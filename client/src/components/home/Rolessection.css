@@ -1,0 +1,373 @@
+.roles-section {
+  position: relative;
+  background: #ffffff;
+  padding: 110px 32px;
+  font-family: "DM Sans", "Helvetica Neue", sans-serif;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.roles-background {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.roles-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  top: -200px;
+  left: -150px;
+  filter: blur(120px);
+  opacity: 0.07;
+  transition: background 0.5s ease;
+  animation: glowPulse 8s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.roles-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(3, 54, 61, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(3, 54, 61, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.animate-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.roles-header {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 52px;
+  position: relative;
+  z-index: 1;
+}
+
+.section-eyebrow {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #03363d;
+  opacity: 0.65;
+  margin-bottom: 16px;
+  padding: 5px 14px;
+  background: rgba(3, 54, 61, 0.06);
+  border-radius: 100px;
+}
+
+.section-heading {
+  font-family: "Sora", "DM Sans", sans-serif;
+  font-size: clamp(30px, 4vw, 50px);
+  font-weight: 800;
+  color: #1f2937;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0 0 18px;
+}
+
+.heading-accent {
+  transition: color 0.4s ease;
+}
+
+.section-subheading {
+  font-size: 16px;
+  color: #6b7280;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.role-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 52px;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.role-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 24px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(3, 54, 61, 0.1);
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  min-width: 130px;
+}
+
+.role-tab:hover {
+  background: rgba(3, 54, 61, 0.03);
+  border-color: rgba(3, 54, 61, 0.18);
+}
+
+.role-tab-active {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: var(--tab-color);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.03), inset 0 0 0 1px var(--tab-color);
+}
+
+.tab-icon {
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.tab-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+.role-detail {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  max-width: 960px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  animation: panelFadeIn 0.36s ease;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.role-detail-left {
+  position: relative;
+  background: #03363d;
+  border-radius: 20px;
+  padding: 44px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.role-icon-large {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  border: 1.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 100px;
+  position: relative;
+  z-index: 1;
+}
+
+.role-title {
+  font-family: "Sora", sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  line-height: 1.2;
+}
+
+.role-tagline {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0;
+  line-height: 1.55;
+  position: relative;
+  z-index: 1;
+}
+
+.decorative-ring {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  border: 1px solid;
+  bottom: -80px;
+  right: -80px;
+  pointer-events: none;
+  animation: ringSpin 20s linear infinite;
+}
+
+.decorative-ring-second {
+  width: 380px;
+  height: 380px;
+  bottom: -130px;
+  right: -130px;
+  animation-duration: 30s;
+  animation-direction: reverse;
+}
+
+@keyframes ringSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.role-detail-right {
+  background: #f9fafb;
+  border: 1px solid rgba(3, 54, 61, 0.1);
+  border-radius: 20px;
+  padding: 40px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.permissions-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #6b7280;
+}
+
+.permissions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  flex: 1;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14.5px;
+  color: #1f2937;
+  font-weight: 500;
+  opacity: 0;
+  animation: permissionSlideIn 0.35s ease forwards;
+}
+
+@keyframes permissionSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.permission-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.permissions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid rgba(3, 54, 61, 0.1);
+}
+
+.permissions-count {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.permissions-count span {
+  font-weight: 800;
+  font-family: "Sora", sans-serif;
+  font-size: 18px;
+}
+
+@media (max-width: 900px) {
+  .role-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .permissions-list {
+    grid-template-columns: 1fr;
+  }
+
+  .role-tabs {
+    gap: 8px;
+  }
+
+  .role-tab {
+    min-width: 100px;
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .roles-section {
+    padding: 80px 20px;
+  }
+
+  .role-tabs {
+    grid-template-columns: repeat(2, 1fr);
+    display: grid;
+  }
+
+  .role-detail-left {
+    padding: 32px 24px;
+  }
+
+  .role-detail-right {
+    padding: 28px 20px;
+  }
+}
