@@ -133,7 +133,7 @@ const LoginModal = ({ isOpen, onClose }) => {
             <div className={`form-field ${focusedInput === "password" ? "form-field--focused" : ""} ${password ? "form-field--filled" : ""}`}>
               <div className="form-label-row">
                 <label className="form-label" htmlFor="password-input">Password</label>
-                <a href="#" className="forgot-password-link">Forgot password?</a>
+                <a href="#" className="forgot-password-link">Change password?</a>
               </div>
               <div className="input-wrapper">
                 <span className="input-icon">
