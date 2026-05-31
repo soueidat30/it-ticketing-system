@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "./LoginModal.css";
+import { login } from "../../../services/authService";
 import logoImg from "../../../assets/logo2.png";
 
 const LoginModal = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,9 +58,49 @@ const LoginModal = ({ isOpen, onClose }) => {
       return; 
     }
 
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1800));
-    setLoading(false);
+    try {
+  setLoading(true);
+
+  const data = await login(username, password);
+
+  localStorage.setItem(
+    "token",
+    data.access_token
+  );
+
+  localStorage.setItem(
+    "user",
+    JSON.stringify(data.user)
+  );
+
+  console.log("Login Success");
+  console.log(data);
+  const role = data.user.role;
+  if (role === "admin") {
+    navigate("/admin/dashboard");
+  }
+  else if (role === "manager") {
+    navigate("/manager/dashboard");
+  }
+  else if (role === "agent") {
+    navigate("/agent/dashboard");
+  }
+  else {
+    navigate("/employee/dashboard");
+  }
+  onClose();
+
+} catch (err) {
+
+  if (err.response?.data?.message) {
+    setError(err.response.data.message);
+  } else {
+    setError("Unable to connect to server.");
+  }
+
+} finally {
+  setLoading(false);
+}
   };
 
   if (!isOpen) return null;
