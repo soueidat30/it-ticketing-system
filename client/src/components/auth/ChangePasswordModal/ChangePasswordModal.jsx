@@ -28,7 +28,13 @@ const ChangePasswordModal = ({ isOpen, onClose, token, onBackToLogin }) => {
   const currentStrength = getStrength(newPassword);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setError("");
+      setSuccess(false);
+    }
   }, [isOpen]);
 
   useEffect(() => {
@@ -50,35 +56,18 @@ const ChangePasswordModal = ({ isOpen, onClose, token, onBackToLogin }) => {
 
   const handleCancel = () => {
     onClose();
-    if (onBackToLogin) {
-      onBackToLogin();
-    }
+    if (onBackToLogin) onBackToLogin();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!currentPassword) {
-      setError("Please enter your current password.");
-      return;
-    }
-    if (!newPassword) {
-      setError("Please enter a new password.");
-      return;
-    }
-    if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters.");
-      return;
-    }
-    if (newPassword === currentPassword) {
-      setError("New password must be different from your current password.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+    if (!currentPassword) { setError("Please enter your current password."); return; }
+    if (!newPassword) { setError("Please enter a new password."); return; }
+    if (newPassword.length < 8) { setError("New password must be at least 8 characters."); return; }
+    if (newPassword === currentPassword) { setError("New password must be different from your current password."); return; }
+    if (newPassword !== confirmPassword) { setError("Passwords do not match."); return; }
 
     setLoading(true);
 
@@ -122,8 +111,6 @@ const ChangePasswordModal = ({ isOpen, onClose, token, onBackToLogin }) => {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <div
       ref={backdropRef}
@@ -131,7 +118,9 @@ const ChangePasswordModal = ({ isOpen, onClose, token, onBackToLogin }) => {
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
+      aria-hidden={!isOpen}
       aria-label="Change Password"
+      style={{ pointerEvents: isOpen ? "auto" : "none" }}
     >
       <div className={`password-modal ${isOpen ? "visible" : ""}`}>
         <button className="close-btn" onClick={handleCancel} aria-label="Close">
@@ -274,10 +263,7 @@ const ChangePasswordModal = ({ isOpen, onClose, token, onBackToLogin }) => {
 
               {confirmPassword && (
                 <p className="match-status" style={{ color: confirmPassword === newPassword ? "#10b981" : "#ef4444" }}>
-                  {confirmPassword === newPassword
-                    ? "✓ Passwords match"
-                    : "✗ Passwords do not match"
-                  }
+                  {confirmPassword === newPassword ? "✓ Passwords match" : "✗ Passwords do not match"}
                 </p>
               )}
             </div>
@@ -293,9 +279,7 @@ const ChangePasswordModal = ({ isOpen, onClose, token, onBackToLogin }) => {
             )}
 
             <div className="action-buttons">
-              <button type="button" className="btn btn-cancel" onClick={handleCancel}>
-                Cancel
-              </button>
+              <button type="button" className="btn btn-cancel" onClick={handleCancel}>Cancel</button>
               <button type="submit" className="btn btn-submit" disabled={loading}>
                 {loading ? (
                   <><span className="spinner" /> Updating...</>
