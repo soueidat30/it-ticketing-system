@@ -75,7 +75,7 @@ const LoginModal = ({ isOpen, onClose }) => {
 
   console.log("Login Success");
   console.log(data);
-  const role = data.user.role;
+  const role = typeof data.user.role === "object" ? data.user.role.name : data.user.role || "employee";
   if (role === "admin") {
     navigate("/admin/dashboard");
   }
@@ -174,10 +174,7 @@ const LoginModal = ({ isOpen, onClose }) => {
             </div>
 
             <div className={`form-field ${focusedInput === "password" ? "form-field--focused" : ""} ${password ? "form-field--filled" : ""}`}>
-              <div className="form-label-row">
-                <label className="form-label" htmlFor="password-input">Password</label>
-                <a href="#" className="forgot-password-link">Change password?</a>
-              </div>
+              <label className="form-label" htmlFor="password-input">Password</label>
               <div className="input-wrapper">
                 <span className="input-icon">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
