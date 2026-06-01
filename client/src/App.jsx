@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute";
 
 import HomePage from "./pages/Home";
-import AdminDashboard from "./pages/admin/Dashboard";
+import AdminDashboard from "./pages/admin/Dashboard/Dashboard";
 import ManagerDashboard from "./pages/manager/Dashboard";
 import AgentDashboard from "./pages/agent/Dashboard";
 import EmployeeDashboard from "./pages/employee/Dashboard";
