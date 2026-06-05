@@ -1,41 +1,42 @@
+
 import { useState } from "react";
-import logo2 from "../../assets/logo2.png";
+import { useNavigate } from "react-router-dom";
+import logo2 from "../../../assets/logo2.png";
 import {
   LayoutDashboard, Ticket, PlusCircle, BookOpen,
   Megaphone, User, Bell, Settings, MessageCircle,
   ChevronRight, Filter, MoreHorizontal, X,
-  Search, ChevronDown, LogOut
+  Search, ChevronDown
 } from "lucide-react";
 
 // ── Sidebar ──────────────────────────────────────────────────────────────────
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard",    active: true  },
-  { icon: Ticket,          label: "My Tickets",   active: false },
-  { icon: PlusCircle,      label: "Create Ticket",active: false },
-  { icon: BookOpen,        label: "Knowledge Base",active: false},
-  { icon: Megaphone,       label: "Announcements",active: false },
-  { icon: User,            label: "Profile",      active: false },
-  { icon: Bell,            label: "Notifications",active: false },
-  { icon: Settings,        label: "Settings",     active: false },
+  { icon: LayoutDashboard, label: "Dashboard",     path: "/employee/dashboard",      active: true  },
+  { icon: Ticket,          label: "My Tickets",    path: "/employee/my-tickets",     active: false },
+  { icon: PlusCircle,      label: "Create Ticket", path: "/employee/create-ticket",  active: false },
+  { icon: BookOpen,        label: "Knowledge Base",path: "/employee/knowledge-base", active: false },
+  { icon: Megaphone,       label: "Announcements", path: "/employee/announcements",  active: false },
+  { icon: User,            label: "Profile",       path: "/employee/profile",        active: false },
+  { icon: Bell,            label: "Notifications", path: "/employee/notifications",  active: false },
+  { icon: Settings,        label: "Settings",      path: "/employee/settings",       active: false },
 ];
 
 function Sidebar() {
+  const navigate = useNavigate();
+
   return (
     <aside className="w-56 min-h-screen bg-white border-r border-gray-100 flex flex-col">
       {/* Logo */}
-     <div className="px-5 py-5 border-b border-gray-100 flex justify-center">
-     <img
-         src={logo2}
-         alt="Tickora Logo"
-         className="h-12 object-contain"
-         />
+      <div className="px-5 py-5 border-b border-gray-100 flex justify-center">
+        <img src={logo2} alt="Tickora Logo" className="h-12 object-contain" />
       </div>
 
       {/* Nav */}
       <nav className="flex-1 py-4 px-3 space-y-0.5">
-        {navItems.map(({ icon: Icon, label, active }) => (
+        {navItems.map(({ icon: Icon, label, active, path }) => (
           <button
             key={label}
+            onClick={() => navigate(path)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               active
                 ? "bg-blue-50 text-blue-600"
@@ -112,10 +113,10 @@ function Priority({ level }) {
 // ── Status Badge ──────────────────────────────────────────────────────────────
 function Status({ status }) {
   const map = {
-    Open:       "bg-blue-100 text-blue-600",
-    Pending:    "bg-orange-100 text-orange-500",
-    Resolved:   "bg-green-100 text-green-600",
-    Closed:     "bg-gray-100 text-gray-500",
+    Open:          "bg-blue-100 text-blue-600",
+    Pending:       "bg-orange-100 text-orange-500",
+    Resolved:      "bg-green-100 text-green-600",
+    Closed:        "bg-gray-100 text-gray-500",
     "In Progress": "bg-purple-100 text-purple-600",
   };
   return (
@@ -180,11 +181,11 @@ function DonutChart({ open, pending, resolved }) {
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 const tickets = [
-  { id: "TK-1024", subject: "Email not working",             category: "Email",   priority: "High",   status: "Open",     updated: "1h ago"  },
-  { id: "TK-1023", subject: "Password reset request",        category: "Account", priority: "Medium", status: "Pending",  updated: "3h ago"  },
-  { id: "TK-1022", subject: "VPN connection issue",          category: "Network", priority: "High",   status: "Open",     updated: "5h ago"  },
-  { id: "TK-1021", subject: "Cannot access shared drive",    category: "Access",  priority: "Low",    status: "Resolved", updated: "1d ago"  },
-  { id: "TK-1020", subject: "Software installation request", category: "Software",priority: "Medium", status: "Closed",   updated: "2d ago"  },
+  { id: "TK-1024", subject: "Email not working",             category: "Email",   priority: "High",   status: "Open",     updated: "1h ago" },
+  { id: "TK-1023", subject: "Password reset request",        category: "Account", priority: "Medium", status: "Pending",  updated: "3h ago" },
+  { id: "TK-1022", subject: "VPN connection issue",          category: "Network", priority: "High",   status: "Open",     updated: "5h ago" },
+  { id: "TK-1021", subject: "Cannot access shared drive",    category: "Access",  priority: "Low",    status: "Resolved", updated: "1d ago" },
+  { id: "TK-1020", subject: "Software installation request", category: "Software",priority: "Medium", status: "Closed",   updated: "2d ago" },
 ];
 
 const tabs = ["All", "Open", "Pending", "Resolved", "Closed"];
@@ -197,6 +198,7 @@ const resources = [
 ];
 
 export default function EmployeeDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("All");
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
@@ -208,14 +210,11 @@ export default function EmployeeDashboard() {
     <div className="flex min-h-screen bg-gray-50 font-sans">
       <Sidebar />
 
-      {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
         <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-4">
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-gray-800">
-              Welcome back, Karen! 👋
-            </h1>
+            <h1 className="text-lg font-bold text-gray-800">Welcome back, Karen! 👋</h1>
             <p className="text-xs text-gray-400">Create and monitor your support requests.</p>
           </div>
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 w-64">
@@ -281,7 +280,7 @@ export default function EmployeeDashboard() {
               </div>
 
               {/* Tabs */}
-              <div className="flex items-center gap-0 px-5 border-b border-gray-100">
+              <div className="flex items-center px-5 border-b border-gray-100">
                 {tabs.map((tab) => (
                   <button
                     key={tab}
@@ -312,7 +311,11 @@ export default function EmployeeDashboard() {
                 </thead>
                 <tbody>
                   {filtered.map((t) => (
-                    <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={t.id}
+                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/employee/ticket/${t.id}`)}
+                    >
                       <td className="px-5 py-3 text-blue-600 font-medium">{t.id}</td>
                       <td className="px-3 py-3 text-gray-700">{t.subject}</td>
                       <td className="px-3 py-3 text-gray-500">{t.category}</td>
@@ -345,7 +348,10 @@ export default function EmployeeDashboard() {
             {/* Right Column */}
             <div className="w-56 space-y-4 flex-shrink-0">
               {/* Create Ticket CTA */}
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-4 flex items-center gap-3 transition-colors shadow-sm">
+              <button
+                onClick={() => navigate("/employee/create-ticket")}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-4 flex items-center gap-3 transition-colors shadow-sm"
+              >
                 <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                   <PlusCircle className="w-4 h-4" />
                 </div>

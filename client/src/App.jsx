@@ -17,11 +17,13 @@ import Tickets from "./pages/admin/Tickets/Tickets";
 import Notifications from "./pages/admin/Notifications/Notifications";
 import ManagerDashboard from "./pages/manager/Dashboard";
 import AgentDashboard from "./pages/agent/Dashboard";
-import EmployeeDashboard from "./pages/employee/Dashboard";
+import EmployeeDashboard from "./pages/employee/Dashboard/Dashboard";
 import AdminLayout    from "./layouts/AdminLayout";
 import ManagerLayout  from "./layouts/ManagerLayout";
 import AgentLayout    from "./layouts/AgentLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
+
+import CreateTicket from "./pages/employee/CreateTicket/CreateTicket";
 
 function App() {
   return (
@@ -83,8 +85,10 @@ function App() {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<EmployeeDashboard />} />
+          <Route path="create-ticket" element={<CreateTicket />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
+        
 
       </Routes>
     </BrowserRouter>
