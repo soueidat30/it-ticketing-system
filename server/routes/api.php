@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\TicketController;
 
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
@@ -18,6 +19,10 @@ Route::middleware(['auth:api', 'role:employee,agent,manager,admin'])->group(func
 });
 
 Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
+
+    Route::get('/tickets', [TicketController::class, 'index']);
+    Route::get('/tickets/{id}', [TicketController::class, 'show']);
+
 });
 
 Route::middleware(['auth:api', 'role:manager,admin'])->group(function () {

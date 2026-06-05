@@ -16,7 +16,7 @@ import ActivityLogs from "./pages/admin/ActivityLogs/ActivityLogs";
 import Tickets from "./pages/admin/Tickets/Tickets";
 import Notifications from "./pages/admin/Notifications/Notifications";
 import ManagerDashboard from "./pages/manager/Dashboard";
-import AgentDashboard from "./pages/agent/Dashboard";
+import AgentDashboard from "./pages/agent/Dashboard/Dashboard";
 import EmployeeDashboard from "./pages/employee/Dashboard";
 import AdminLayout    from "./layouts/AdminLayout";
 import ManagerLayout  from "./layouts/ManagerLayout";
