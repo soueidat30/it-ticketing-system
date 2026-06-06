@@ -25,9 +25,9 @@ function Sidebar() {
   const navigate = useNavigate();
 
   return (
-    <aside className="w-56 min-h-screen bg-white border-r border-gray-100 flex flex-col">
+    <aside className="w-56 min-h-screen bg-white border-r border-black flex flex-col">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100 flex justify-center">
+      <div className="px-5 py-5 border-b border-black flex justify-center">
         <img src={logo2} alt="Tickora Logo" className="h-12 object-contain" />
       </div>
 

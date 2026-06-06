@@ -13,7 +13,7 @@ class Ticket extends Model
         'category_id',
         'priority_id',
         'status_id',
-        'created_by',
+        'user_id',
         'assigned_to',
         'resolved_at',
     ];
@@ -35,7 +35,7 @@ class Ticket extends Model
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function assignee()
