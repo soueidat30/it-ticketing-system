@@ -210,22 +210,36 @@ class TicketController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status_id' => 'required|exists:statuses,id',
-            'note'      => 'nullable|string|max:1000',
+            'status_id'      => 'required|exists:statuses,id',
+            'priority_id'    => 'sometimes|exists:priorities,id',
+            'note'           => 'nullable|string|max:1000',
+            'notify_user'    => 'sometimes|boolean',
+            'notify_manager' => 'sometimes|boolean',
         ]);
 
         $ticket = Ticket::findOrFail($id);
-        $ticket->update(['status_id' => $request->status_id]);
+
+        // Always update status, optionally update priority.
+        $update = ['status_id' => $request->status_id];
+        if ($request->has('priority_id')) {
+            $update['priority_id'] = $request->priority_id;
+        }
+
+        $ticket->update($update);
 
         TicketStatusHistory::create([
-            'ticket_id'  => $ticket->id,
-            'status_id'  => $request->status_id,
-            'changed_by' => Auth::id(),
-            'note'       => $request->note,
+            'ticket_id'       => $ticket->id,
+            'status_id'       => $request->status_id,
+            'changed_by'      => Auth::id(),
+            'note'            => $request->note,
+            'notify_user'     => $request->boolean('notify_user', false),
+            'notify_manager'  => $request->boolean('notify_manager', false),
         ]);
 
         return response()->json(['message' => 'Status updated successfully.']);
     }
+
+
 
     // ── Helper: human-readable file size ─────────────────────
     private function formatBytes(int $bytes): string

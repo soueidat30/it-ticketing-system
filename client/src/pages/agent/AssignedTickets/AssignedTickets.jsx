@@ -208,20 +208,13 @@ export default function AssignedTickets() {
   const go = (path, id) => navigate(path, { state: { ticketId: id } });
 
   const chipCounts = {
-    all:          ticketsArray.length,
-    open:         ticketsArray.filter(t => t.status?.status_name === "Open").length,
-    "in-progress":ticketsArray.filter(t => t.status?.status_name === "In Progress").length,
-    pending:      ticketsArray.filter(t => t.status?.status_name === "Pending").length,
-    overdue:      ticketsArray.filter(t => {
-      const createdDate = new Date(t.created_at);
-      const hoursAgo = Number.isNaN(createdDate.getTime())
-        ? null
-        : Math.floor((now - createdDate.getTime()) / (1000 * 60 * 60));
-      const priority = t.priority?.priority_name?.toLowerCase() ?? "low";
-      const status = normalizeTicketStatus(t.status?.status_name);
-      return isTicketOverdue(status, priority, hoursAgo);
-    }).length,
+    all:           filtered.length,
+    open:          filtered.filter(t => t.status === "open").length,
+    "in-progress":filtered.filter(t => t.status === "in-progress").length,
+    pending:       filtered.filter(t => t.status === "pending").length,
+    overdue:       filtered.filter(t => t.overdue).length,
   };
+
 
   if (loading) {
     return (
