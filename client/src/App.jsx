@@ -27,6 +27,8 @@ import ManagerLayout  from "./layouts/ManagerLayout";
 import AgentLayout    from "./layouts/AgentLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 
+
+import MyTickets from "./pages/employee/MyTickets/MyTickets";
 import CreateTicket from "./pages/employee/CreateTicket/CreateTicket";
 
 function App() {
@@ -95,6 +97,7 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<EmployeeDashboard />} />
           <Route path="create-ticket" element={<CreateTicket />} />
+          <Route path="my-tickets" element={<MyTickets />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
         

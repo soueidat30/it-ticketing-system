@@ -45,3 +45,19 @@ Route::middleware(['auth:api', 'role:manager,admin'])->group(function () {
 
 Route::middleware(['auth:api', 'role:admin'])->group(function () {
 });
+
+Route::middleware(['auth:api'])->group(function () {
+
+    // Categories
+    Route::get('/categories', [CategoryController::class, 'index']);
+
+    // Priorities
+    Route::get('/priorities', [PriorityController::class, 'index']);
+
+    Route::post('/tickets', [TicketController::class, 'store']);
+});
+Route::middleware(['auth:api', 'role:employee,agent,manager,admin'])->group(function () {
+
+    Route::get('/my-tickets', [TicketController::class, 'myTickets']);
+    
+});
