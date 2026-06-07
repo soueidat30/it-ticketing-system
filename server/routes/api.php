@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\TicketController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\PriorityController;
 
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
@@ -15,20 +17,28 @@ Route::middleware('auth:api')->prefix('auth')->group(function () {
     Route::post('change-password', [AuthController::class, 'changePassword']);
 });
 
+Route::middleware(['auth:api', 'role:employee,agent,manager,admin'])->group(function () {
+});
+
+// Agents, managers, admins can view and manage all tickets
 Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
 
-    Route::get('/tickets',      [TicketController::class, 'index']);
+    Route::get('/tickets', [TicketController::class, 'index']);
     Route::get('/tickets/{id}', [TicketController::class, 'show']);
 
-    Route::get('/agent/tickets',          [TicketController::class, 'assignedTickets']);
-    Route::get('/agent/tickets/{id}',     [TicketController::class, 'show']);
-    Route::post('/agent/tickets/{id}/attachments', [TicketController::class, 'storeAttachment']);
-    Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'downloadAttachment']);
-    Route::post('/agent/tickets/{id}/status', [TicketController::class, 'updateStatus']);
-    Route::get('/agent/dashboard/stats',  [TicketController::class, 'dashboardStats']);
+    // Agent queue (MY assigned tickets)
+    Route::get('/agent/tickets', [TicketController::class, 'assignedTickets']);
 
-    Route::post('/agent/tickets/{id}/comments', [TicketController::class, 'storeComment']);
+    // Agent ticket details (fetch by ticket number/id)
+    Route::get('/agent/tickets/{id}', [TicketController::class, 'show']);
+
+
+    // Agent dashboard stats
+    Route::get('/agent/dashboard/stats', [TicketController::class, 'dashboardStats']);
+
+
 });
+
 
 Route::middleware(['auth:api', 'role:manager,admin'])->group(function () {
 });

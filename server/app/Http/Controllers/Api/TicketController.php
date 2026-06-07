@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 
 class TicketController extends Controller
 {
-    // ── GET /tickets  (all tickets — admin/manager view) ─────
+
     public function index()
     {
         $tickets = Ticket::with([
@@ -26,7 +26,7 @@ class TicketController extends Controller
         return response()->json($tickets);
     }
 
-    // ── GET /tickets/{id}  or  /agent/tickets/{id} ──────────
+
     public function show($id)
     {
         $query = Ticket::with([
@@ -233,5 +233,92 @@ class TicketController extends Controller
         if ($bytes < 1024)       return "{$bytes} B";
         if ($bytes < 1048576)    return round($bytes / 1024, 1) . ' KB';
         return round($bytes / 1048576, 1) . ' MB';
+    }
+
+    // POST /api/tickets - Create a new ticket
+    public function store(Request $request)
+    {
+        $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'required|string',
+            'category_id' => 'required|exists:categories,id',
+            'priority_id' => 'required|exists:priorities,id',
+        ]);
+
+        // Generate unique ticket number
+        $lastTicket = Ticket::orderBy('id', 'desc')->first();
+        $nextNumber = $lastTicket ? ($lastTicket->id + 1) : 1;
+        $ticketNumber = 'TKT-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+
+        // Get the "Open" status id
+        $openStatus = \DB::table('statuses')->where('status_name', 'Open')->first();
+
+        $ticket = Ticket::create([
+            'ticket_number' => $ticketNumber,
+            'title'         => $request->title,
+            'description'   => $request->description,
+            'category_id'   => $request->category_id,
+            'priority_id'   => $request->priority_id,
+            'status_id'     => $openStatus ? $openStatus->id : 1,
+            'user_id'       => Auth::id(),
+        ]);
+
+        return response()->json([
+            'message' => 'Ticket created successfully',
+            'ticket'  => $ticket->load(['category', 'priority', 'status'])
+        ], 201);
+    }
+
+    // PUT /api/tickets/{id} - Update a ticket
+    public function update(Request $request, $id)
+    {
+        $ticket = Ticket::find($id);
+
+        if (!$ticket) {
+            return response()->json(['message' => 'Ticket not found'], 404);
+        }
+
+        $request->validate([
+            'title'       => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'category_id' => 'sometimes|exists:categories,id',
+            'priority_id' => 'sometimes|exists:priorities,id',
+            'status_id'   => 'sometimes|exists:statuses,id',
+        ]);
+
+        $ticket->update($request->only([
+            'title', 'description', 'category_id', 'priority_id', 'status_id'
+        ]));
+
+        return response()->json([
+            'message' => 'Ticket updated successfully',
+            'ticket'  => $ticket->load(['category', 'priority', 'status'])
+        ]);
+    }
+
+    // DELETE /api/tickets/{id} - Delete a ticket
+    public function destroy($id)
+    {
+        $ticket = Ticket::find($id);
+
+        if (!$ticket) {
+            return response()->json(['message' => 'Ticket not found'], 404);
+        }
+
+        $ticket->delete();
+
+        return response()->json([
+            'message' => 'Ticket deleted successfully'
+        ]);
+    }
+
+    public function myTickets()
+    {
+    $tickets = Ticket::with(['category', 'priority', 'status'])
+        ->where('user_id', Auth::id())
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json($tickets);
     }
 }
