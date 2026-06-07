@@ -18,30 +18,37 @@ Route::middleware('auth:api')->prefix('auth')->group(function () {
 });
 
 Route::middleware(['auth:api', 'role:employee,agent,manager,admin'])->group(function () {
+    Route::post('/tickets',             [TicketController::class, 'store']);
+    Route::put('/tickets/{id}',         [TicketController::class, 'update']);
+    Route::delete('/tickets/{id}',      [TicketController::class, 'destroy']);
+    Route::get('/my-tickets',           [TicketController::class, 'myTickets']);
+    Route::get('/categories',           [CategoryController::class, 'index']);
+    Route::get('/priorities',           [PriorityController::class, 'index']);
 });
 
-// Agents, managers, admins can view and manage all tickets
 Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
 
     Route::get('/tickets', [TicketController::class, 'index']);
     Route::get('/tickets/{id}', [TicketController::class, 'show']);
 
-    // Agent queue (MY assigned tickets)
     Route::get('/agent/tickets', [TicketController::class, 'assignedTickets']);
 
-    // Agent ticket details (fetch by ticket number/id)
     Route::get('/agent/tickets/{id}', [TicketController::class, 'show']);
 
-
-    // Agent dashboard stats
     Route::get('/agent/dashboard/stats', [TicketController::class, 'dashboardStats']);
 
+    Route::post('/agent/tickets/{id}/comments',                         [TicketController::class, 'storeComment']);
+    Route::post('/agent/tickets/{id}/attachments',                      [TicketController::class, 'storeAttachment']);
+    Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}',  [TicketController::class, 'downloadAttachment']);
 
+    Route::put('/agent/tickets/{id}/status',                            [TicketController::class, 'updateStatus']);
+
+    Route::post('/agent/tickets/{id}/resolve',                          [TicketController::class, 'updateStatus']);
 });
-
 
 Route::middleware(['auth:api', 'role:manager,admin'])->group(function () {
 });
 
 Route::middleware(['auth:api', 'role:admin'])->group(function () {
 });
+
