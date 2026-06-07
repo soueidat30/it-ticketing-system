@@ -325,14 +325,12 @@ class TicketController extends Controller
             'message' => 'Ticket deleted successfully'
         ]);
     }
-
-    public function myTickets()
-    {
-    $tickets = Ticket::with(['category', 'priority', 'status'])
-        ->where('user_id', Auth::id())
+public function myTickets(Request $request)
+{
+    return Ticket::with(['category', 'priority', 'status'])
+        ->where('user_id', $request->user()->id)
         ->orderBy('created_at', 'desc')
         ->get();
+}
 
-    return response()->json($tickets);
-    }
 }
