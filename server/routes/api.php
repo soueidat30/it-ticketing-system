@@ -15,14 +15,19 @@ Route::middleware('auth:api')->prefix('auth')->group(function () {
     Route::post('change-password', [AuthController::class, 'changePassword']);
 });
 
-Route::middleware(['auth:api', 'role:employee,agent,manager,admin'])->group(function () {
-});
-
 Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
 
-    Route::get('/tickets', [TicketController::class, 'index']);
+    Route::get('/tickets',      [TicketController::class, 'index']);
     Route::get('/tickets/{id}', [TicketController::class, 'show']);
 
+    Route::get('/agent/tickets',          [TicketController::class, 'assignedTickets']);
+    Route::get('/agent/tickets/{id}',     [TicketController::class, 'show']);
+    Route::post('/agent/tickets/{id}/attachments', [TicketController::class, 'storeAttachment']);
+    Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'downloadAttachment']);
+    Route::post('/agent/tickets/{id}/status', [TicketController::class, 'updateStatus']);
+    Route::get('/agent/dashboard/stats',  [TicketController::class, 'dashboardStats']);
+
+    Route::post('/agent/tickets/{id}/comments', [TicketController::class, 'storeComment']);
 });
 
 Route::middleware(['auth:api', 'role:manager,admin'])->group(function () {

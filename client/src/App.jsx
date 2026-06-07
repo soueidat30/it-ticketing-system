@@ -17,6 +17,10 @@ import Tickets from "./pages/admin/Tickets/Tickets";
 import Notifications from "./pages/admin/Notifications/Notifications";
 import ManagerDashboard from "./pages/manager/Dashboard";
 import AgentDashboard from "./pages/agent/Dashboard/Dashboard";
+import AssignedTickets from "./pages/agent/AssignedTickets/AssignedTickets";
+import TicketDetails from "./pages/agent/TicketDetails/TicketDetails";
+import UpdateStatus from "./pages/agent/UpdateStatus/UpdateStatus";
+import ResolveTicket from "./pages/agent/ResolveTicket/ResolveTicket";
 import EmployeeDashboard from "./pages/employee/Dashboard/Dashboard";
 import AdminLayout    from "./layouts/AdminLayout";
 import ManagerLayout  from "./layouts/ManagerLayout";
@@ -74,6 +78,11 @@ function App() {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AgentDashboard />} />
+          <Route path="assigned-tickets" element={<AssignedTickets />} />
+          <Route path="ticket-details" element={<TicketDetails />} />
+          <Route path="update-status" element={<UpdateStatus />} />
+          <Route path="resolve-ticket" element={<ResolveTicket />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
         <Route
           path="/employee"

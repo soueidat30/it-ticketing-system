@@ -10,11 +10,11 @@ class Ticket extends Model
         'ticket_number',
         'title',
         'description',
+        'user_id',
+        'assigned_to',
         'category_id',
         'priority_id',
         'status_id',
-        'created_by',
-        'assigned_to',
         'resolved_at',
     ];
 
@@ -33,13 +33,28 @@ class Ticket extends Model
         return $this->belongsTo(Status::class);
     }
 
-    public function creator()
+    public function user()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class);
     }
 
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(TicketAttachment::class);
+    }
+
+    public function history()
+    {
+        return $this->hasMany(TicketStatusHistory::class);
     }
 }
