@@ -36,3 +36,15 @@ export const deleteTicket = (token, id) =>
     return d;
   });
 
+  // Manager sees ALL tickets
+export const getAllTickets = (token) =>
+  fetch(`${BASE}/tickets`, {
+    headers: headers(token),
+  }).then(r => r.json());
+// Manager updates ticket status (future use)
+export const updateTicketStatus = (token, id, status) =>
+  fetch(`${BASE}/tickets/${id}`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify({ status }),
+  }).then(r => r.json());
