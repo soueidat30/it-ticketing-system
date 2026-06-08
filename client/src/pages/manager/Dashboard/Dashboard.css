@@ -1,0 +1,134 @@
+/* ===== MANAGER DASHBOARD BASE ===== */
+
+.mgr-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* HEADER */
+.mgr-dashboard__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mgr-dashboard__title {
+  font-family: "Sora", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #03363d;
+  margin: 0;
+}
+
+.mgr-dashboard__subtitle {
+  font-size: 13.5px;
+  color: #6b7280;
+}
+
+/* STATS GRID */
+.mgr-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.mgr-stat-card {
+  background: #fff;
+  border: 1px solid rgba(3,54,61,0.09);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.mgr-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.mgr-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: "Sora", sans-serif;
+  color: #1f2937;
+}
+
+.mgr-stat-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* GRID */
+.mgr-dashboard__grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+}
+
+/* CARD */
+.mgr-card {
+  background: #fff;
+  border: 1px solid rgba(3,54,61,0.09);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.mgr-card__header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(3,54,61,0.09);
+}
+
+.mgr-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: "Sora", sans-serif;
+}
+
+/* TABLE */
+.mgr-table-wrapper {
+  overflow-x: auto;
+}
+
+.mgr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.mgr-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #6b7280;
+  padding: 10px;
+}
+
+.mgr-table td {
+  padding: 12px 10px;
+  border-top: 1px solid #eee;
+}
+
+/* RIGHT COLUMN */
+.mgr-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mgr-info,
+.mgr-activity {
+  padding: 16px;
+  font-size: 13px;
+  color: #374151;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

@@ -15,7 +15,6 @@ import ActivityLogs from "./pages/admin/ActivityLogs/ActivityLogs";
 
 import Tickets from "./pages/admin/Tickets/Tickets";
 import Notifications from "./pages/admin/Notifications/Notifications";
-import ManagerDashboard from "./pages/manager/Dashboard";
 import AgentDashboard from "./pages/agent/Dashboard/Dashboard";
 import AssignedTickets from "./pages/agent/AssignedTickets/AssignedTickets";
 import TicketDetails from "./pages/agent/TicketDetails/TicketDetails";
@@ -26,6 +25,7 @@ import AdminLayout    from "./layouts/AdminLayout";
 import ManagerLayout  from "./layouts/ManagerLayout";
 import AgentLayout    from "./layouts/AgentLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
+import ManagerDashboard from "./pages/manager/Dashboard/Dashboard";
 
 
 import MyTickets from "./pages/employee/MyTickets/MyTickets";
@@ -61,15 +61,28 @@ function App() {
         </Route>
         <Route
           path="/manager"
-          element={
-            <ProtectedRoute allowedRoles={["manager"]}>
-              <ManagerLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ManagerDashboard />} />
-        </Route>
+           element={
+    <ProtectedRoute allowedRoles={["manager"]}>
+      <ManagerLayout />
+    </ProtectedRoute>
+  }
+>
+  <Route index element={<Navigate to="dashboard" replace />} />
+
+  {/* DASHBOARD */}
+  <Route path="dashboard" element={<ManagerDashboard />} />
+
+  {/* FUTURE PAGES (you already prepared sidebar for these) */}
+  <Route path="team-tickets" element={<div>Team Tickets Page</div>} />
+  <Route path="reports" element={<div>Reports Page</div>} />
+  <Route path="analytics" element={<div>Analytics Page</div>} />
+  <Route path="notifications" element={<div>Notifications Page</div>} />
+  <Route path="profile" element={<div>Profile Page</div>} />
+  <Route path="settings" element={<div>Settings Page</div>} />
+
+  {/* fallback */}
+  <Route path="*" element={<Navigate to="dashboard" replace />} />
+  </Route>
         <Route
           path="/agent"
           element={

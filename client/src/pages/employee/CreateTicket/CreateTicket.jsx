@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./CreateTicket.css";
 import { createTicket, getCategories, getPriorities } from "../../../services/ticketService";
 
 
 export default function CreateTicket() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ title: "", category_id: "", priority_id: "", description: "" });
   const [errors, setErrors]         = useState({});
   const [submitted, setSubmitted]   = useState(false);
@@ -94,7 +96,7 @@ export default function CreateTicket() {
         </div>
         <div className="ct-success__actions">
           <button className="ct-btn ct-btn--outline" onClick={handleReset}>Create Another</button>
-          <button className="ct-btn ct-btn--primary" onClick={() => navigate("/employee/my-tickets")}></button>
+          <button className="ct-btn ct-btn--primary" onClick={() => navigate("/employee/my-tickets")}> View My ticket</button>
         </div>
       </div>
     );
