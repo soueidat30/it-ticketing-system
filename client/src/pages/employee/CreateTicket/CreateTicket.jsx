@@ -96,7 +96,7 @@ export default function CreateTicket() {
         </div>
         <div className="ct-success__actions">
           <button className="ct-btn ct-btn--outline" onClick={handleReset}>Create Another</button>
-          <button className="ct-btn ct-btn--primary" onClick={() => navigate("/employee/my-tickets")}></button>
+          <button className="ct-btn ct-btn--primary" onClick={() => navigate("/employee/my-tickets")}> View My ticket</button>
         </div>
       </div>
     );
