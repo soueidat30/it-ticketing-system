@@ -84,7 +84,7 @@ export default function AgentLayout() {
             <Icon d={Icons.support} />
           </div>
           <div className="agent-sidebar__brand-text">
-            <span className="agent-sidebar__brand-name">IDS HelpDesk</span>
+            <span className="agent-sidebar__brand-name">HelpDesk</span>
             <span className="agent-sidebar__brand-role">Agent Portal</span>
           </div>
         </a>

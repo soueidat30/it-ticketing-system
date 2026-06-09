@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./CreateTicket.css";
 import { createTicket, getCategories, getPriorities } from "../../../services/ticketService";
 
 
 export default function CreateTicket() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ title: "", category_id: "", priority_id: "", description: "" });
   const [errors, setErrors]         = useState({});
   const [submitted, setSubmitted]   = useState(false);

@@ -3,334 +3,297 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Comment;
+use App\Models\Priority;
+use App\Models\Status;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketStatusHistory;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use App\Models\TicketResolution;
 
 class TicketController extends Controller
 {
 
-    public function index()
-    {
-        $tickets = Ticket::with([
-            'category',
-            'priority',
-            'status',
-            'user',
-            'assignee',
-        ])->get();
-
-        return response()->json($tickets);
-    }
-
-
-    public function show($id)
-    {
-        $query = Ticket::with([
-            'category',
-            'priority',
-            'status',
-            'user',
-            'assignee',
-            // comments — eager-load the author so the frontend gets full_name & role
-            'comments.user.role',
-            // attachments — eager-load the uploader
-            'attachments.uploader',
-            // history — eager-load the new status label and the actor's name
-            'history.status',
-            'history.changer',
-        ]);
-
-        $ticket = is_numeric($id)
-            ? $query->find($id)
-            : null;
-
-        if (!$ticket) {
-            $ticketNumber = str_contains($id, ':') ? explode(':', $id, 2)[0] : $id;
-            $ticket = $query->where('ticket_number', $ticketNumber)->first();
-        }
-
-        if (!$ticket) {
-            return response()->json(['message' => 'Ticket not found'], 404);
-        }
-
-        // ── Shape comments so the frontend field names match ──
-        $comments = $ticket->comments->map(fn($c) => [
-            'id'       => $c->id,
-            'author'   => $c->user->full_name ?? $c->user->username ?? 'Unknown',
-            'role'     => $c->user->role->name ?? 'employee',
-            'text'     => $c->content,          // frontend reads c.text
-            'internal' => $c->internal,
-            'time'     => $c->created_at->diffForHumans(),
-        ]);
-
-        // ── Shape attachments ─────────────────────────────────
-        $attachments = $ticket->attachments->map(fn($a) => [
-            'id'       => $a->id,
-            'name'     => $a->file_name,        // frontend reads a.name
-            'type'     => $a->file_type,        // frontend reads a.type (pdf / img / log / doc)
-            'size'     => $this->formatBytes($a->file_size), // frontend reads a.size
-            'uploaded' => $a->created_at->format('M j, Y'), // frontend reads a.uploaded
-            'path'     => $a->file_path,
-        ]);
-
-        // ── Shape history ─────────────────────────────────────
-        $history = $ticket->history->map(fn($h) => [
-            'id'    => $h->id,
-            'event' => 'Status changed to ' . ($h->status->status_name ?? '—'),
-            'actor' => 'By ' . ($h->changer->full_name ?? $h->changer->username ?? 'System'),
-            'time'  => $h->created_at->diffForHumans(),
-            'type'  => 'status',   // drives the CSS dot colour (td-history-dot--status)
-            'note'  => $h->note,
-        ]);
-
-        return response()->json([
-            'ticket'      => $ticket,
-            'comments'    => $comments,
-            'attachments' => $attachments,
-            'history'     => $history,
-        ]);
-    }
-
-    // ── GET /agent/tickets  (only MY assigned tickets) ───────
-    public function assignedTickets()
-    {
-        $agentId = Auth::id();   // ← was returning ALL tickets before
-
-        $tickets = Ticket::with([
-            'category',
-            'priority',
-            'status',
-            'user',
-        ])
-        ->where('assigned_to', $agentId)
-        ->get();
-
-        return response()->json($tickets);
-    }
-
-    // ── GET /agent/dashboard/stats ───────────────────────────
-    public function dashboardStats()
-    {
-        $agentId = Auth::id();
-
-        return response()->json([
-            'assigned' => Ticket::where('assigned_to', $agentId)->count(),
-
-            'open' => Ticket::where('assigned_to', $agentId)
-                ->whereHas('status', fn($q) => $q->where('status_name', 'Open'))
-                ->count(),
-
-            'in_progress' => Ticket::where('assigned_to', $agentId)
-                ->whereHas('status', fn($q) => $q->where('status_name', 'In Progress'))
-                ->count(),
-
-            'resolved' => Ticket::where('assigned_to', $agentId)
-                ->whereHas('status', fn($q) => $q->where('status_name', 'Resolved'))
-                ->count(),
-        ]);
-    }
-
-    // ── POST /agent/tickets/{id}/comments ────────────────────
-    public function storeComment(Request $request, $id)
-    {
-        $request->validate([
-            'content'  => 'required|string|max:5000',
-            'internal' => 'boolean',
-        ]);
-
-        $ticket = Ticket::findOrFail($id);
-
-        $comment = Comment::create([
-            'ticket_id' => $ticket->id,
-            'user_id'   => Auth::id(),
-            'content'   => $request->content,
-            'internal'  => $request->boolean('internal', false),
-        ]);
-
-        // Return the same shape the frontend expects
-        $comment->load('user.role');
-
-        return response()->json([
-            'id'       => $comment->id,
-            'author'   => $comment->user->full_name ?? $comment->user->username,
-            'role'     => $comment->user->role->name ?? 'agent',
-            'text'     => $comment->content,
-            'internal' => $comment->internal,
-            'time'     => 'Just now',
-        ], 201);
-    }
-
-    public function storeAttachment(Request $request, $id)
-    {
-        $request->validate([
-            'file' => 'required|file|max:10240|mimes:jpg,jpeg,png,pdf,doc,docx,txt,log,zip',
-        ]);
-
-        $ticket = Ticket::findOrFail($id);
-        $file   = $request->file('file');
-        $path   = $file->store("tickets/{$ticket->id}/attachments", 'local');
-        $ext    = strtolower($file->getClientOriginalExtension());
-        $type   = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'img'
-                : (in_array($ext, ['pdf']) ? 'pdf'
-                : (in_array($ext, ['log','txt']) ? 'log' : 'doc'));
-
-        $attachment = TicketAttachment::create([
-            'ticket_id'   => $ticket->id,
-            'uploaded_by' => Auth::id(),
-            'file_name'   => $file->getClientOriginalName(),
-            'file_path'   => $path,
-            'file_type'   => $type,
-            'file_size'   => $file->getSize(),
-        ]);
-
-        return response()->json([
-            'id'       => $attachment->id,
-            'name'     => $attachment->file_name,
-            'type'     => $attachment->file_type,
-            'size'     => $this->formatBytes($attachment->file_size),
-            'uploaded' => $attachment->created_at->format('M j, Y'),
-        ], 201);
-    }
-
-    public function downloadAttachment($ticketId, $attachmentId)
-    {
-        $attachment = TicketAttachment::where('ticket_id', $ticketId)
-                                      ->findOrFail($attachmentId);
-
-        return response()->download(
-            storage_path('app/' . $attachment->file_path),
-            $attachment->file_name
-        );
-    }
-
-    public function updateStatus(Request $request, $id)
-    {
-        $request->validate([
-            'status_id'      => 'required|exists:statuses,id',
-            'priority_id'    => 'sometimes|exists:priorities,id',
-            'note'           => 'nullable|string|max:1000',
-            'notify_user'    => 'sometimes|boolean',
-            'notify_manager' => 'sometimes|boolean',
-        ]);
-
-        $ticket = Ticket::findOrFail($id);
-
-        // Always update status, optionally update priority.
-        $update = ['status_id' => $request->status_id];
-        if ($request->has('priority_id')) {
-            $update['priority_id'] = $request->priority_id;
-        }
-
-        $ticket->update($update);
-
-        TicketStatusHistory::create([
-            'ticket_id'       => $ticket->id,
-            'status_id'       => $request->status_id,
-            'changed_by'      => Auth::id(),
-            'note'            => $request->note,
-            'notify_user'     => $request->boolean('notify_user', false),
-            'notify_manager'  => $request->boolean('notify_manager', false),
-        ]);
-
-        return response()->json(['message' => 'Status updated successfully.']);
-    }
-
-
-
-    // ── Helper: human-readable file size ─────────────────────
-    private function formatBytes(int $bytes): string
-    {
-        if ($bytes < 1024)       return "{$bytes} B";
-        if ($bytes < 1048576)    return round($bytes / 1024, 1) . ' KB';
-        return round($bytes / 1048576, 1) . ' MB';
-    }
-
-    // POST /api/tickets - Create a new ticket
     public function store(Request $request)
     {
         $request->validate([
-            'title'       => 'required|string|max:255',
+            'title' => 'required|string|max:255',
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'priority_id' => 'required|exists:priorities,id',
         ]);
 
-        // Generate unique ticket number
         $lastTicket = Ticket::orderBy('id', 'desc')->first();
         $nextNumber = $lastTicket ? ($lastTicket->id + 1) : 1;
         $ticketNumber = 'TKT-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-        // Get the "Open" status id
-        $openStatus = \DB::table('statuses')->where('status_name', 'Open')->first();
+        $openStatus = DB::table('statuses')->where('status_name', 'Open')->first();
+
+        $agentRoleId = DB::table('roles')->where('name', 'agent')->value('id');
+        $agent = null;
+        if ($agentRoleId) {
+            $agent = User::where('role_id', $agentRoleId)
+                ->where('status', 'Active')
+                ->leftJoin('tickets', 'users.id', '=', 'tickets.assigned_to')
+                ->whereIn('tickets.status_id', function ($q) {
+                    $q->select('id')->from('statuses')->whereIn('status_name', ['Open', 'In Progress', 'Pending']);
+                })
+                ->select('users.*', DB::raw('count(tickets.id) as open_count'))
+                ->groupBy('users.id')
+                ->orderBy('open_count', 'asc')
+                ->first();
+
+            if (!$agent) $agent = null;
+        }
 
         $ticket = Ticket::create([
             'ticket_number' => $ticketNumber,
-            'title'         => $request->title,
-            'description'   => $request->description,
-            'category_id'   => $request->category_id,
-            'priority_id'   => $request->priority_id,
-            'status_id'     => $openStatus ? $openStatus->id : 1,
-            'user_id'       => Auth::id(),
+            'title' => $request->title,
+            'description' => $request->description,
+            'category_id' => $request->category_id,
+            'priority_id' => $request->priority_id,
+            'status_id' => $openStatus?->id ?? 1,
+            'user_id' => Auth::id(),
+            'assigned_to' => $agent?->id,
         ]);
 
         return response()->json([
             'message' => 'Ticket created successfully',
-            'ticket'  => $ticket->load(['category', 'priority', 'status'])
+            'assigned_to' => $agent?->full_name ?? 'Unassigned',
+            'ticket' => $ticket->load(['category', 'priority', 'status', 'user']),
         ], 201);
     }
 
-    // PUT /api/tickets/{id} - Update a ticket
-    public function update(Request $request, $id)
+    public function index(Request $request)
     {
-        $ticket = Ticket::find($id);
+        $tickets = Ticket::with(['category', 'priority', 'status', 'user', 'assignee'])
+            ->latest('id')
+            ->get();
 
-        if (!$ticket) {
-            return response()->json(['message' => 'Ticket not found'], 404);
+        return response()->json($tickets);
+    }
+
+    public function show($id)
+    {
+        $query = Ticket::with(['category', 'priority', 'status', 'user', 'assignee', 'history']);
+
+        if (is_string($id) && str_starts_with($id, 'TKT-')) {
+            $ticket = $query->where('ticket_number', $id)->firstOrFail();
+        } else {
+            $ticket = $query->findOrFail($id);
         }
 
+        return response()->json($ticket);
+    }
+
+
+    public function myTickets()
+    {
+        $tickets = Ticket::with(['category', 'priority', 'status', 'history'])
+            ->where('user_id', Auth::id())
+            ->latest('id')
+            ->get();
+
+        return response()->json($tickets);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $ticket = Ticket::findOrFail($id);
         $request->validate([
-            'title'       => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'category_id' => 'sometimes|exists:categories,id',
-            'priority_id' => 'sometimes|exists:priorities,id',
-            'status_id'   => 'sometimes|exists:statuses,id',
+            'title' => 'sometimes|required|string|max:255',
+            'description' => 'sometimes|required|string',
+            'category_id' => 'sometimes|nullable|exists:categories,id',
+            'priority_id' => 'sometimes|nullable|exists:priorities,id',
+            'status_id' => 'sometimes|nullable|exists:statuses,id',
+            'assigned_to' => 'sometimes|nullable|exists:users,id',
         ]);
 
-        $ticket->update($request->only([
-            'title', 'description', 'category_id', 'priority_id', 'status_id'
-        ]));
+        $ticket->update($request->only(['title','description','category_id','priority_id','status_id','assigned_to']));
 
         return response()->json([
             'message' => 'Ticket updated successfully',
-            'ticket'  => $ticket->load(['category', 'priority', 'status'])
+            'ticket' => $ticket->load(['category','priority','status','user','assignee']),
         ]);
     }
 
-    // DELETE /api/tickets/{id} - Delete a ticket
     public function destroy($id)
     {
-        $ticket = Ticket::find($id);
-
-        if (!$ticket) {
-            return response()->json(['message' => 'Ticket not found'], 404);
-        }
-
+        $ticket = Ticket::findOrFail($id);
         $ticket->delete();
+        return response()->json(['message' => 'Ticket deleted successfully']);
+    }
+
+    public function assignedTickets()
+    {
+        $agentId = Auth::id();
+
+        $tickets = Ticket::with(['category', 'priority', 'status', 'user'])
+            ->where('assigned_to', $agentId)
+            ->latest('id')
+            ->get();
+
+        return response()->json($tickets);
+    }
+
+    public function dashboardStats()
+    {
+        $agentId = Auth::id();
+
+        $base = Ticket::where('assigned_to', $agentId);
+
+        $stats = [
+            'total' => (clone $base)->count(),
+            'open' => (clone $base)->whereHas('status', fn($q) => $q->where('status_name', 'Open'))->count(),
+            'in_progress' => (clone $base)->whereHas('status', fn($q) => $q->where('status_name', 'In Progress'))->count(),
+            'pending' => (clone $base)->whereHas('status', fn($q) => $q->where('status_name', 'Pending'))->count(),
+        ];
+
+        return response()->json($stats);
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status_id' => 'required|exists:statuses,id',
+            'priority_id' => 'sometimes|exists:priorities,id',
+            // Columns exist per your migrations
+            'reason' => 'required|string|max:255',
+            'note' => 'nullable|string|max:1000',
+            'notify_user' => 'sometimes|boolean',
+            'notify_manager' => 'sometimes|boolean',
+        ]);
+
+        $ticket = Ticket::findOrFail($id);
+
+        $ticket->update([
+            'status_id' => $request->status_id,
+            'priority_id' => $request->has('priority_id') ? $request->priority_id : $ticket->priority_id,
+        ]);
+
+        TicketStatusHistory::create([
+            'ticket_id' => $ticket->id,
+            'status_id' => $request->status_id,
+            'changed_by' => Auth::id(),
+            'reason' => $request->reason,
+            'note' => $request->note,
+            'notify_user' => $request->boolean('notify_user', false),
+            'notify_manager' => $request->boolean('notify_manager', false),
+        ]);
 
         return response()->json([
-            'message' => 'Ticket deleted successfully'
+            'message' => 'Status updated successfully.',
+            'ticket' => $ticket->load(['status','priority']),
         ]);
     }
-public function myTickets(Request $request)
-{
-    return Ticket::with(['category', 'priority', 'status'])
-        ->where('user_id', $request->user()->id)
-        ->orderBy('created_at', 'desc')
-        ->get();
+
+    public function storeComment(Request $request, $id)
+    {
+        $request->validate([
+            'content' => 'required|string|max:5000',
+            'internal' => 'sometimes|boolean',
+        ]);
+
+
+        $ticket = Ticket::findOrFail($id);
+
+        $comment = Comment::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => Auth::id(),
+            'content' => $request->comment,
+        ]);
+
+        return response()->json($comment, 201);
+    }
+
+    public function storeAttachment(Request $request, $id)
+    {
+        $ticket = Ticket::findOrFail($id);
+
+        $request->validate([
+            'file' => 'required|file|max:10240', // 10MB
+        ]);
+
+        $path = $request->file('file')->store('ticket-attachments', 'public');
+
+        $att = TicketAttachment::create([
+            'ticket_id' => $ticket->id,
+            'uploaded_by' => Auth::id(),
+            'file_path' => $path,
+            'file_name' => $request->file('file')->getClientOriginalName(),
+        ]);
+
+        return response()->json($att, 201);
+    }
+
+    public function downloadAttachment($ticketId, $attachmentId)
+    {
+        $att = TicketAttachment::where('id', $attachmentId)
+            ->where('ticket_id', $ticketId)
+            ->firstOrFail();
+
+        $fullPath = storage_path('app/public/' . $att->file_path);
+
+        return response()->download($fullPath, $att->file_name);
+    }
+    // (Optional) resolution endpoint if you later add it to routes.
+    // Keeping it out of the route graph avoids extra 500s.
+    public function resolveTicket(Request $request, $id)
+    {
+
+    $request->validate([
+        'resolution_type' => 'required|string',
+        'solution'        => 'required|string|min:20',
+        'root_cause'      => 'nullable|string',
+        'time_spent'      => 'nullable|integer|min:1',
+        'time_unit'       => 'nullable|in:minutes,hours',
+        'internal_notes'  => 'nullable|string',
+        'rating'          => 'nullable|integer|min:1|max:5',
+        'notify_user'     => 'boolean',
+        'notify_manager'  => 'boolean',
+    ]);
+
+    $ticket = Ticket::findOrFail($id);
+
+    $resolvedStatus = Status::where(
+        'status_name',
+        'Resolved'
+    )->first();
+
+    $ticket->update([
+        'status_id' => $resolvedStatus->id,
+        'resolved_at' => now(),
+    ]);
+
+    TicketResolution::create([
+        'ticket_id'       => $ticket->id,
+        'resolved_by'     => Auth::id(),
+        'resolution_type' => $request->resolution_type,
+        'solution'        => $request->solution,
+        'root_cause'      => $request->root_cause,
+        'time_spent'      => $request->time_spent,
+        'time_unit'       => $request->time_unit,
+        'internal_notes'  => $request->internal_notes,
+        'rating'          => $request->rating,
+    ]);
+
+    TicketStatusHistory::create([
+        'ticket_id'      => $ticket->id,
+        'status_id'      => $resolvedStatus->id,
+        'changed_by'     => Auth::id(),
+        'note'           => $request->solution,
+        'notify_user'    => $request->boolean('notify_user'),
+        'notify_manager' => $request->boolean('notify_manager'),
+    ]);
+
+    return response()->json([
+        'message' => 'Ticket resolved successfully'
+    ]);
+}
 }
 
-}
