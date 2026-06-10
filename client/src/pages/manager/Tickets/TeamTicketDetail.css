@@ -1,0 +1,54 @@
+.td-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.td-card {
+  background: white;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #eee;
+}
+
+.td-title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.td-sub {
+  color: gray;
+  font-size: 13px;
+}
+
+.td-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.td-comment {
+  padding: 10px;
+  background: #f8f8f8;
+  border-radius: 8px;
+}
+
+.td-input {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.td-input textarea {
+  flex: 1;
+  padding: 8px;
+}
+
+.td-input button {
+  padding: 8px 14px;
+  background: #03363d;
+  color: white;
+  border: none;
+  cursor: pointer;
+}

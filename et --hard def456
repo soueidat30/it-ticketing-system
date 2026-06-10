@@ -1,0 +1,29 @@
+[33m55970de[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: reset: moving to ORIG_HEAD
+[33mdfb0541[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: pull origin main --rebase: Fast-forward
+[33m55970de[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{2}: checkout: moving from restore-work to main
+[33m2f30dbb[m[33m ([m[1;32mrestore-work[m[33m)[m HEAD@{3}: commit: TeamTicket
+[33m3917eec[m HEAD@{4}: commit (merge): Merge branch 'main' of https://github.com/soueidat30/it-ticketing-system into restore-work
+[33m88d95cf[m HEAD@{5}: commit: new TicketDetail
+[33m55970de[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{6}: pull origin main: Fast-forward
+[33m5d6490d[m HEAD@{7}: reset: moving to 5d6490d
+[33m55970de[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{8}: reset: moving to origin/main
+[33m5d6490d[m HEAD@{9}: reset: moving to HEAD
+[33m5d6490d[m HEAD@{10}: checkout: moving from main to restore-work
+[33m55970de[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{11}: commit: new code
+[33m5d6490d[m HEAD@{12}: commit: redo manager
+[33ma270d81[m HEAD@{13}: commit: manager files
+[33mca6e257[m HEAD@{14}: pull origin main: Fast-forward
+[33me972606[m HEAD@{15}: commit (merge): Merge branch 'main' of https://github.com/soueidat30/it-ticketing-system
+[33mda9523d[m HEAD@{16}: commit: MyTickets
+[33mbdaf0c6[m HEAD@{17}: pull origin main: Fast-forward
+[33m8b45225[m HEAD@{18}: commit: employeelayout and other things
+[33m67841dd[m HEAD@{19}: commit: add Files MyTicket and TicketService
+[33m61e4752[m HEAD@{20}: pull origin main: Fast-forward
+[33m0e2fe87[m HEAD@{21}: commit: ADD CreatTicket and Files
+[33m582eda6[m HEAD@{22}: pull origin main: Fast-forward
+[33m21ddf06[m HEAD@{23}: commit: Fix logo import path in Dashboard
+[33me4c1ed0[m HEAD@{24}: pull origin main: Fast-forward
+[33m3052667[m HEAD@{25}: pull origin main: Fast-forward
+[33m5e5f3cc[m HEAD@{26}: pull origin main: Fast-forward
+[33m5cb735d[m HEAD@{27}: pull origin main: Fast-forward
+[33m06244d8[m HEAD@{28}: clone: from https://github.com/soueidat30/it-ticketing-system.git

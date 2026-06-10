@@ -170,7 +170,15 @@ export default function MyTickets() {
                 {paginated.map(t => (
                   <tr key={t.id} className="mt-row">
                     <td><span className="mt-ticket-id">{t.ticket_number}</span></td>
-                    <td><span className="mt-ticket-title">{t.title}</span></td>
+                    <td>
+  <span
+    className="mt-ticket-title"
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate(`/employee/ticket/${t.id}`)}
+  >
+    {t.title}
+  </span>
+</td>
                     <td><span className="mt-ticket-cat">{t.category?.category_name || "-"}</span></td>
                     <td>
                       <span className={`priority-badge priority-badge--${(t.priority?.priority_name || "").toLowerCase()}`}>

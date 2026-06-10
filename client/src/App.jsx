@@ -30,6 +30,9 @@ import ManagerDashboard from "./pages/manager/Dashboard/Dashboard";
 
 import MyTickets from "./pages/employee/MyTickets/MyTickets";
 import CreateTicket from "./pages/employee/CreateTicket/CreateTicket";
+import TeamTicket from "./pages/manager/Tickets/TeamTicket";
+import TeamTicketDetail from "./pages/manager/Tickets/TeamTicketDetail";
+import Notification from "./pages/employee/Notification/Notification";
 
 function App() {
   return (
@@ -73,7 +76,8 @@ function App() {
   <Route path="dashboard" element={<ManagerDashboard />} />
 
   {/* FUTURE PAGES (you already prepared sidebar for these) */}
-  <Route path="team-tickets" element={<div>Team Tickets Page</div>} />
+  <Route path="team-tickets" element={<TeamTicket />} />
+<Route path="team-tickets/:id" element={<TeamTicketDetail />} />
   <Route path="reports" element={<div>Reports Page</div>} />
   <Route path="analytics" element={<div>Analytics Page</div>} />
   <Route path="notifications" element={<div>Notifications Page</div>} />
@@ -111,6 +115,7 @@ function App() {
           <Route path="dashboard" element={<EmployeeDashboard />} />
           <Route path="create-ticket" element={<CreateTicket />} />
           <Route path="my-tickets" element={<MyTickets />} />
+          <Route path="notification" element={<Notification />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
         

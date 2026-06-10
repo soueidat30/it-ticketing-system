@@ -38,11 +38,8 @@ const StatusBadge = ({ s }) => (
 );
 
 const formatCreatedAt = (rawDate) => {
-  if (!rawDate) return "—";
   const date = new Date(rawDate);
   if (Number.isNaN(date.getTime())) return "—";
-  // guard against Unix epoch / invalid null → Date(0) → 1970 bug
-  if (date.getFullYear() < 2000) return "—";
 
   return date.toLocaleString(undefined, {
     month: "short",
@@ -156,8 +153,8 @@ export default function AssignedTickets() {
 
   const filtered = useMemo(() => {
     let list = ticketsArray.map(t => {
-      const createdDate = t.created_at ? new Date(t.created_at) : null;
-      const hoursAgo = (!createdDate || Number.isNaN(createdDate.getTime()) || createdDate.getFullYear() < 2000)
+      const createdDate = new Date(t.created_at);
+      const hoursAgo = Number.isNaN(createdDate.getTime())
         ? null
         : Math.floor((now - createdDate.getTime()) / (1000 * 60 * 60));
       const priority = t.priority?.priority_name?.toLowerCase() ?? "low";
@@ -167,8 +164,8 @@ export default function AssignedTickets() {
         id: t.ticket_number,
         subject: t.title,
         desc: t.description,
-        requester: t.user?.full_name ?? t.user?.username ?? "Unknown",
-        dept: t.user?.department || "No department",
+        requester: t.creator?.full_name ?? t.user?.full_name ?? "Unknown",
+        dept: t.creator?.department ?? t.user?.department ?? "N/A",
         priority,
         status,
         category: t.category?.category_name ?? "General",
@@ -388,6 +385,7 @@ export default function AssignedTickets() {
                         <div className="at-user-avatar">{initials(t.requester)}</div>
                         <div>
                           <div className="at-user-name">{t.requester}</div>
+                          <div className="at-user-dept">{t.dept}</div>
                         </div>
                       </div>
                     </td>

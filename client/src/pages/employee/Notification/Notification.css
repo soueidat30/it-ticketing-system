@@ -1,0 +1,333 @@
+/* ─────────────────────────────────────────────
+   Notifications.css
+   Used by both /employee/notifications
+   and /manager/notifications
+───────────────────────────────────────────── */
+
+.notif-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 780px;   /* readable line-length for a feed */
+}
+
+/* ── header ── */
+.notif-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notif-header__title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+}
+
+.notif-header__sub {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.notif-header__actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-top: 2px;
+}
+
+/* ── buttons ── */
+.notif-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.notif-btn--ghost {
+  background: transparent;
+  color: #6366f1;
+  border: 1px solid #e0e7ff;
+}
+
+.notif-btn--ghost:hover {
+  background: #eef2ff;
+}
+
+/* ── tabs ── */
+.notif-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #f3f4f6;
+  padding-bottom: 0;
+}
+
+.notif-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.notif-tab:hover { color: #374151; }
+
+.notif-tab--active {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+
+.notif-tab__count {
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+
+.notif-tab--active .notif-tab__count {
+  background: #eef2ff;
+  color: #6366f1;
+}
+
+/* ── content ── */
+.notif-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── group ── */
+.notif-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notif-group__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #9ca3af;
+  padding: 0 0 8px;
+}
+
+/* ── item ── */
+.notif-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #f3f4f6;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+  margin-bottom: 4px;
+}
+
+.notif-item:hover {
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.notif-item--unread {
+  background: #fafbff;
+  border-color: #e0e7ff;
+}
+
+.notif-item--unread:hover {
+  background: #f5f7ff;
+}
+
+/* unread blue dot */
+.notif-item__dot {
+  position: absolute;
+  top: 18px;
+  left: -6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6366f1;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #e0e7ff;
+}
+
+/* icon */
+.notif-item__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  margin-top: 1px;
+}
+
+.notif-item__icon--blue   { background: #eff6ff; color: #2563eb; }
+.notif-item__icon--orange { background: #fff7ed; color: #ea580c; }
+.notif-item__icon--green  { background: #f0fdf4; color: #16a34a; }
+.notif-item__icon--purple { background: #faf5ff; color: #7c3aed; }
+.notif-item__icon--red    { background: #fef2f2; color: #dc2626; }
+.notif-item__icon--gray   { background: #f3f4f6; color: #6b7280; }
+
+/* body */
+.notif-item__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.notif-item__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notif-item__time {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.notif-item__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.notif-item__message {
+  font-size: 0.82rem;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.notif-item__ticket,
+.notif-item__agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.notif-item__ticket i,
+.notif-item__agent i {
+  font-size: 0.75rem;
+}
+
+/* type badge */
+.notif-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.notif-type-badge--blue   { background: #eff6ff; color: #2563eb; }
+.notif-type-badge--orange { background: #fff7ed; color: #ea580c; }
+.notif-type-badge--green  { background: #f0fdf4; color: #16a34a; }
+.notif-type-badge--purple { background: #faf5ff; color: #7c3aed; }
+.notif-type-badge--red    { background: #fef2f2; color: #dc2626; }
+.notif-type-badge--gray   { background: #f3f4f6; color: #6b7280; }
+
+/* delete button */
+.notif-item__delete {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #d1d5db;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: background 0.12s, color 0.12s;
+  margin-top: 2px;
+}
+
+.notif-item__delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* ── empty state ── */
+.notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 60px 20px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.notif-empty i {
+  font-size: 2.4rem;
+  color: #d1d5db;
+}
+
+.notif-empty p {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+}
+
+.notif-empty__hint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  max-width: 280px;
+}
+
+/* ── spinner ── */
+.notif-spin {
+  animation: notif-rotate 0.8s linear infinite;
+}
+
+@keyframes notif-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* ── responsive ── */
+@media (max-width: 600px) {
+  .notif-item { padding: 12px 12px; }
+  .notif-item__icon { width: 34px; height: 34px; font-size: 0.95rem; }
+  .notif-item__time { display: none; }
+}

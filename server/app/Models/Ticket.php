@@ -57,10 +57,5 @@ class Ticket extends Model
     {
         return $this->hasMany(TicketStatusHistory::class);
     }
-
-    public function resolution()
-    {
-        return $this->hasOne(TicketResolution::class);
-    }
 }
 

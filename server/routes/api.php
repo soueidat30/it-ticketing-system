@@ -6,61 +6,44 @@ use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PriorityController;
 
-
-// ── Public ───────────────────────────────────────────────────
+/*
+| AUTH
+*/
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
 });
 
-// ── Auth only ─────────────────────────────────────────────────
-Route::middleware('auth:api')->prefix('auth')->group(function () {
-    Route::post('logout',          [AuthController::class, 'logout']);
-    Route::post('refresh',         [AuthController::class, 'refresh']);
-    Route::get('me',               [AuthController::class, 'me']);
-    Route::post('change-password', [AuthController::class, 'changePassword']);
-});
+Route::middleware('auth:api')->group(function () {
 
-// ── All roles ─────────────────────────────────────────────────
-Route::middleware(['auth:api', 'role:employee,agent,manager,admin'])->group(function () {
-    Route::get('/categories',       [CategoryController::class, 'index']);
-    Route::get('/priorities',       [PriorityController::class, 'index']);
-    // NOTE: /statuses endpoint was referencing a non-existent StatusController
-    // Route::get('/statuses',         [StatusController::class,   'index']);
-    Route::post('/tickets',         [TicketController::class,   'store']);
-    Route::put('/tickets/{id}',     [TicketController::class,   'update']);
-    Route::delete('/tickets/{id}',  [TicketController::class,   'destroy']);
-    Route::get('/my-tickets',       [TicketController::class,   'myTickets']);
-});
+    // auth
+    Route::get('auth/me', [AuthController::class, 'me']);
+    Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::post('auth/refresh', [AuthController::class, 'refresh']);
+    Route::post('auth/change-password', [AuthController::class, 'changePassword']);
 
-// ── Agent / Manager / Admin ───────────────────────────────────
-Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
-    Route::get('/tickets',      [TicketController::class, 'index']);
+    // shared data
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/priorities', [PriorityController::class, 'index']);
+
+    // employee ticket actions
+    Route::get('/my-tickets', [TicketController::class, 'myTickets']);
+    Route::post('/tickets', [TicketController::class, 'store']);
     Route::get('/tickets/{id}', [TicketController::class, 'show']);
 
-    Route::get('/agent/tickets',          [TicketController::class, 'assignedTickets']);
-    Route::get('/agent/tickets/{id}',     [TicketController::class, 'show']);
+    Route::put('/tickets/{id}', [TicketController::class, 'update']);
+    Route::delete('/tickets/{id}', [TicketController::class, 'destroy']);
 
-    // FIX: route calls 'dashboard', not 'dashboardStats'
-    Route::get('/agent/dashboard/stats',  [TicketController::class, 'dashboard']);
-
-    Route::post('/agent/tickets/{id}/comments',
-        [TicketController::class, 'storeComment']);
-    Route::post('/agent/tickets/{id}/attachments',
-        [TicketController::class, 'storeAttachment']);
-    Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}',
-        [TicketController::class, 'downloadAttachment']);
-    Route::put('/agent/tickets/{id}/status',
-        [TicketController::class, 'updateStatus']);
-    Route::post('/agent/tickets/{id}/resolve',
-        [TicketController::class, 'resolveTicket']);
+    // comments (IMPORTANT: shared for employee + agent)
+    Route::post('/tickets/{id}/comments', [TicketController::class, 'storeComment']);
 });
 
-// ── Manager / Admin ───────────────────────────────────────────
-Route::middleware(['auth:api', 'role:manager,admin'])->group(function () {
-    // future manager routes
-});
+/*
+| AGENT ONLY
+*/
+Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
 
-// ── Admin only ────────────────────────────────────────────────
-Route::middleware(['auth:api', 'role:admin'])->group(function () {
-    // future admin routes
+    Route::get('/tickets', [TicketController::class, 'index']);
+    Route::get('/agent/tickets', [TicketController::class, 'assignedTickets']);
+
+    Route::put('/tickets/{id}/status', [TicketController::class, 'updateStatus']);
 });

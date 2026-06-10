@@ -1,0 +1,45 @@
+.team {
+  padding: 20px;
+}
+
+.team__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.team__controls {
+  display: flex;
+  gap: 10px;
+}
+
+.team__controls input,
+.team__controls select {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.team__table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
+}
+
+.team__table th,
+.team__table td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.status-open { background: #dbeafe; }
+.status-in-progress { background: #fef3c7; }
+.status-pending { background: #fee2e2; }
+.status-resolved { background: #dcfce7; }
+.status-closed { background: #e5e7eb; }
