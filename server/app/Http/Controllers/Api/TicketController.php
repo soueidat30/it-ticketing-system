@@ -150,7 +150,7 @@ class TicketController extends Controller
             'content'   => $request->content,
             'internal'  => $request->boolean('internal', false),
         ]);
-
+$this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}");
         // Return the same shape the frontend expects
         $comment->load('user.role');
 
@@ -235,6 +235,7 @@ class TicketController extends Controller
             'notify_user'     => $request->boolean('notify_user', false),
             'notify_manager'  => $request->boolean('notify_manager', false),
         ]);
+        $this->logActivity($ticket->id, 'status_update', "Status changed to {$request->status_id}");
 
         return response()->json(['message' => 'Status updated successfully.']);
     }
@@ -332,5 +333,78 @@ public function myTickets(Request $request)
         ->orderBy('created_at', 'desc')
         ->get();
 }
+
+
+
+public function assignTicket(Request $request, $id)
+{
+    $request->validate([
+        'agent_id' => 'required|exists:users,id',
+        'note'     => 'nullable|string|max:1000',
+    ]);
+
+    $ticket = Ticket::findOrFail($id);
+
+    $ticket->update([
+        'assigned_to' => $request->agent_id,
+    ]);
+
+    // Log assignment in history
+    \DB::table('ticket_assignments')->insert([
+        'ticket_id'   => $ticket->id,
+        'assigned_by' => Auth::id(),
+        'assigned_to' => $request->agent_id,
+        'note'        => $request->note,
+        'created_at'  => now(),
+        'updated_at'  => now(),
+    ]);
+$this->logActivity($ticket->id, 'assign', "Assigned to user {$request->agent_id}");
+    return response()->json(['message' => 'Ticket assigned successfully.']);
+}
+
+
+
+public function history($id)
+{
+    $ticket = Ticket::with(['history.status', 'history.changer'])->findOrFail($id);
+
+    $history = $ticket->history->map(fn($h) => [
+        'id'    => $h->id,
+        'event' => 'Status changed to ' . ($h->status->status_name ?? '—'),
+        'actor' => 'By ' . ($h->changer->full_name ?? 'System'),
+        'time'  => $h->created_at->diffForHumans(),
+        'note'  => $h->note,
+    ]);
+
+    return response()->json($history);
+}
+private function logActivity($ticketId, $action, $details)
+{
+    \DB::table('activity_logs')->insert([
+        'ticket_id' => $ticketId,
+        'user_id'   => Auth::id(),
+        'action'    => $action,
+        'details'   => $details,
+        'created_at'=> now(),
+        'updated_at'=> now(),
+    ]);
+}
+
+public function getComments($id)
+{
+    $ticket = Ticket::with('comments.user.role')->findOrFail($id);
+
+    $comments = $ticket->comments->map(fn($c) => [
+        'id'       => $c->id,
+        'author'   => $c->user->full_name ?? $c->user->username ?? 'Unknown',
+        'role'     => $c->user->role->name ?? 'employee',
+        'text'     => $c->content,
+        'internal' => $c->internal,
+        'time'     => $c->created_at->diffForHumans(),
+    ]);
+
+    return response()->json($comments);
+}
+
 
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PriorityController;
+use App\Http\Controllers\Api\StatusController;
 
 /*
 | AUTH
@@ -24,7 +25,7 @@ Route::middleware('auth:api')->group(function () {
     // shared data
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/priorities', [PriorityController::class, 'index']);
-
+    Route::get('/statuses', [StatusController::class, 'index']);
     // employee ticket actions
     Route::get('/my-tickets', [TicketController::class, 'myTickets']);
     Route::post('/tickets', [TicketController::class, 'store']);
@@ -46,4 +47,9 @@ Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
     Route::get('/agent/tickets', [TicketController::class, 'assignedTickets']);
 
     Route::put('/tickets/{id}/status', [TicketController::class, 'updateStatus']);
+    Route::post('/tickets/{id}/assign', [TicketController::class, 'assignTicket']);
+    Route::get('/tickets/{id}/comments', [TicketController::class, 'getComments']);
+    Route::get('/tickets/{id}/history', [TicketController::class, 'history']);
+
+
 });

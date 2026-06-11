@@ -3,29 +3,17 @@ import { useNavigate } from "react-router-dom";
 import "./TeamTicket.css";
 import {
   getAllTickets,
-  assignTicket as assignTicketAPI,
+  assignTicket,
   updateTicketStatus,
-  addTicketComment,
-  getTicketComments
+  getComments,
+  addComment,
+  getStatuses,
 } from "../../../services/ticketService";
-
-const statusOptions = ["Open", "In Progress", "Pending", "Resolved", "Closed"];
-
-// helpers
-const title = (t) => t.title || "—";
-const number = (t) => t.ticket_number || `#${t.id}`;
-const status = (t) => t.status?.status_name || "Open";
-const employee = (t) => t.user?.full_name || "Unassigned";
-
-// mock agents (replace later with API)
-const agents = [
-  { id: 1, name: "Agent A" },
-  { id: 2, name: "Agent B" },
-  { id: 3, name: "Agent C" },
-];
 
 export default function TeamTickets() {
   const [tickets, setTickets] = useState([]);
+  const [statuses, setStatuses] = useState([]);
+  const [agents, setAgents] = useState([]); // will fetch from backend later
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -33,75 +21,75 @@ export default function TeamTickets() {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
+  // Load tickets + statuses
   useEffect(() => {
     let ignore = false;
 
-  const fetchTickets = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const data = await getAllTickets(token);
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const data = await getAllTickets(token);
+        const statusData = await getStatuses(token);
 
-      if (!ignore) setTickets(Array.isArray(data) ? data : []);
+        if (!ignore) {
+          setTickets(Array.isArray(data) ? data : []);
+          setStatuses(Array.isArray(statusData) ? statusData : []);
+        }
+      } catch (err) {
+        console.error(err);
+        if (!ignore) {
+          setTickets([]);
+          setStatuses([]);
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Assign ticket
+  const handleAssign = async (ticketId, agentId) => {
+    try {
+      await assignTicket(token, ticketId, agentId);
+      const data = await getAllTickets(token);
+      setTickets(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(err);
-      if (!ignore) setTickets([]);
-    } finally {
-      if (!ignore) setLoading(false);
+      console.error("Assign failed", err);
     }
   };
 
-  fetchTickets();
-  return () => { ignore = true; };
-}, []);
-const assignTicket = async (ticketId, agentId) => {
-  try {
-    const token = localStorage.getItem("token");
+  // Update status
+  const handleStatusChange = async (ticketId, statusId) => {
+    try {
+      await updateTicketStatus(token, ticketId, statusId, "Updated by manager");
+      const data = await getAllTickets(token);
+      setTickets(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Status update failed", err);
+    }
+  };
 
-    const updated = await assignTicketAPI(token, ticketId, agentId);
-
-    setTickets(prev =>
-      prev.map(t =>
-        t.id === ticketId ? updated : t
-      )
-    );
-  } catch (err) {
-    console.error("Assign failed", err);
-  }
-};
-
-  // update status (FRONTEND ONLY for now)
- const updateStatus = async (ticketId, newStatus) => {
-  try {
-    const token = localStorage.getItem("token");
-
-    const updated = await updateTicketStatus(token, ticketId, newStatus);
-
-    setTickets(prev =>
-      prev.map(t =>
-        t.id === ticketId ? updated : t
-      )
-    );
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-  const filtered = tickets.filter(t => {
+  // Filtering
+  const filtered = tickets.filter((t) => {
     const q = search.toLowerCase();
     const matchSearch =
-      title(t).toLowerCase().includes(q) ||
-      number(t).toLowerCase().includes(q) ||
-      employee(t).toLowerCase().includes(q);
+      (t.title || "").toLowerCase().includes(q) ||
+      (t.ticket_number || "").toLowerCase().includes(q) ||
+      (t.user?.full_name || "").toLowerCase().includes(q);
 
     const matchFilter =
-      filter === "All" || status(t) === filter;
+      filter === "All" || t.status?.status_name === filter;
 
     return matchSearch && matchFilter;
   });
 
   return (
     <div className="team">
-
       {/* HEADER */}
       <div className="team__header">
         <h1>Team Tickets</h1>
@@ -115,8 +103,10 @@ const assignTicket = async (ticketId, agentId) => {
 
           <select value={filter} onChange={(e) => setFilter(e.target.value)}>
             <option value="All">All</option>
-            {statusOptions.map(s => (
-              <option key={s}>{s}</option>
+            {statuses.map((s) => (
+              <option key={s.id} value={s.status_name}>
+                {s.status_name}
+              </option>
             ))}
           </select>
         </div>
@@ -139,32 +129,38 @@ const assignTicket = async (ticketId, agentId) => {
           </thead>
 
           <tbody>
-            {filtered.map(t => (
+            {filtered.map((t) => (
               <tr key={t.id}>
-                <td>{number(t)}</td>
-              <td
-  onClick={() => navigate(`/manager/team-tickets/${t.id}`)}
-  style={{ cursor: "pointer" }}
->
-  {title(t)}
-</td>
-                <td>{employee(t)}</td>
+                <td>{t.ticket_number || `#${t.id}`}</td>
+                <td
+                  onClick={() => navigate(`/manager/team-tickets/${t.id}`)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {t.title || "—"}
+                </td>
+                <td>{t.user?.full_name || "Unassigned"}</td>
 
                 {/* STATUS */}
                 <td>
-                  <span className={`badge status-${status(t).toLowerCase().replace(/ /g,"-")}`}>
-                    {status(t)}
+                  <span
+                    className={`badge status-${(t.status?.status_name || "")
+                      .toLowerCase()
+                      .replace(/ /g, "-")}`}
+                  >
+                    {t.status?.status_name || "Open"}
                   </span>
                 </td>
 
                 {/* ASSIGN */}
                 <td>
                   <select
-                    onChange={(e) => assignTicket(t.id, e.target.value)}
+                    onChange={(e) => handleAssign(t.id, e.target.value)}
                     defaultValue=""
                   >
-                    <option value="" disabled>Assign</option>
-                    {agents.map(a => (
+                    <option value="" disabled>
+                      Assign
+                    </option>
+                    {agents.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.name}
                       </option>
@@ -175,15 +171,16 @@ const assignTicket = async (ticketId, agentId) => {
                 {/* STATUS UPDATE */}
                 <td>
                   <select
-                    value={status(t)}
-                    onChange={(e) => updateStatus(t.id, e.target.value)}
+                    value={t.status?.id || ""}
+                    onChange={(e) => handleStatusChange(t.id, e.target.value)}
                   >
-                    {statusOptions.map(s => (
-                      <option key={s}>{s}</option>
+                    {statuses.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.status_name}
+                      </option>
                     ))}
                   </select>
                 </td>
-
               </tr>
             ))}
           </tbody>

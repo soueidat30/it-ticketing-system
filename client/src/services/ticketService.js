@@ -6,112 +6,121 @@ const headers = (token) => ({
   Accept: "application/json",
 });
 
-
 // =====================================================
 // AUTH / LOOKUPS
 // =====================================================
 
-export const getCategories = (t) =>
-  fetch(`${BASE}/categories`, { headers: headers(t) })
-    .then(r => r.json());
+export const getCategories = (token) =>
+  fetch(`${BASE}/categories`, { headers: headers(token) }).then((r) => r.json());
 
-export const getPriorities = (t) =>
-  fetch(`${BASE}/priorities`, { headers: headers(t) })
-    .then(r => r.json());
+export const getPriorities = (token) =>
+  fetch(`${BASE}/priorities`, { headers: headers(token) }).then((r) => r.json());
 
+export const getStatuses = (token) =>
+  fetch(`${BASE}/statuses`, { headers: headers(token) }).then((r) => r.json());
 
 // =====================================================
 // TICKETS
 // =====================================================
 
-export const createTicket = (t, body) =>
+export const createTicket = (token, body) =>
   fetch(`${BASE}/tickets`, {
     method: "POST",
-    headers: headers(t),
+    headers: headers(token),
     body: JSON.stringify(body),
-  }).then(r => r.json());
+  }).then((r) => r.json());
 
-export const getMyTickets = (t) =>
-  fetch(`${BASE}/my-tickets`, {
-    headers: headers(t),
-  }).then(r => r.json());
+export const getMyTickets = (token) =>
+  fetch(`${BASE}/my-tickets`, { headers: headers(token) }).then((r) => r.json());
 
-export const getTicketById = (t, id) =>
-  fetch(`${BASE}/tickets/${id}`, {
-    headers: headers(t),
-  }).then(r => r.json());
+export const getTicketById = (token, id) =>
+  fetch(`${BASE}/tickets/${id}`, { headers: headers(token) }).then((r) => r.json());
 
 export const getAllTickets = (token) =>
-  fetch(`${BASE}/tickets`, {
-    headers: headers(token),
-  }).then(r => r.json());
+  fetch(`${BASE}/tickets`, { headers: headers(token) }).then((r) => r.json());
 
-export const deleteTicket = (t, id) =>
+export const deleteTicket = (token, id) =>
   fetch(`${BASE}/tickets/${id}`, {
     method: "DELETE",
-    headers: headers(t),
-  }).then(r => r.json());
-
-
-// =====================================================
-// ASSIGN + STATUS (MANAGER / AGENT FLOW)
-// =====================================================
-
-export const assignTicket = (token, id, agent_id) =>
-  fetch(`${BASE}/tickets/${id}/assign`, {
-    method: "PUT",
     headers: headers(token),
-    body: JSON.stringify({ agent_id }),
-  }).then(r => r.json());
-
-export const updateTicketStatus = (token, id, status) =>
-  fetch(`${BASE}/tickets/${id}/status`, {
-    method: "PUT",
-    headers: headers(token),
-    body: JSON.stringify({ status }),
-  }).then(r => r.json());
-
+  }).then((r) => r.json());
 
 // =====================================================
-// COMMENTS (MANAGER / AGENT / EMPLOYEE)
+// ASSIGN + STATUS
 // =====================================================
 
-// get comments of a ticket
-export const getTicketComments = (t, id) =>
-  fetch(`${BASE}/tickets/${id}`, {
-    headers: headers(t),
-  })
-    .then(r => r.json())
-    .then(data => data.comments || []);
-
-// add comment
-export const addTicketComment = (t, id, content) =>
-  fetch(`${BASE}/tickets/${id}/comments`, {
+export const assignTicket = (token, ticketId, agentId, note = "") =>
+  fetch(`${BASE}/tickets/${ticketId}/assign`, {
     method: "POST",
-    headers: headers(t),
-    body: JSON.stringify({ content }),
-  }).then(r => r.json());
+    headers: headers(token),
+    body: JSON.stringify({ agent_id: agentId, note }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw { response: { data: d } };
+    return d;
+  });
 
+export const updateTicketStatus = (token, ticketId, statusId, note = "") =>
+  fetch(`${BASE}/tickets/${ticketId}/status`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify({ status_id: statusId, note }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw { response: { data: d } };
+    return d;
+  });
 
 // =====================================================
-// NOTIFICATIONS (placeholder for now)
+// COMMENTS
 // =====================================================
 
-export const getNotifications = async () => {
-  return [
-    {
-      id: 1,
-      type: "ticket_created",
-      title: "Ticket Created",
-      message: "Your ticket was submitted successfully",
-      is_read: false,
-      created_at: new Date().toISOString(),
-    },
-  ];
-};
+export const getComments = (token, ticketId) =>
+  fetch(`${BASE}/tickets/${ticketId}/comments`, { headers: headers(token) }).then((r) => r.json());
 
-export const markNotificationRead = async () => ({ success: true });
+export const addComment = (token, ticketId, body, isInternal = false) =>
+  fetch(`${BASE}/tickets/${ticketId}/comments`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify({ body, is_internal: isInternal }),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw { response: { data: d } };
+    return d;
+  });
 
-export const markAllNotificationsRead = async () => ({ success: true });
+// =====================================================
+// NOTIFICATIONS
+// =====================================================
 
-export const deleteNotification = async () => ({ success: true });
+export const getNotifications = (token) =>
+  fetch(`${BASE}/notifications`, { headers: headers(token) }).then((r) => r.json());
+
+export const getUnreadCount = (token) =>
+  fetch(`${BASE}/notifications/unread-count`, { headers: headers(token) }).then((r) => r.json());
+
+export const markNotificationRead = (token, id) =>
+  fetch(`${BASE}/notifications/${id}/read`, {
+    method: "PATCH",
+    headers: headers(token),
+  }).then((r) => r.json());
+
+export const markAllNotificationsRead = (token) =>
+  fetch(`${BASE}/notifications/read-all`, {
+    method: "PATCH",
+    headers: headers(token),
+  }).then((r) => r.json());
+
+export const deleteNotification = (token, id) =>
+  fetch(`${BASE}/notifications/${id}`, {
+    method: "DELETE",
+    headers: headers(token),
+  }).then((r) => r.json());
+
+// =====================================================
+// TICKET HISTORY
+// =====================================================
+
+export const getTicketHistory = (token, ticketId) =>
+  fetch(`${BASE}/tickets/${ticketId}/history`, { headers: headers(token) }).then((r) => r.json());
+
