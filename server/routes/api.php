@@ -43,8 +43,15 @@ Route::middleware('auth:api')->group(function () {
 */
 Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
 
+    // Dashboard stats for agent profile
+    Route::get('/agent/dashboard/stats', [TicketController::class, 'dashboardStats']);
+
     Route::get('/tickets', [TicketController::class, 'index']);
+
+    // Ticket details for agent (supports numeric DB id OR ticket_number like TKT-0001)
+    Route::get('/agent/tickets/{id}', [TicketController::class, 'show']);
     Route::get('/agent/tickets', [TicketController::class, 'assignedTickets']);
+
 
     Route::put('/tickets/{id}/status', [TicketController::class, 'updateStatus']);
     Route::post('/tickets/{id}/assign', [TicketController::class, 'assignTicket']);
@@ -53,3 +60,4 @@ Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
 
 
 });
+
