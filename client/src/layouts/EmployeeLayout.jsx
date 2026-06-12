@@ -23,7 +23,7 @@ const NAV_ITEMS = [
     group: "Account",
     items: [
       { to: "/employee/profile",       icon: "ti-user",        label: "Profile"       },
-      { to: "/employee/notifications", icon: "ti-bell",        label: "Notifications" },
+      { to: "/employee/notification", icon: "ti-bell",        label: "Notification" },
       { to: "/employee/settings",      icon: "ti-settings",    label: "Settings"      },
     ]
   }
@@ -87,7 +87,7 @@ const EmployeeLayout = () => {
                 >
                   <i className={`ti ${item.icon}`} aria-hidden="true" />
                   {sidebarOpen && <span>{item.label}</span>}
-                  {item.to === "/employee/notifications" && notifCount > 0 && (
+                  {item.to === "/employee/notification" && notifCount > 0 && (
                     <span className="el__badge">{notifCount}</span>
                   )}
                 </NavLink>
@@ -163,7 +163,7 @@ const EmployeeLayout = () => {
               />
             </div>
 
-            <NavLink to="/employee/notifications" className="el__topbar-icon" aria-label="Notifications">
+            <NavLink to="/employee/notification" className="el__topbar-icon" aria-label="Notification">
               <i className="ti ti-bell" />
               {notifCount > 0 && <span className="el__topbar-badge">{notifCount}</span>}
             </NavLink>

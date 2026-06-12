@@ -6,6 +6,9 @@ use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PriorityController;
 use App\Http\Controllers\Api\StatusController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\CommentController;
+
 
 /*
 | AUTH
@@ -46,18 +49,34 @@ Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
     // Dashboard stats for agent profile
     Route::get('/agent/dashboard/stats', [TicketController::class, 'dashboardStats']);
 
+    // Tickets
     Route::get('/tickets', [TicketController::class, 'index']);
-
-    // Ticket details for agent (supports numeric DB id OR ticket_number like TKT-0001)
-    Route::get('/agent/tickets/{id}', [TicketController::class, 'show']);
     Route::get('/agent/tickets', [TicketController::class, 'assignedTickets']);
-
-
-    Route::put('/tickets/{id}/status', [TicketController::class, 'updateStatus']);
-    Route::post('/tickets/{id}/assign', [TicketController::class, 'assignTicket']);
-    Route::get('/tickets/{id}/comments', [TicketController::class, 'getComments']);
     Route::get('/tickets/{id}/history', [TicketController::class, 'history']);
 
+    // Ticket details (agents can also use the generic /tickets/{id})
+    Route::get('/agent/tickets/{id}', [TicketController::class, 'show']);
 
+    // Status updates (use PATCH consistently)
+    Route::patch('/tickets/{id}/status', [TicketController::class, 'updateStatus']);
+
+    // Assignment
+    Route::post('/tickets/{id}/assign', [TicketController::class, 'assignTicket']);
+
+    // Comments (keep consistent controller)
+    Route::get('/tickets/{id}/comments', [TicketController::class, 'getComments']);
+    Route::post('/tickets/{id}/comments', [TicketController::class, 'storeComment']);
 });
 
+Route::middleware(['auth:api'])->group(function () {
+
+    // Notifications — accessible to ALL roles
+    Route::get   ('/notifications', [NotificationController::class, 'index']);
+    Route::get   ('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::patch ('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::patch ('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
+    // Single ticket detail — accessible to ALL roles (employee, agent, manager)
+    Route::get('/tickets/{id}', [TicketController::class, 'showSingle']);
+});

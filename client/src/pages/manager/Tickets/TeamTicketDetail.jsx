@@ -4,13 +4,12 @@ import "./TeamTicketDetail.css";
 
 import {
   getTicketById,
-  getComments,       
-  addComment,
+  getTicketComments,
+  addTicketComment,
   getTicketHistory,
   updateTicketStatus,
-  getStatuses,         
+  getStatuses,
 } from "../../../services/ticketService";
-
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
@@ -76,12 +75,12 @@ export default function TeamTicketDetail() {
 
     const fetchAll = async () => {
       try {
-       const [t, c, h, s] = await Promise.all([
-  getTicketById(token, id),
-  getComments(token, id),       
-  getTicketHistory(token, id),
-  getStatuses(token),
-]);
+        const [t, c, h, s] = await Promise.all([
+          getTicketById(token, id),
+          getTicketComments(token, id),
+          getTicketHistory(token, id),
+          getStatuses(token),
+        ]);
 
         setTicket(t);
         setComments(Array.isArray(c) ? c : []);
@@ -102,8 +101,8 @@ export default function TeamTicketDetail() {
     if (!text.trim()) return;
     setSending(true);
     try {
-     await addComment(token, id, text.trim(), isInternal);   
-     const updated = await getComments(token, id); 
+      await addTicketComment(token, id, text.trim(), isInternal);
+      const updated = await getTicketComments(token, id);
       setComments(Array.isArray(updated) ? updated : []);
       setText("");
       setIsInternal(false);
@@ -228,7 +227,7 @@ export default function TeamTicketDetail() {
                       return (
                         <div
                           key={c.id}
-                          className={`ttd-comment ${c.is_internal ? "ttd-comment--internal" : ""} ${isMe ? "ttd-comment--mine" : ""}`}
+                          className={`ttd-comment ${c.internal ? "ttd-comment--internal" : ""} ${isMe ? "ttd-comment--mine" : ""}`}
                         >
                           <div className="ttd-comment__avatar">
                             {(c.user?.full_name?.[0] || "?").toUpperCase()}
@@ -238,7 +237,7 @@ export default function TeamTicketDetail() {
                               <span className="ttd-comment__author">
                                 {c.user?.full_name || "Unknown"}
                               </span>
-                              {c.is_internal && (
+                              {c.internal && (
                                 <span className="ttd-internal-badge">
                                   <i className="ti ti-lock" /> Internal note
                                 </span>
@@ -247,9 +246,8 @@ export default function TeamTicketDetail() {
                                 {timeAgo(c.created_at)}
                               </span>
                             </div>
-                            {/* field is "body" from your DB — fallback to "comment" just in case */}
                             <p className="ttd-comment__text">
-                              {c.body || c.comment || "—"}
+                              {c.content || "—"}
                             </p>
                           </div>
                         </div>
@@ -319,18 +317,12 @@ export default function TeamTicketDetail() {
                         <div className={`ttd-timeline__dot ttd-timeline__dot--${statusColor(h.new_status)}`} />
                         <div className="ttd-timeline__content">
                           <div className="ttd-timeline__row">
-                            <span className="ttd-timeline__from">
-                              <Badge
-                                text={h.old_status || "—"}
-                                colorKey={statusColor(h.old_status)}
-                              />
-                            </span>
-                            <i className="ti ti-arrow-right ttd-timeline__arrow" />
-                            <span className="ttd-timeline__to">
-                              <Badge
-                                text={h.new_status}
-                                colorKey={statusColor(h.new_status)}
-                              />
+                            <Badge
+                              text={h.new_status}
+                              colorKey={statusColor(h.new_status)}
+                            />
+                            <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
+                              Status set to <b>{h.new_status}</b>
                             </span>
                           </div>
                           <div className="ttd-timeline__meta">

@@ -208,38 +208,58 @@ $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}")
     }
 
     public function updateStatus(Request $request, $id)
-    {
-        $request->validate([
-            'status_id'      => 'required|exists:statuses,id',
-            'priority_id'    => 'sometimes|exists:priorities,id',
-            'note'           => 'nullable|string|max:1000',
-            'notify_user'    => 'sometimes|boolean',
-            'notify_manager' => 'sometimes|boolean',
-        ]);
-
-        $ticket = Ticket::findOrFail($id);
-
-        // Always update status, optionally update priority.
-        $update = ['status_id' => $request->status_id];
-        if ($request->has('priority_id')) {
-            $update['priority_id'] = $request->priority_id;
-        }
-
-        $ticket->update($update);
-
-        TicketStatusHistory::create([
-            'ticket_id'       => $ticket->id,
-            'status_id'       => $request->status_id,
-            'changed_by'      => Auth::id(),
-            'note'            => $request->note,
-            'notify_user'     => $request->boolean('notify_user', false),
-            'notify_manager'  => $request->boolean('notify_manager', false),
-        ]);
-        $this->logActivity($ticket->id, 'status_update', "Status changed to {$request->status_id}");
-
-        return response()->json(['message' => 'Status updated successfully.']);
+{
+    $request->validate([
+        'status_id' => 'required|exists:statuses,id',
+        'note'      => 'nullable|string|max:500',
+    ]);
+ 
+    $user   = $request->user();
+    $ticket = Ticket::with(['user', 'status'])->findOrFail($id);
+ 
+    $oldStatusId = $ticket->status_id;
+ 
+    $ticket->update(['status_id' => $request->status_id]);
+    $ticket->refresh()->load('status');
+ 
+    // Save to ticket_status_histories (matches your real columns)
+    \DB::table('ticket_status_histories')->insert([
+        'ticket_id'  => $ticket->id,
+        'status_id'  => $request->status_id,
+        'changed_by' => $user->id,
+        'note'       => $request->note,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+ 
+    // Activity log
+    \DB::table('activity_logs')->insert([
+        'user_id'     => $user->id,
+        'action'      => 'status_changed',
+        'description' => "Status changed to {$ticket->status->status_name} on #{$ticket->ticket_number}",
+        'ticket_id'   => $ticket->id,
+        'created_at'  => now(),
+        'updated_at'  => now(),
+    ]);
+ 
+    // Notify employee
+    if ($ticket->user_id !== $user->id) {
+        \App\Http\Controllers\Api\NotificationController::notify(
+            user_id:      $ticket->user_id,
+            ticket_id:    $ticket->id,
+            triggered_by: $user->id,
+            type:         'status_changed',
+            title:        'Ticket status updated',
+            message:      "Your ticket \"{$ticket->title}\" is now {$ticket->status->status_name}."
+        );
     }
-
+ 
+    if (in_array(strtolower($ticket->status->status_name), ['resolved', 'closed'])) {
+        $ticket->update(['resolved_at' => now()]);
+    }
+ 
+    return response()->json($ticket->load(['status', 'priority', 'category', 'user', 'assignee']));
+}
 
 
     // ── Helper: human-readable file size ─────────────────────
@@ -366,18 +386,23 @@ $this->logActivity($ticket->id, 'assign', "Assigned to user {$request->agent_id}
 
 public function history($id)
 {
-    $ticket = Ticket::with(['history.status', 'history.changer'])->findOrFail($id);
-
-    $history = $ticket->history->map(fn($h) => [
-        'id'    => $h->id,
-        'event' => 'Status changed to ' . ($h->status->status_name ?? '—'),
-        'actor' => 'By ' . ($h->changer->full_name ?? 'System'),
-        'time'  => $h->created_at->diffForHumans(),
-        'note'  => $h->note,
-    ]);
-
+    $history = \DB::table('ticket_status_histories')
+        ->join('users', 'ticket_status_histories.changed_by', '=', 'users.id')
+        ->join('statuses', 'ticket_status_histories.status_id', '=', 'statuses.id')
+        ->where('ticket_status_histories.ticket_id', $id)
+        ->orderBy('ticket_status_histories.created_at')
+        ->select(
+            'ticket_status_histories.id',
+            'ticket_status_histories.note',
+            'ticket_status_histories.created_at',
+            'statuses.status_name as new_status',
+            'users.full_name as changed_by_name'
+        )
+        ->get();
+ 
     return response()->json($history);
 }
+ 
 private function logActivity($ticketId, $action, $details)
 {
     \DB::table('activity_logs')->insert([
@@ -405,6 +430,14 @@ public function getComments($id)
 
     return response()->json($comments);
 }
-
+public function showSingle($id)
+{
+    $ticket = Ticket::with(['status', 'priority', 'category', 'user', 'assignee'])
+        ->where('id', $id)
+        ->orWhere('ticket_number', $id)
+        ->firstOrFail();
+ 
+    return response()->json($ticket);
+}
 
 }
