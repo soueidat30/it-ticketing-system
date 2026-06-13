@@ -11,43 +11,40 @@ const Icon = ({ d, size = 16 }) => (
 );
 
 const IC = {
-  back:      "M19 12H5 M12 19l-7-7 7-7",
-  resolve:   "M22 11.08V12a10 10 0 11-5.93-9.14 M22 4L12 14.01l-3-3",
-  update:    "M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7 M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",
-  comment:   "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z",
-  lock:      "M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z M7 11V7a5 5 0 0110 0v4",
-  attach:    "M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48",
-  history:   "M12 22a10 10 0 100-20 10 10 0 000 20z M12 6v6l4 2",
-  info:      "M12 22a10 10 0 100-20 10 10 0 000 20z M12 16v-4 M12 8h.01",
-  send:      "M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z",
-  download:  "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M7 10l5 5 5-5 M12 15V3",
-  user:      "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z",
-  mail:      "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6",
-  phone:     "M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 01.22 1.18 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.06 6.06l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z",
-  warning:   "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z M12 9v4 M12 17h.01",
-  clip:      "M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13",
+  back:    "M19 12H5 M12 19l-7-7 7-7",
+  resolve: "M22 11.08V12a10 10 0 11-5.93-9.14 M22 4L12 14.01l-3-3",
+  update:  "M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7 M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",
+  comment: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z",
+  lock:    "M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z M7 11V7a5 5 0 0110 0v4",
+  attach:  "M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48",
+  history: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 6v6l4 2",
+  info:    "M12 22a10 10 0 100-20 10 10 0 000 20z M12 16v-4 M12 8h.01",
+  send:    "M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z",
+  download:"M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M7 10l5 5 5-5 M12 15V3",
+  mail:    "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6",
+  phone:   "M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8 19.79 19.79 0 01.22 1.18 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.06 6.06l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z",
+  warning: "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z M12 9v4 M12 17h.01",
+  clip:    "M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13",
+  trash:   "M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6",
 };
 
 const initials = (name = "") =>
   name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
 const PriorityBadge = ({ p = "low" }) => {
-  const value = (typeof p === "string" ? p : String(p ?? "low")).toLowerCase();
-  return <span className={`agent-badge agent-badge--${value}`}>{value}</span>;
+  const v = String(p ?? "low").toLowerCase();
+  return <span className={`agent-badge agent-badge--${v}`}>{v}</span>;
 };
 const StatusBadge = ({ s = "open" }) => {
-  const value = (typeof s === "string" ? s : String(s ?? "open")).toLowerCase();
-  return <span className={`agent-badge agent-badge--${value.replace(/\s+/g, "-")}`}>{value}</span>;
+  const v = String(s ?? "open").toLowerCase().replace(/\s+/g, "-");
+  return <span className={`agent-badge agent-badge--${v}`}>{v}</span>;
 };
 
 const formatDate = (value) => {
   if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
-    month: "short", day: "numeric", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+  const d = new Date(value);
+  if (isNaN(d.getTime()) || d.getFullYear() < 2000) return "—";
+  return d.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
 const ATTACH_TYPE_CLASS = { img: "img", pdf: "pdf", log: "log", doc: "doc" };
@@ -56,121 +53,138 @@ const ATTACH_TYPE_LABEL = { img: "IMG", pdf: "PDF", log: "LOG", doc: "DOC" };
 const BASE_URL = "http://127.0.0.1:8000/api";
 
 export default function TicketDetails() {
-  const navigate   = useNavigate();
-  const location   = useLocation();
-  const ticketId   = location.state?.ticketId;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const ticketId = location.state?.ticketId;
 
+  // ── Current user ────────────────────────────────────────
+  const user = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}"); }
+    catch { return {}; }
+  })();
+  const currentUserId   = user.id;
+  const currentUserRole = user.role ?? "employee"; // set at login in localStorage
+
+  const token = localStorage.getItem("token");
+
+  // ── Ticket data ─────────────────────────────────────────
   const [ticket,        setTicket]        = useState(null);
   const [comments,      setComments]      = useState([]);
   const [attachments,   setAttachments]   = useState([]);
   const [ticketHistory, setTicketHistory] = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState(null);
+
+  // ── Tab / section state ─────────────────────────────────
   const [activeTab,     setActiveTab]     = useState("details");
-  const [commentText,   setCommentText]   = useState("");
-  const [commentType,   setCommentType]   = useState("public");
-  const [submitting,    setSubmitting]    = useState(false);
-  const [commentError,  setCommentError]  = useState(null);
+  const [activeSection, setActiveSection] = useState("public"); // "public" | "internal"
 
-  const user = (() => {
-    try { return JSON.parse(localStorage.getItem("user") || "{}"); }
-    catch { return {}; }
-  })();
-  const agentName = user.full_name || user.username || "Agent";
+  // ── Comment form state ──────────────────────────────────
+  const [commentText,  setCommentText]  = useState("");
+  const [commentType,  setCommentType]  = useState("public");
+  const [submitting,   setSubmitting]   = useState(false);
+  const [commentError, setCommentError] = useState(null);
 
+  // ── Delete confirmation state ───────────────────────────
+  const [deletingId,  setDeletingId]  = useState(null);  // id of comment awaiting confirmation
+  const [deleteError, setDeleteError] = useState(null);
+
+  // ── Fetch ticket ────────────────────────────────────────
   useEffect(() => {
-    const loadTicket = async () => {
-      if (!ticketId) { setError("Ticket not found."); setLoading(false); return; }
+    if (!ticketId) { setError("Ticket not found."); setLoading(false); return; }
+    if (!token)    { setError("Unauthorized."); setLoading(false); return; }
 
-      const token = localStorage.getItem("token");
-      if (!token)  { setError("Unauthorized. Please log in."); setLoading(false); return; }
-
+    const load = async () => {
       try {
         const res  = await fetch(`${BASE_URL}/agent/tickets/${ticketId}`, {
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
         const data = await res.json();
-
         if (!res.ok) { setError(data.message || "Failed to load ticket."); return; }
-
         setTicket(data.ticket ?? data);
         setComments(data.comments    ?? []);
         setAttachments(data.attachments ?? []);
-        setTicketHistory(data.history    ?? []);
-      } catch (err) {
-        console.error(err);
+        setTicketHistory(data.history  ?? []);
+      } catch {
         setError("Unable to load ticket.");
       } finally {
         setLoading(false);
       }
     };
+    load();
+  }, [ticketId, token]);
 
-    loadTicket();
-  }, [ticketId]);
-
+  // ── Derived fields ──────────────────────────────────────
   const ticketNumber   = ticket?.ticket_number ?? ticket?.id ?? "Unknown";
   const subject        = ticket?.title        ?? "Untitled ticket";
   const desc           = ticket?.description  ?? "No description available.";
-
   const requesterName  = ticket?.user?.full_name  ?? ticket?.user?.username ?? "Unknown";
-  const requesterDept  = ticket?.user?.department ?? "N/A";
-  const requesterEmail = ticket?.user?.email      ?? "—";
-  const requesterPhone = ticket?.user?.phone      ?? "—";          
+  const requesterDept  = ticket?.user?.department ?? "No department";
+  const requesterEmail = ticket?.user?.email ?? "—";
+  const requesterPhone = ticket?.user?.phone ?? "—";
   const requesterJoined = ticket?.user?.created_at
     ? new Date(ticket.user.created_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })
     : "—";
-
-  const assignee = ticket?.assignee?.full_name ?? ticket?.assignee?.username ?? "Unassigned";
-
-  const category = ticket?.category?.category_name ?? "General";
-  const priority = (ticket?.priority?.priority_name ?? "low").toLowerCase();
-  const status   = (ticket?.status?.status_name   ?? "open").toLowerCase().replace(/\s+/g, "-");
-
+  const assignee  = ticket?.assignee?.full_name ?? ticket?.assignee?.username ?? "Unassigned";
+  const category  = ticket?.category?.category_name ?? "General";
+  const priority  = String(ticket?.priority?.priority_name ?? "low").toLowerCase();
+  const status    = String(ticket?.status?.status_name ?? "open").toLowerCase().replace(/\s+/g, "-");
   const createdLabel = formatDate(ticket?.created_at);
   const updatedLabel = formatDate(ticket?.updated_at);
-  const dueLabel     = formatDate(ticket?.due_at ?? ticket?.resolved_at); 
-  const slaBreached  = ticket?.sla_breached  ?? false;
-  const slaPercent   = Number(ticket?.sla_percent ?? 100);
-  const timeOpen     = ticket?.time_open     ?? "—";
-  const tags         = ticket?.tags          ?? [];
+  const dueLabel     = formatDate(ticket?.due_at);
+  const slaBreached  = ticket?.sla_breached ?? false;
+  const slaPercent   = Number(ticket?.sla_percent ?? 0);
+  const timeOpen     = ticket?.time_open ?? "—";
+  const tags         = ticket?.tags ?? [];
+
+  // ── Can current user see internal notes? ────────────────
+  const canSeeInternal = currentUserRole === "agent" || currentUserRole === "admin";
 
   const tabs = [
-    { key: "details",     label: "Details",     icon: IC.info },
-    { key: "comments",    label: "Comments",    icon: IC.comment, count: comments.length },
+    { key: "details",     label: "Details",     icon: IC.info    },
+    { key: "comments",    label: "Comments",    icon: IC.comment, count: comments.filter(c => !c.internal || canSeeInternal).length },
     { key: "attachments", label: "Attachments", icon: IC.attach,  count: attachments.length },
     { key: "history",     label: "History",     icon: IC.history, count: ticketHistory.length },
   ];
 
+  // ── Post comment ────────────────────────────────────────
   const handleSendComment = async () => {
     if (!commentText.trim()) return;
     setSubmitting(true);
     setCommentError(null);
-
-    const token = localStorage.getItem("token");
     try {
-      const res  = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/comments`, {
-        method:  "POST",
-        headers: {
-          Authorization:  `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept:         "application/json",
-        },
-        body: JSON.stringify({
-          content:  commentText.trim(),
-          internal: commentType === "internal",
-        }),
+      const res = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/comments`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ content: commentText.trim(), internal: commentType === "internal" }),
       });
-
       const data = await res.json();
       if (!res.ok) { setCommentError(data.message || "Failed to post comment."); return; }
-
       setComments(prev => [...prev, data]);
       setCommentText("");
-    } catch (err) {
-      console.error(err);
+      // Switch to the section we just posted in
+      setActiveSection(commentType === "internal" ? "internal" : "public");
+    } catch {
       setCommentError("Network error — could not post comment.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // ── Delete comment ──────────────────────────────────────
+  const handleDeleteComment = async (commentId) => {
+    setDeleteError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/comments/${commentId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) { setDeleteError(data.message || "Failed to delete."); return; }
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      setDeletingId(null);
+    } catch {
+      setDeleteError("Network error — could not delete.");
     }
   };
 
@@ -179,35 +193,31 @@ export default function TicketDetails() {
     return <div className={`td-comment-avatar td-comment-avatar--${cls}`}>{initials(name)}</div>;
   };
 
-  if (loading) {
-    return (
-      <div className="ticket-details">
-        <div className="agent-page-header">
-          <div>
-            <h1 className="agent-page-title">Ticket Details</h1>
-            <p className="agent-page-subtitle">Loading ticket…</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // ── Loading / error ─────────────────────────────────────
+  if (loading) return (
+    <div className="ticket-details">
+      <div className="agent-page-header"><div>
+        <h1 className="agent-page-title">Ticket Details</h1>
+        <p className="agent-page-subtitle">Loading ticket…</p>
+      </div></div>
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="ticket-details">
-        <div className="agent-page-header">
-          <div>
-            <h1 className="agent-page-title">Ticket Details</h1>
-            <p className="agent-page-subtitle">{error}</p>
-          </div>
-          <button className="agent-btn agent-btn--ghost" onClick={() => navigate(-1)}>
-            <Icon d={IC.back} /> Back
-          </button>
+  if (error) return (
+    <div className="ticket-details">
+      <div className="agent-page-header">
+        <div>
+          <h1 className="agent-page-title">Ticket Details</h1>
+          <p className="agent-page-subtitle" style={{ color: "var(--agent-danger)" }}>{error}</p>
         </div>
+        <button className="agent-btn agent-btn--ghost" onClick={() => navigate(-1)}>
+          <Icon d={IC.back} /> Back
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
 
+  // ── Render ──────────────────────────────────────────────
   return (
     <div className="ticket-details">
       <div className="agent-page-header">
@@ -219,10 +229,12 @@ export default function TicketDetails() {
           <button className="agent-btn agent-btn--ghost" onClick={() => navigate(-1)}>
             <Icon d={IC.back} /> Back
           </button>
-          <button className="agent-btn agent-btn--ghost" onClick={() => navigate("/agent/update-status", { state: { ticketId } })}>
+          <button className="agent-btn agent-btn--ghost"
+            onClick={() => navigate("/agent/update-status", { state: { ticketId } })}>
             <Icon d={IC.update} /> Update Status
           </button>
-          <button className="agent-btn agent-btn--accent" onClick={() => navigate("/agent/resolve-ticket", { state: { ticketId } })}>
+          <button className="agent-btn agent-btn--accent"
+            onClick={() => navigate("/agent/resolve-ticket", { state: { ticketId } })}>
             <Icon d={IC.resolve} /> Resolve
           </button>
         </div>
@@ -230,6 +242,8 @@ export default function TicketDetails() {
 
       <div className="td-layout">
         <div>
+
+          {/* Hero */}
           <div className="td-hero">
             <div className="td-hero-top">
               <span className="td-hero-id">#{ticketNumber}</span>
@@ -240,7 +254,7 @@ export default function TicketDetails() {
                   </span>
                 )}
                 <PriorityBadge p={priority} />
-                <StatusBadge   s={status}   />
+                <StatusBadge s={status} />
               </div>
             </div>
             <div className="td-hero-title">{subject}</div>
@@ -251,7 +265,7 @@ export default function TicketDetails() {
                 { label: "Requester", value: requesterName },
                 { label: "Assignee",  value: assignee },
                 { label: "Created",   value: createdLabel },
-                { label: "Due",       value: dueLabel, style: { color: "#fca5a5" } },
+                { label: "Due",       value: dueLabel, style: slaBreached ? { color: "#fca5a5" } : {} },
                 { label: "Time Open", value: timeOpen },
               ].map(item => (
                 <div className="td-hero-meta-item" key={item.label}>
@@ -260,20 +274,14 @@ export default function TicketDetails() {
                 </div>
               ))}
             </div>
-            {tags.length > 0 && (
-              <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
-                {tags.map(tag => (
-                  <span key={tag} style={{ fontSize: 11, fontWeight: 600, padding: "2px 9px", background: "rgba(212,242,101,0.15)", color: "var(--agent-accent)", borderRadius: 20, border: "1px solid rgba(212,242,101,0.25)" }}>
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
 
+          {/* Tabs */}
           <div className="td-tabs">
             {tabs.map(tab => (
-              <button key={tab.key} className={`td-tab${activeTab === tab.key ? " active" : ""}`} onClick={() => setActiveTab(tab.key)}>
+              <button key={tab.key}
+                className={`td-tab${activeTab === tab.key ? " active" : ""}`}
+                onClick={() => setActiveTab(tab.key)}>
                 <Icon d={tab.icon} size={14} />
                 {tab.label}
                 {tab.count != null && <span className="td-tab-count">{tab.count}</span>}
@@ -281,6 +289,7 @@ export default function TicketDetails() {
             ))}
           </div>
 
+          {/* ── Details tab ── */}
           {activeTab === "details" && (
             <div className="td-panel">
               <div className="td-requester-card">
@@ -294,7 +303,6 @@ export default function TicketDetails() {
                   </div>
                 </div>
               </div>
-
               <div className="td-details-grid">
                 <div className="td-detail-card">
                   <div className="td-detail-card-title">Ticket Info</div>
@@ -303,7 +311,7 @@ export default function TicketDetails() {
                       { key: "Ticket ID",   val: `#${ticketNumber}` },
                       { key: "Category",    val: category },
                       { key: "Priority",    val: <PriorityBadge p={priority} /> },
-                      { key: "Status",      val: <StatusBadge   s={status}   /> },
+                      { key: "Status",      val: <StatusBadge s={status} /> },
                       { key: "Created",     val: createdLabel },
                       { key: "Last Update", val: updatedLabel },
                     ].map(row => (
@@ -314,13 +322,12 @@ export default function TicketDetails() {
                     ))}
                   </div>
                 </div>
-
                 <div className="td-detail-card">
                   <div className="td-detail-card-title">Assignment & SLA</div>
                   <div className="td-detail-rows">
                     {[
                       { key: "Assignee",  val: assignee },
-                      { key: "Due Date",  val: dueLabel, style: { color: "var(--agent-danger)" } },
+                      { key: "Due Date",  val: dueLabel, style: slaBreached ? { color: "var(--agent-danger)" } : {} },
                       { key: "Time Open", val: timeOpen },
                     ].map(row => (
                       <div className="td-detail-row" key={row.key}>
@@ -332,11 +339,14 @@ export default function TicketDetails() {
                       <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
                         <span className="td-detail-key">SLA Status</span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: slaBreached ? "var(--agent-danger)" : "var(--agent-success)" }}>
-                          {slaBreached ? `Breached (+${Math.max(slaPercent - 100, 0)}%)` : "Within SLA"}
+                          {slaBreached ? "Breached" : "Within SLA"} ({slaPercent}%)
                         </span>
                       </div>
                       <div className="td-sla-bar-track" style={{ width: "100%" }}>
-                        <div className={`td-sla-bar-fill ${slaBreached ? "td-sla-bar-fill--danger" : "td-sla-bar-fill--success"}`} style={{ width: `${Math.min(Math.max(slaPercent, 0), 100)}%` }} />
+                        <div
+                          className={`td-sla-bar-fill ${slaBreached ? "td-sla-bar-fill--danger" : "td-sla-bar-fill--good"}`}
+                          style={{ width: `${Math.min(slaPercent, 100)}%` }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -345,70 +355,188 @@ export default function TicketDetails() {
             </div>
           )}
 
+          {/* ── Comments tab ── */}
           {activeTab === "comments" && (
             <div className="td-panel">
-              <div className="td-comments">
-                {comments.length === 0 && (
-                  <div className="td-empty">
-                    <Icon d={IC.comment} size={32} />
-                    <div className="td-empty-title">No comments yet</div>
-                    <p style={{ fontSize: 13 }}>Be the first to reply to this ticket.</p>
-                  </div>
-                )}
 
-                {comments.map((c, i) => (
-                  <div key={c.id ?? i} className={`td-comment${c.internal ? " internal" : ""}`}>
-                    <CommentAvatar role={c.role} name={c.author} />
-                    <div className="td-comment-body">
-                      <div className="td-comment-header">
-                        <span className="td-comment-author">{c.author}</span>
-                        <span className={`td-comment-role td-comment-role--${c.internal ? "internal" : c.role}`}>
-                          {c.internal ? "Internal Note" : c.role === "agent" ? "Support Agent" : c.role === "system" ? "System" : "Requester"}
-                        </span>
-                        <span className="td-comment-time">{c.time}</span>
-                      </div>
-                      <div className="td-comment-text">{c.text}</div>
-                      {c.internal && (
-                        <div className="td-internal-label"><Icon d={IC.lock} size={10} /> Internal — not visible to requester</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              {/* Section switcher */}
+              <div className="td-comment-sections">
+                <button
+                  className={`td-comment-section-btn${activeSection === "public" ? " active" : ""}`}
+                  onClick={() => setActiveSection("public")}
+                >
+                  <Icon d={IC.comment} size={13} />
+                  Public Replies
+                  <span className="td-comment-section-count">
+                    {comments.filter(c => !c.internal).length}
+                  </span>
+                </button>
+
+                {/* Internal tab — agents and admins only, NOT managers, NOT employees */}
+                {canSeeInternal && (
+                  <button
+                    className={`td-comment-section-btn td-comment-section-btn--internal${activeSection === "internal" ? " active" : ""}`}
+                    onClick={() => setActiveSection("internal")}
+                  >
+                    <Icon d={IC.lock} size={13} />
+                    Internal Notes
+                    <span className="td-comment-section-count td-comment-section-count--internal">
+                      {comments.filter(c => c.internal).length}
+                    </span>
+                  </button>
+                )}
               </div>
 
+              {/* Comment list */}
+              <div className="td-comments">
+                {(() => {
+                  const visible = activeSection === "internal"
+                    ? comments.filter(c => c.internal)
+                    : comments.filter(c => !c.internal);
+
+                  if (visible.length === 0) return (
+                    <div className="td-empty">
+                      <Icon d={activeSection === "internal" ? IC.lock : IC.comment} size={32} />
+                      <div className="td-empty-title">
+                        {activeSection === "internal" ? "No internal notes" : "No public replies yet"}
+                      </div>
+                      <p style={{ fontSize: 13 }}>
+                        {activeSection === "internal"
+                          ? "Internal notes are only visible to agents and admins."
+                          : "Be the first to reply to this ticket."}
+                      </p>
+                    </div>
+                  );
+
+                  return visible.map((c, i) => {
+                    // Author can delete their own; manager/admin can delete any
+                    const canDelete  = c.user_id === currentUserId || currentUserRole === "admin" || currentUserRole === "manager";
+                    const isDeleting = deletingId === c.id;
+
+                    return (
+                      <div key={c.id ?? i} className={`td-comment${c.internal ? " internal" : ""}`}>
+                        <CommentAvatar role={c.role} name={c.author} />
+                        <div className="td-comment-body">
+                          <div className="td-comment-header">
+                            <span className="td-comment-author">{c.author}</span>
+                            <span className={`td-comment-role td-comment-role--${c.internal ? "internal" : c.role}`}>
+                              {c.internal ? "Internal Note"
+                                : c.role === "agent" ? "Support Agent"
+                                : c.role === "system" ? "System"
+                                : "Requester"}
+                            </span>
+                            <span className="td-comment-time">{c.time}</span>
+
+                            {/* Delete icon — right-aligned in header */}
+                            {canDelete && !isDeleting && (
+                              <button
+                                className="td-comment-delete-btn"
+                                title="Delete comment"
+                                onClick={() => { setDeletingId(c.id); setDeleteError(null); }}
+                              >
+                                <Icon d={IC.trash} size={13} />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="td-comment-text">{c.text}</div>
+
+                          {c.internal && (
+                            <div className="td-internal-label">
+                              <Icon d={IC.lock} size={10} /> Internal — not visible to requester
+                            </div>
+                          )}
+
+                          {/* Inline delete confirmation banner */}
+                          {isDeleting && (
+                            <div className="td-comment-confirm-delete">
+                              <Icon d={IC.warning} size={14} />
+                              <span style={{ flex: 1 }}>Delete this comment? This cannot be undone.</span>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button
+                                  className="agent-btn agent-btn--ghost agent-btn--sm"
+                                  onClick={() => { setDeletingId(null); setDeleteError(null); }}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  className="agent-btn agent-btn--sm"
+                                  style={{ background: "#fee2e2", color: "#b91c1c", border: "1px solid #fca5a5", fontWeight: 700 }}
+                                  onClick={() => handleDeleteComment(c.id)}
+                                >
+                                  <Icon d={IC.trash} size={12} /> Delete
+                                </button>
+                              </div>
+                              {deleteError && (
+                                <div style={{ width: "100%", fontSize: 11.5, color: "#b91c1c", marginTop: 6 }}>
+                                  {deleteError}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Comment form */}
               <div className="td-comment-form">
                 <div className="td-comment-form-top">
-                  <button className={`td-comment-type-btn${commentType === "public"   ? " active" : ""}`} onClick={() => setCommentType("public")}>
+                  <button
+                    className={`td-comment-type-btn${commentType === "public" ? " active" : ""}`}
+                    onClick={() => setCommentType("public")}
+                  >
                     <Icon d={IC.comment} size={14} /> Public Reply
                   </button>
-                  <button className={`td-comment-type-btn${commentType === "internal" ? " active" : ""}`} onClick={() => setCommentType("internal")}>
-                    <Icon d={IC.lock}    size={14} /> Internal Note
-                  </button>
+
+                  {/* Internal Note toggle — agents and admins only */}
+                  {canSeeInternal && (
+                    <button
+                      className={`td-comment-type-btn${commentType === "internal" ? " active" : ""}`}
+                      onClick={() => setCommentType("internal")}
+                    >
+                      <Icon d={IC.lock} size={14} /> Internal Note
+                    </button>
+                  )}
                 </div>
+
                 <textarea
                   className={`td-comment-textarea${commentType === "internal" ? " internal-mode" : ""}`}
-                  placeholder={commentType === "public" ? "Write a reply to the requester…" : "Write an internal note (only visible to agents)…"}
+                  placeholder={
+                    commentType === "public"
+                      ? "Write a reply to the requester…"
+                      : "Write an internal note (only visible to agents)…"
+                  }
                   value={commentText}
                   onChange={e => setCommentText(e.target.value)}
                   rows={4}
                   onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSendComment(); }}
                 />
+
                 {commentError && (
                   <div style={{ padding: "6px 16px", background: "#fee2e2", color: "#b91c1c", fontSize: 12 }}>
                     {commentError}
                   </div>
                 )}
+
                 <div className="td-comment-form-footer">
                   <span className="td-comment-hint">Ctrl+Enter to send</span>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <button className="agent-btn agent-btn--ghost agent-btn--sm"><Icon d={IC.clip} size={13} /> Attach</button>
+                    <button className="agent-btn agent-btn--ghost agent-btn--sm">
+                      <Icon d={IC.clip} size={13} /> Attach
+                    </button>
                     <button
                       className="agent-btn agent-btn--primary agent-btn--sm"
                       onClick={handleSendComment}
                       disabled={!commentText.trim() || submitting}
                       style={{ opacity: !commentText.trim() ? 0.5 : 1 }}
                     >
-                      {submitting ? "Sending…" : <><Icon d={IC.send} size={13} /> {commentType === "public" ? "Send Reply" : "Add Note"}</>}
+                      {submitting
+                        ? "Sending…"
+                        : <><Icon d={IC.send} size={13} /> {commentType === "public" ? "Send Reply" : "Add Note"}</>
+                      }
                     </button>
                   </div>
                 </div>
@@ -416,6 +544,7 @@ export default function TicketDetails() {
             </div>
           )}
 
+          {/* ── Attachments tab ── */}
           {activeTab === "attachments" && (
             <div className="td-panel">
               {attachments.length === 0 ? (
@@ -445,13 +574,14 @@ export default function TicketDetails() {
             </div>
           )}
 
+          {/* ── History tab ── */}
           {activeTab === "history" && (
             <div className="td-panel">
               {ticketHistory.length === 0 ? (
                 <div className="td-empty">
                   <Icon d={IC.history} size={32} />
                   <div className="td-empty-title">No history yet</div>
-                  <p style={{ fontSize: 13 }}>Activity and ticket events will appear here once they are recorded.</p>
+                  <p style={{ fontSize: 13 }}>Status changes will appear here.</p>
                 </div>
               ) : (
                 <div style={{ background: "var(--agent-surface)", border: "1px solid var(--agent-border)", borderRadius: "var(--radius)", padding: "20px 24px", boxShadow: "var(--agent-shadow)" }}>
@@ -466,7 +596,7 @@ export default function TicketDetails() {
                           <div className="td-history-event">{ev.event}</div>
                           <div className="td-history-actor">{ev.actor}</div>
                           <div className="td-history-time">{ev.time}</div>
-                          {ev.note && <div style={{ fontSize: 12, color: "var(--agent-muted)", marginTop: 2 }}>{ev.note}</div>}
+                          {ev.note && <div style={{ fontSize: 12, color: "var(--agent-muted)", marginTop: 2 }}>"{ev.note}"</div>}
                         </div>
                       </div>
                     ))}
@@ -477,13 +607,23 @@ export default function TicketDetails() {
           )}
         </div>
 
+        {/* Sidebar */}
         <div className="td-sidebar">
           <div className="td-side-card">
             <div className="td-side-header">Quick Actions</div>
             <div className="td-quick-actions">
-              <button className="agent-btn agent-btn--primary"  style={{ justifyContent: "center" }} onClick={() => navigate("/agent/update-status",  { state: { ticketId } })}><Icon d={IC.update}  /> Update Status</button>
-              <button className="agent-btn agent-btn--accent"   style={{ justifyContent: "center" }} onClick={() => navigate("/agent/resolve-ticket", { state: { ticketId } })}><Icon d={IC.resolve} /> Resolve Ticket</button>
-              <button className="agent-btn agent-btn--ghost"    style={{ justifyContent: "center" }} onClick={() => setActiveTab("comments")}><Icon d={IC.comment} /> Add Comment</button>
+              <button className="agent-btn agent-btn--primary" style={{ justifyContent: "center" }}
+                onClick={() => navigate("/agent/update-status", { state: { ticketId } })}>
+                <Icon d={IC.update} /> Update Status
+              </button>
+              <button className="agent-btn agent-btn--accent" style={{ justifyContent: "center" }}
+                onClick={() => navigate("/agent/resolve-ticket", { state: { ticketId } })}>
+                <Icon d={IC.resolve} /> Resolve Ticket
+              </button>
+              <button className="agent-btn agent-btn--ghost" style={{ justifyContent: "center" }}
+                onClick={() => { setActiveTab("comments"); setActiveSection("public"); }}>
+                <Icon d={IC.comment} /> Add Comment
+              </button>
             </div>
           </div>
 
@@ -493,7 +633,7 @@ export default function TicketDetails() {
               {[
                 { key: "ID",       val: `#${ticketNumber}` },
                 { key: "Priority", val: <PriorityBadge p={priority} /> },
-                { key: "Status",   val: <StatusBadge   s={status}   /> },
+                { key: "Status",   val: <StatusBadge s={status} /> },
                 { key: "Category", val: category },
                 { key: "Assignee", val: assignee },
                 { key: "Created",  val: createdLabel },
@@ -511,19 +651,28 @@ export default function TicketDetails() {
             <div className="td-side-header">SLA Status</div>
             <div className="td-side-body">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: slaBreached ? "var(--agent-danger)" : "var(--agent-success)" }}>{slaBreached ? "Breached" : "On track"}</span>
-                <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: slaBreached ? "var(--agent-danger)" : "var(--agent-success)" }}>{Math.min(Math.max(slaPercent, 0), 200)}%</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: slaBreached ? "var(--agent-danger)" : "var(--agent-success)" }}>
+                  {slaBreached ? "Breached" : "On track"}
+                </span>
+                <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: slaBreached ? "var(--agent-danger)" : "var(--agent-success)" }}>
+                  {slaPercent}%
+                </span>
               </div>
               <div className="td-sla-bar-track">
-                <div className={`td-sla-bar-fill ${slaBreached ? "td-sla-bar-fill--danger" : "td-sla-bar-fill--success"}`} style={{ width: `${Math.min(Math.max(slaPercent, 0), 100)}%` }} />
+                <div
+                  className={`td-sla-bar-fill ${slaBreached ? "td-sla-bar-fill--danger" : "td-sla-bar-fill--good"}`}
+                  style={{ width: `${Math.min(slaPercent, 100)}%` }}
+                />
               </div>
               <div style={{ fontSize: 12, color: "var(--agent-muted)", marginTop: 4 }}>
-                Due was {dueLabel} · {slaBreached ? "Overdue" : "On schedule"}
+                Due: {dueLabel} · Open: {timeOpen}
               </div>
               {slaBreached && (
                 <div style={{ padding: "8px 12px", background: "#fee2e2", borderRadius: "var(--radius-sm)", display: "flex", gap: 7, alignItems: "flex-start", marginTop: 4 }}>
                   <Icon d={IC.warning} size={14} />
-                  <span style={{ fontSize: 12, color: "#b91c1c", lineHeight: 1.5 }}>Escalation sent to manager. Resolve this ticket as soon as possible.</span>
+                  <span style={{ fontSize: 12, color: "#b91c1c", lineHeight: 1.5 }}>
+                    SLA breached. Resolve this ticket as soon as possible.
+                  </span>
                 </div>
               )}
             </div>
@@ -559,7 +708,9 @@ export default function TicketDetails() {
             <div className="td-side-body">
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {tags.length > 0 ? tags.map(tag => (
-                  <span key={tag} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", background: "rgba(3,54,61,0.06)", color: "var(--agent-primary)", borderRadius: 20, border: "1px solid rgba(3,54,61,0.12)" }}>#{tag}</span>
+                  <span key={tag} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", background: "rgba(3,54,61,0.06)", color: "var(--agent-primary)", borderRadius: 20, border: "1px solid rgba(3,54,61,0.12)" }}>
+                    #{tag}
+                  </span>
                 )) : (
                   <span style={{ fontSize: 12, color: "var(--agent-muted)" }}>No tags assigned</span>
                 )}

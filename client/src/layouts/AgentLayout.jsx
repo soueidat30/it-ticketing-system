@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import NotificationPanel from "../pages/agent/NotifcationPanel/Notificationpanel";
 import "./AgentLayout.css";
+
+
 
 const Icon = ({ d, ...p }) => (
   <svg
@@ -37,7 +40,8 @@ const API_URL = "http://127.0.0.1:8000/api";
 
 export default function AgentLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen] = useState(false);
+
   const [assignedCount, setAssignedCount] = useState(0);
 
   const navigate = useNavigate();
@@ -232,11 +236,9 @@ export default function AgentLayout() {
         </div>
 
         <div className="agent-topbar__actions">
-          <button className="agent-topbar__action-btn" title="Notifications">
-            <Icon d={Icons.bell} />
-            <span className="agent-topbar__notif-badge">5</span>
-          </button>
+          <NotificationPanel />
           <div className="agent-topbar__user">
+
             <div className="agent-topbar__user-avatar">{initials}</div>
             <span className="agent-topbar__user-name">{displayName}</span>
           </div>

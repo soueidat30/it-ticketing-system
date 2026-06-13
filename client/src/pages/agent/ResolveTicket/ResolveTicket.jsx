@@ -115,6 +115,9 @@ export default function ResolveTicket() {
   const allChecked = checks.every(Boolean);
   const canResolve = resType && solution.trim().length >= 20 && allChecked;
 
+
+
+
   const toggleCheck = (i) =>
     setChecks((prev) => {
       const n = [...prev];
@@ -179,7 +182,8 @@ export default function ResolveTicket() {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/resolve`, {
+    const res = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/resolve`, {
+
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -190,7 +194,7 @@ export default function ResolveTicket() {
           resolution_type: resType,
           solution,
           root_cause: rootCause,
-          time_spent: Number(timeSpent),
+          time_spent: timeSpent ? Number(timeSpent) : null,
           time_unit: timeUnit,
           internal_notes: notes,
           rating,
@@ -234,14 +238,14 @@ export default function ResolveTicket() {
           <div>
             <div className="rt-summary-card">
               <div className="rt-summary-top">
-                <span className="rt-summary-id">#{ticket.ticket_number ?? ticket.id}</span>
+                <span className="rt-summary-id">#{ticket.ticket_number || ticket.id || "N/A"}</span>
                 <div className="rt-summary-badges">
-                  <PriorityBadge p={ticket.priority?.priority_name ?? ticket.priority} />
+                  <PriorityBadge p={ticket.priority?.priority_name || ticket.priority || "low"} />
                   <StatusBadge s={ticket.status?.status_name ?? ticket.status} />
                 </div>
               </div>
-              <div className="rt-summary-title">{ticket.title ?? ticket.subject}</div>
-              <div className="rt-summary-desc">{ticket.description ?? ticket.desc}</div>
+              <div className="rt-summary-title">{ticket.title || ticket.subject || "Untitled Ticket"}</div>
+              <div className="rt-summary-desc">{ticket.description || ticket.desc || "No description provided."}</div>
             </div>
 
             <div className="rt-form-card">
@@ -424,7 +428,10 @@ export default function ResolveTicket() {
 
               <div className="rt-form-actions">
                 <button className="agent-btn agent-btn--ghost" onClick={() => navigate("/agent/assigned-tickets")}>Cancel</button>
-                <button className="rt-btn-resolve" onClick={handleResolve} disabled={submitting || !canResolve}>
+                <button className="rt-btn-resolve" onClick={handleResolve} disabled={submitting || !canResolve || success}>
+
+
+
                   {submitting ? (
                     <>
                       <svg

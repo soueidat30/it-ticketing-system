@@ -63,9 +63,15 @@ Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
     // Assignment
     Route::post('/tickets/{id}/assign', [TicketController::class, 'assignTicket']);
 
-    // Comments (keep consistent controller)
+// Comments (agent/manager). NOTE: api/agent/tickets/{id}/comments is used by the React UI.
+    Route::get('/agent/tickets/{id}/comments', [TicketController::class, 'getComments']);
+    Route::post('/agent/tickets/{id}/comments', [TicketController::class, 'storeComment']);
+    Route::delete('/agent/tickets/{ticketId}/comments/{commentId}', [TicketController::class, 'deleteComment']);
+
+    // Backwards-compatible routes (if any older pages call without `/agent`)
     Route::get('/tickets/{id}/comments', [TicketController::class, 'getComments']);
     Route::post('/tickets/{id}/comments', [TicketController::class, 'storeComment']);
+    Route::delete('/tickets/{ticketId}/comments/{commentId}', [TicketController::class, 'deleteComment']);
 });
 
 Route::middleware(['auth:api'])->group(function () {

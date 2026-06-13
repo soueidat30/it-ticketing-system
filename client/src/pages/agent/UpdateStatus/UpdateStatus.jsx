@@ -106,7 +106,7 @@ const StatusBadge = ({ s }) => (
 export default function UpdateStatus() {
   const navigate = useNavigate();
   const location = useLocation();
-  const ticketId = location.state?.ticketId; // passed from AssignedTickets / TicketDetails
+  const ticketId = location.state?.ticketId; // may be ticket_number (TCK-....) or numeric id
 
   // ── Ticket state ──────────────────────────────────────────────────────────
   const [ticket,      setTicket]      = useState(null);
@@ -228,21 +228,50 @@ export default function UpdateStatus() {
         body.priority_id = Number(priorityId);
       }
 
-      const res = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/status`, {
-        method:  "PUT",
+      const res = await fetch(`${BASE_URL}/tickets/${ticket?.id ?? ticketId}/status`, {
+
+        method:  "PATCH",
         headers: {
-          Authorization:  `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          Accept:         "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify(body),
       });
 
-      const data = await res.json();
+      // If ticketId is a ticket_number (e.g. TCK-1001) but backend expects numeric id,
+      // this will 404. In that case, fallback to using the numeric ticket.id.
+      if (res.status === 404 && ticket?.id) {
+        const res2 = await fetch(`${BASE_URL}/tickets/${ticket.id}/status`, {
+          method:  "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+
+        const data2 = await res2.json().catch(() => ({}));
+        if (!res2.ok) {
+          setSubmitError(data2.message || "Failed to update status.");
+          return;
+        }
+
+        setToast(true);
+        setTimeout(() => {
+          setToast(false);
+          navigate("/agent/assigned-tickets");
+        }, 2200);
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setSubmitError(data.message || "Failed to update status.");
         return;
       }
+
 
       setToast(true);
       setTimeout(() => {

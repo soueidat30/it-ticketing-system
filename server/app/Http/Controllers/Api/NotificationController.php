@@ -1,11 +1,11 @@
 <?php
- 
+
 namespace App\Http\Controllers\Api;
- 
+
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use Illuminate\Http\Request;
- 
+
 class NotificationController extends Controller
 {
     /**
@@ -13,14 +13,23 @@ class NotificationController extends Controller
      */
     public function index(Request $request)
     {
-        $notifications = Notification::with(['ticket', 'triggeredBy'])
-            ->where('user_id', $request->user()->id)
-            ->orderByDesc('created_at')
-            ->get();
- 
-        return response()->json($notifications);
+        $userId = $request->user()->id;
+
+        if (!\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+            return response()->json([]);
+        }
+
+        return response()->json(
+            Notification::with(['ticket', 'triggeredBy'])
+                ->where('user_id', $userId)
+                ->orderByDesc('created_at')
+                ->get()
+        );
+
     }
- 
+
+
+
     /**
      * GET /api/notifications/unread-count
      */
@@ -29,10 +38,10 @@ class NotificationController extends Controller
         $count = Notification::where('user_id', $request->user()->id)
             ->where('is_read', false)
             ->count();
- 
+
         return response()->json(['count' => $count]);
     }
- 
+
     /**
      * PATCH /api/notifications/{id}/read
      */
@@ -41,15 +50,15 @@ class NotificationController extends Controller
         $notification = Notification::where('id', $id)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
- 
+
         $notification->update([
             'is_read' => true,
             'read_at' => now(),
         ]);
- 
+
         return response()->json(['message' => 'Marked as read']);
     }
- 
+
     /**
      * PATCH /api/notifications/read-all
      */
@@ -58,10 +67,10 @@ class NotificationController extends Controller
         Notification::where('user_id', $request->user()->id)
             ->where('is_read', false)
             ->update(['is_read' => true, 'read_at' => now()]);
- 
+
         return response()->json(['message' => 'All marked as read']);
     }
- 
+
     /**
      * DELETE /api/notifications/{id}
      */
@@ -71,10 +80,10 @@ class NotificationController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail()
             ->delete();
- 
+
         return response()->json(['message' => 'Notification deleted']);
     }
- 
+
     /**
      * Static helper — call from other controllers to create notifications.
      */

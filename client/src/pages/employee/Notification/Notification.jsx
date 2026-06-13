@@ -49,7 +49,10 @@ export default function Notifications() {
     }
   }, [token]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
 
   // ── actions ─────────────────────────────────────────────────────────────────
   const handleRead = async (id) => {
@@ -203,12 +206,13 @@ export default function Notifications() {
                         </span>
                       )}
 
-                      {n.triggered_by && (
+                      {(n.triggered_by || n.triggeredBy) && (
                         <span className="notif-item__agent">
                           <i className="ti ti-user" />
-                          {n.triggered_by.full_name}
+                          {(n.triggered_by || n.triggeredBy)?.full_name}
                         </span>
                       )}
+
                     </div>
 
                     {/* delete button */}

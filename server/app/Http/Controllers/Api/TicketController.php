@@ -7,6 +7,8 @@ use App\Models\Comment;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketStatusHistory;
+use App\Models\Notification;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,6 +46,10 @@ class TicketController extends Controller
             'history.changer',
         ]);
 
+        $role = optional(Auth::user()->role)->name;
+        $isEmployee = $role === 'employee';
+
+
         $ticket = is_numeric($id)
             ? $query->find($id)
             : null;
@@ -57,8 +63,19 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket not found'], 404);
         }
 
-        // ── Shape comments so the frontend field names match ──
-        $comments = $ticket->comments->map(fn($c) => [
+        $commentsQuery = $ticket->comments;
+        if (!$isEmployee) {
+            // non-employee: only allow internal notes if role is agent
+            if ($role !== 'agent') {
+                $commentsQuery = $commentsQuery->where('internal', false);
+            }
+        } else {
+            // employee
+            $commentsQuery = $commentsQuery->where('internal', false);
+        }
+
+
+        $comments = $commentsQuery->map(fn($c) => [
             'id'       => $c->id,
             'author'   => $c->user->full_name ?? $c->user->username ?? 'Unknown',
             'role'     => $c->user->role->name ?? 'employee',
@@ -66,6 +83,7 @@ class TicketController extends Controller
             'internal' => $c->internal,
             'time'     => $c->created_at->diffForHumans(),
         ]);
+
 
         // ── Shape attachments ─────────────────────────────────
         $attachments = $ticket->attachments->map(fn($a) => [
@@ -137,20 +155,55 @@ class TicketController extends Controller
     // ── POST /agent/tickets/{id}/comments ────────────────────
     public function storeComment(Request $request, $id)
     {
+
         $request->validate([
             'content'  => 'required|string|max:5000',
             'internal' => 'boolean',
         ]);
 
-        $ticket = Ticket::findOrFail($id);
+        $ticket = (is_numeric($id)
+            ? Ticket::findOrFail($id)
+            : Ticket::where('ticket_number', $id)->firstOrFail());
 
-        $comment = Comment::create([
-            'ticket_id' => $ticket->id,
-            'user_id'   => Auth::id(),
-            'content'   => $request->content,
-            'internal'  => $request->boolean('internal', false),
-        ]);
-$this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}");
+        try {
+
+            $comment = Comment::create([
+                'ticket_id' => $ticket->id,
+                'user_id'   => Auth::id(),
+                'content'   => $request->content,
+                'internal'  => $request->boolean('internal', false),
+            ]);
+        } catch (\Throwable $e) {
+
+            $msg = $e->getMessage();
+            $friendly = str_contains($msg, 'Base table or view not found') && str_contains($msg, 'comments')
+                ? 'Database table `comments` is missing in the current DB. Run migrations / verify DB connection.'
+                : 'Failed to create comment: ' . $msg;
+
+            return response()->json([
+                'message' => $friendly,
+                'debug' => [
+                    'error' => class_basename($e),
+                ],
+            ], 500);
+        }
+
+        $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}");
+
+        // Notify the ticket requester about a new public comment.
+        if (!$request->boolean('internal', false)) {
+
+            Notification::notify(
+                user_id:      $ticket->user_id,
+                ticket_id:    $ticket->id,
+                triggered_by: Auth::id(),
+                type:         'new_comment',
+                title:        'New reply on your ticket',
+                message:      "An agent replied to ticket {$ticket->ticket_number}.",
+            );
+        }
+
+
         // Return the same shape the frontend expects
         $comment->load('user.role');
 
@@ -163,6 +216,7 @@ $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}")
             'time'     => 'Just now',
         ], 201);
     }
+
 
     public function storeAttachment(Request $request, $id)
     {
@@ -213,15 +267,15 @@ $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}")
         'status_id' => 'required|exists:statuses,id',
         'note'      => 'nullable|string|max:500',
     ]);
- 
+
     $user   = $request->user();
     $ticket = Ticket::with(['user', 'status'])->findOrFail($id);
- 
+
     $oldStatusId = $ticket->status_id;
- 
+
     $ticket->update(['status_id' => $request->status_id]);
     $ticket->refresh()->load('status');
- 
+
     // Save to ticket_status_histories (matches your real columns)
     \DB::table('ticket_status_histories')->insert([
         'ticket_id'  => $ticket->id,
@@ -231,7 +285,8 @@ $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}")
         'created_at' => now(),
         'updated_at' => now(),
     ]);
- 
+
+
     // Activity log
     \DB::table('activity_logs')->insert([
         'user_id'     => $user->id,
@@ -241,23 +296,26 @@ $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}")
         'created_at'  => now(),
         'updated_at'  => now(),
     ]);
- 
+
     // Notify employee
-    if ($ticket->user_id !== $user->id) {
-        \App\Http\Controllers\Api\NotificationController::notify(
-            user_id:      $ticket->user_id,
-            ticket_id:    $ticket->id,
-            triggered_by: $user->id,
-            type:         'status_changed',
-            title:        'Ticket status updated',
-            message:      "Your ticket \"{$ticket->title}\" is now {$ticket->status->status_name}."
-        );
-    }
- 
+        if ($ticket->user_id !== $user->id) {
+            $newStatusName = \App\Models\Status::find($request->status_id)->status_name ?? 'Updated';
+
+            Notification::notify(
+                user_id:      $ticket->user_id,
+                ticket_id:    $ticket->id,
+                triggered_by: $user->id,
+                type:         'status_changed',
+                title:        'Your ticket status was updated',
+                message:      "Ticket {$ticket->ticket_number} status changed to \"{$newStatusName}\".",
+            );
+        }
+
+
     if (in_array(strtolower($ticket->status->status_name), ['resolved', 'closed'])) {
         $ticket->update(['resolved_at' => now()]);
     }
- 
+
     return response()->json($ticket->load(['status', 'priority', 'category', 'user', 'assignee']));
 }
 
@@ -346,8 +404,8 @@ $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}")
             'message' => 'Ticket deleted successfully'
         ]);
     }
-public function myTickets(Request $request)
-{
+    public function myTickets(Request $request)
+    {
     return Ticket::with(['category', 'priority', 'status'])
         ->where('user_id', $request->user()->id)
         ->orderBy('created_at', 'desc')
@@ -356,7 +414,7 @@ public function myTickets(Request $request)
 
 
 
-public function assignTicket(Request $request, $id)
+    public function assignTicket(Request $request, $id)
 {
     $request->validate([
         'agent_id' => 'required|exists:users,id',
@@ -364,6 +422,7 @@ public function assignTicket(Request $request, $id)
     ]);
 
     $ticket = Ticket::findOrFail($id);
+    $agent  = \App\Models\User::find($request->agent_id);
 
     $ticket->update([
         'assigned_to' => $request->agent_id,
@@ -378,9 +437,25 @@ public function assignTicket(Request $request, $id)
         'created_at'  => now(),
         'updated_at'  => now(),
     ]);
-$this->logActivity($ticket->id, 'assign', "Assigned to user {$request->agent_id}");
+
+    $this->logActivity($ticket->id, 'assign', "Assigned to user {$request->agent_id}");
+
+    // Notify the assigned agent that a new ticket was assigned to them.
+    $ticketNumber = $ticket->ticket_number;
+    if ($agent) {
+        Notification::notify(
+            user_id:      $agent->id,
+            ticket_id:    $ticket->id,
+            triggered_by: Auth::id(),
+            type:         'ticket_assigned',
+            title:        'New ticket assigned to you',
+            message:      "Ticket {$ticketNumber} \"{$ticket->title}\" has been assigned to you.",
+        );
+    }
+
     return response()->json(['message' => 'Ticket assigned successfully.']);
 }
+
 
 
 
@@ -399,10 +474,10 @@ public function history($id)
             'users.full_name as changed_by_name'
         )
         ->get();
- 
+
     return response()->json($history);
 }
- 
+
 private function logActivity($ticketId, $action, $details)
 {
     \DB::table('activity_logs')->insert([
@@ -415,28 +490,58 @@ private function logActivity($ticketId, $action, $details)
     ]);
 }
 
-public function getComments($id)
-{
-    $ticket = Ticket::with('comments.user.role')->findOrFail($id);
+    public function getComments($id)
+    {
+        $ticket = (is_numeric($id)
+            ? Ticket::with('comments.user.role')->findOrFail($id)
+            : Ticket::with('comments.user.role')->where('ticket_number', $id)->firstOrFail());
 
-    $comments = $ticket->comments->map(fn($c) => [
-        'id'       => $c->id,
-        'author'   => $c->user->full_name ?? $c->user->username ?? 'Unknown',
-        'role'     => $c->user->role->name ?? 'employee',
-        'text'     => $c->content,
-        'internal' => $c->internal,
-        'time'     => $c->created_at->diffForHumans(),
-    ]);
 
-    return response()->json($comments);
-}
+        $role = optional(Auth::user()->role)->name;
+        $isEmployee = $role === 'employee';
+
+        $commentsQuery = $ticket->comments;
+
+        if ($role !== 'agent') {
+            $commentsQuery = $commentsQuery->where('internal', false);
+        }
+
+        $comments = $commentsQuery->map(fn($c) => [
+            'id'       => $c->id,
+            'author'   => $c->user->full_name ?? $c->user->username ?? 'Unknown',
+            'role'     => $c->user->role->name ?? 'employee',
+            'text'     => $c->content,
+            'internal' => $c->internal,
+            'time'     => $c->created_at->diffForHumans(),
+        ]);
+
+        return response()->json($comments);
+    }
+
+    public function deleteComment(Request $request, $ticketId, $commentId)
+    {
+
+        $comment = Comment::where('ticket_id', $ticketId)
+            ->where('id', $commentId)
+            ->firstOrFail();
+
+        $userId = Auth::id();
+
+        if ((int)$comment->user_id !== (int)$userId) {
+            return response()->json(['message' => 'You can only delete your own comments.'], 403);
+        }
+
+        $comment->delete();
+
+        return response()->json(['message' => 'Comment deleted successfully.']);
+    }
 public function showSingle($id)
 {
     $ticket = Ticket::with(['status', 'priority', 'category', 'user', 'assignee'])
         ->where('id', $id)
         ->orWhere('ticket_number', $id)
         ->firstOrFail();
- 
+
     return response()->json($ticket);
 }
 

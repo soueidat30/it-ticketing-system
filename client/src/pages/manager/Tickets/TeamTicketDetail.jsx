@@ -9,6 +9,7 @@ import {
   getTicketHistory,
   updateTicketStatus,
   getStatuses,
+  deleteTicketComment,
 } from "../../../services/ticketService";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -56,9 +57,10 @@ export default function TeamTicketDetail() {
   const [loading,  setLoading]  = useState(true);
 
   // comment form
-  const [text,       setText]       = useState("");
-  const [isInternal, setIsInternal] = useState(false);
-  const [sending,    setSending]    = useState(false);
+  const [text,        setText]        = useState("");
+  const [recipientType, setRecipientType] = useState("employee"); 
+  const [sending,     setSending]     = useState(false);
+
 
   // status update
   const [newStatusId,    setNewStatusId]    = useState("");
@@ -99,19 +101,34 @@ export default function TeamTicketDetail() {
   // ── add comment ─────────────────────────────────────────────────────────────
   const handleAddComment = async () => {
     if (!text.trim()) return;
+
+    const internal = recipientType === "internal";
+
     setSending(true);
     try {
-      await addTicketComment(token, id, text.trim(), isInternal);
-      const updated = await getTicketComments(token, id);
-      setComments(Array.isArray(updated) ? updated : []);
+      const created = await addTicketComment(token, id, text.trim(), internal);
+
+
+      if (created && typeof created === "object" && created.id != null) {
+        setComments((prev) => {
+          const next = Array.isArray(prev) ? [...prev] : [];
+          if (!next.some((c) => c.id === created.id)) next.push(created);
+          return next;
+        });
+      } else {
+        const updated = await getTicketComments(token, id);
+        setComments(Array.isArray(updated) ? updated : []);
+      }
+
       setText("");
-      setIsInternal(false);
+      setRecipientType("employee");
     } catch (err) {
       console.error("Comment failed:", err);
     } finally {
       setSending(false);
     }
   };
+
 
   // ── update status ───────────────────────────────────────────────────────────
   const handleStatusUpdate = async () => {
@@ -235,19 +252,32 @@ export default function TeamTicketDetail() {
                           <div className="ttd-comment__body">
                             <div className="ttd-comment__meta">
                               <span className="ttd-comment__author">
-                                {c.user?.full_name || "Unknown"}
+                                {c.user?.full_name || c.author || "Unknown"}
                               </span>
                               {c.internal && (
                                 <span className="ttd-internal-badge">
                                   <i className="ti ti-lock" /> Internal note
                                 </span>
                               )}
-                              <span className="ttd-comment__time">
-                                {timeAgo(c.created_at)}
-                              </span>
+                            <span className="ttd-comment__time">
+                                {c.time || timeAgo(c.created_at)}
+                            </span>
+                            <button
+                              type="button"
+                              className="ttd-btn ttd-btn--ghost"
+                              style={{ marginLeft: 8, fontSize: 12, padding: "4px 10px" }}
+                              onClick={() => {
+                                const ok = window.confirm("Are you sure you want to delete this comment?");
+                                if (!ok) return;
+
+                                deleteTicketComment(token, id, c.id).then(() => getTicketComments(token, id)).then((updated) => setComments(Array.isArray(updated) ? updated : [])).catch((e) => console.error("Delete failed:", e));
+                              }}
+                            >
+                              Delete
+                            </button>
                             </div>
                             <p className="ttd-comment__text">
-                              {c.content || "—"}
+                              {(c.text ?? c.content ?? "—")}
                             </p>
                           </div>
                         </div>
@@ -260,19 +290,28 @@ export default function TeamTicketDetail() {
                 <div className="ttd-comment-input">
                   <div className="ttd-comment-input__toolbar">
                     <label className="ttd-internal-toggle">
-                      <input
-                        type="checkbox"
-                        checked={isInternal}
-                        onChange={(e) => setIsInternal(e.target.checked)}
-                      />
-                      <i className="ti ti-lock" />
-                      Internal note (hidden from employee)
+                      <span style={{ marginRight: 10, fontSize: 13, fontWeight: 600 }}>Send to:</span>
+                      <select
+                        value={recipientType}
+                        onChange={(e) => setRecipientType(e.target.value)}
+                        className="ttd-select"
+                        style={{ padding: '8px 10px' }}
+                      >
+                        <option value="employee">Employee (public reply)</option>
+                        <option value="agent">Agent (agent-only public reply)</option>
+                        <option value="internal">Manager-only internal note</option>
+
+
+                      </select>
+
                     </label>
                   </div>
+
+
                   <textarea
-                    className={`ttd-textarea ${isInternal ? "ttd-textarea--internal" : ""}`}
+                    className={`ttd-textarea ${recipientType === "internal" ? "ttd-textarea--internal" : ""}`}
                     placeholder={
-                      isInternal
+                      recipientType === "internal"
                         ? "Write an internal note (only visible to agents & managers)…"
                         : "Write a comment visible to the employee…"
                     }
@@ -283,6 +322,7 @@ export default function TeamTicketDetail() {
                       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAddComment();
                     }}
                   />
+
                   <div className="ttd-comment-input__footer">
                     <span className="ttd-hint">Ctrl+Enter to send</span>
                     <button
@@ -396,51 +436,6 @@ export default function TeamTicketDetail() {
             </dl>
           </div>
 
-          {/* Update Status */}
-          <div className="ttd-card">
-            <h3 className="ttd-card__title">Update Status</h3>
-
-            {statusSuccess && (
-              <div className="ttd-success">
-                <i className="ti ti-circle-check" /> {statusSuccess}
-              </div>
-            )}
-
-            <div className="ttd-status-form">
-              <select
-                className="ttd-select"
-                value={newStatusId}
-                onChange={(e) => setNewStatusId(e.target.value)}
-              >
-                <option value="">— Select new status —</option>
-                {statuses.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.status_name}
-                  </option>
-                ))}
-              </select>
-
-              <textarea
-                className="ttd-textarea ttd-textarea--sm"
-                placeholder="Optional note about this change…"
-                value={statusNote}
-                onChange={(e) => setStatusNote(e.target.value)}
-                rows={2}
-              />
-
-              <button
-                className="ttd-btn ttd-btn--primary ttd-btn--full"
-                onClick={handleStatusUpdate}
-                disabled={updatingStatus || !newStatusId}
-              >
-                {updatingStatus ? (
-                  <><i className="ti ti-loader ttd-spin" /> Updating…</>
-                ) : (
-                  <><i className="ti ti-refresh" /> Update Status</>
-                )}
-              </button>
-            </div>
-          </div>
 
         </div>
       </div>

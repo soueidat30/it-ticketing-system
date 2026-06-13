@@ -82,7 +82,8 @@ function App() {
 <Route path="team-tickets/:id" element={<TeamTicketDetail />} />
   <Route path="reports" element={<div>Reports Page</div>} />
   <Route path="analytics" element={<div>Analytics Page</div>} />
-  <Route path="notifications" element={<div>Notifications Page</div>} />
+  <Route path="notifications" element={<Notification />} />
+
   <Route path="profile" element={<div>Profile Page</div>} />
   <Route path="settings" element={<div>Settings Page</div>} />
 

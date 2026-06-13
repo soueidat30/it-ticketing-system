@@ -106,6 +106,17 @@ export const addTicketComment = (token, ticketId, content, isInternal = false) =
     if (!r.ok) throw { response: { data: d } };
     return d;
   });
+
+export const deleteTicketComment = (token, ticketId, commentId) =>
+  fetch(`${BASE}/tickets/${ticketId}/comments/${commentId}`, {
+    method: "DELETE",
+    headers: headers(token),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw { response: { data: d } };
+    return d;
+  });
+
  
 // Generic aliases (used in Notifications page)
 export const getComments     = getTicketComments;
