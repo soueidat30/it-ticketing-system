@@ -96,11 +96,22 @@ export const getTicketComments = (token, ticketId) =>
     headers: headers(token),
   }).then((r) => r.json());
  
-export const addTicketComment = (token, ticketId, content, isInternal = false) =>
+export const addTicketComment = (
+  token,
+  ticketId,
+  content,
+  isInternal = false,
+  notifyUserId = null
+) =>
   fetch(`${BASE}/tickets/${ticketId}/comments`, {
     method: "POST",
     headers: headers(token),
-    body: JSON.stringify({ content, internal: isInternal }),
+    body: JSON.stringify({
+      content,
+      internal: isInternal,
+      // optional: lets backend notify a specific user (e.g., manager -> employee)
+      notify_user_id: notifyUserId,
+    }),
   }).then(async (r) => {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw { response: { data: d } };
@@ -125,6 +136,11 @@ export const addComment      = addTicketComment;
 // ── Notifications ─────────────────────────────────────────────────────────────
 export const getNotifications = (token) =>
   fetch(`${BASE}/notifications`, { headers: headers(token) }).then((r) => r.json());
+
+// Employee public comments section
+export const getEmployeeComments = (token) =>
+  fetch(`${BASE}/employee/comments`, { headers: headers(token) }).then((r) => r.json());
+
  
 export const getUnreadCount = (token) =>
   fetch(`${BASE}/notifications/unread-count`, {

@@ -157,8 +157,9 @@ class TicketController extends Controller
     {
 
         $request->validate([
-            'content'  => 'required|string|max:5000',
-            'internal' => 'boolean',
+            'content'          => 'required|string|max:5000',
+            'internal'         => 'boolean',
+            'notify_user_id'   => 'nullable|exists:users,id',
         ]);
 
         $ticket = (is_numeric($id)
@@ -170,8 +171,10 @@ class TicketController extends Controller
             $comment = Comment::create([
                 'ticket_id' => $ticket->id,
                 'user_id'   => Auth::id(),
-                'content'   => $request->content,
-                'internal'  => $request->boolean('internal', false),
+            'content'          => $request->content,
+                'internal'         => $request->boolean('internal', false),
+                'notify_user_id'   => $request->input('notify_user_id') ?? $ticket->user_id,
+
             ]);
         } catch (\Throwable $e) {
 
@@ -190,16 +193,24 @@ class TicketController extends Controller
 
         $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}");
 
-        // Notify the ticket requester about a new public comment.
+        // Notify the intended recipient about a new public comment.
         if (!$request->boolean('internal', false)) {
 
+            // Frontend can optionally pass notify_user_id to target a specific user.
+            $notifyUserId = $request->input('notify_user_id');
+
+            // Fallback to current behavior: notify ticket requester.
+            if (!$notifyUserId) {
+                $notifyUserId = $ticket->user_id;
+            }
+
             Notification::notify(
-                user_id:      $ticket->user_id,
+                user_id:      (int) $notifyUserId,
                 ticket_id:    $ticket->id,
                 triggered_by: Auth::id(),
-                type:         'new_comment',
+                type:         'comment_added',
                 title:        'New reply on your ticket',
-                message:      "An agent replied to ticket {$ticket->ticket_number}.",
+                message:      "A new reply was added to ticket {$ticket->ticket_number}.",
             );
         }
 

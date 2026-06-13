@@ -104,10 +104,21 @@ export default function TeamTicketDetail() {
 
     const internal = recipientType === "internal";
 
+    // Who should receive the notification for a *public* comment?
+    // - employee: notify the ticket requester (ticket.user_id)
+    // - agent: notify the assigned agent (ticket.assigned_to)
+    // - internal: no notification
+    const notifyUserId = (() => {
+      if (internal) return null;
+      if (!ticket) return null;
+      if (recipientType === "employee") return ticket.user?.id ?? null;
+      if (recipientType === "agent") return ticket.assignee?.id ?? null;
+      return null;
+    })();
+
     setSending(true);
     try {
-      const created = await addTicketComment(token, id, text.trim(), internal);
-
+      const created = await addTicketComment(token, id, text.trim(), internal, notifyUserId);
 
       if (created && typeof created === "object" && created.id != null) {
         setComments((prev) => {

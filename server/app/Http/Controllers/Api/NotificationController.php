@@ -15,18 +15,29 @@ class NotificationController extends Controller
     {
         $userId = $request->user()->id;
 
-        if (!\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
-            return response()->json([]);
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+                return response()->json([]);
+            }
+
+            return response()->json(
+                Notification::with(['ticket', 'triggeredBy'])
+                    ->where('user_id', $userId)
+                    ->orderByDesc('created_at')
+                    ->get()
+            );
+        } catch (\Throwable $e) {
+            // Return diagnostic info instead of a hard 500.
+            return response()->json([
+                'message' => 'Failed to load notifications',
+                'debug' => [
+                    'error' => class_basename($e),
+                    'detail' => $e->getMessage(),
+                ],
+            ], 500);
         }
-
-        return response()->json(
-            Notification::with(['ticket', 'triggeredBy'])
-                ->where('user_id', $userId)
-                ->orderByDesc('created_at')
-                ->get()
-        );
-
     }
+
 
 
 

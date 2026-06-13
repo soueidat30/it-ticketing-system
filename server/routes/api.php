@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\PriorityController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\EmployeeCommentsController;
+
 
 
 /*
@@ -78,6 +80,10 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Notifications — accessible to ALL roles
     Route::get   ('/notifications', [NotificationController::class, 'index']);
+
+    // Employee comments section (public replies)
+    Route::get   ('/employee/comments', [EmployeeCommentsController::class, 'index']);
+
     Route::get   ('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::patch ('/notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::patch ('/notifications/{id}/read', [NotificationController::class, 'markRead']);
