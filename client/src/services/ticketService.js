@@ -81,6 +81,24 @@ export const assignTicket = (token, ticketId, agentId, note = "") =>
     if (!r.ok) throw { response: { data: d } };
     return d;
   });
+
+// Users helpers (e.g., agents dropdown)
+export const getUsersByRole = (token, role) =>
+  fetch(`${BASE}/users?role=${encodeURIComponent(role)}`, { headers: headers(token) })
+    .then(async (r) => {
+      const data = await r.json().catch(() => null);
+      if (!r.ok) {
+        // Throw a useful error so we can see why the dropdown is empty (auth/404/etc)
+        throw {
+          status: r.status,
+          statusText: r.statusText,
+          data,
+        };
+      }
+      return data;
+    });
+
+
  
 // ── Ticket History / Timeline ─────────────────────────────────────────────────
 export const getTicketHistory = (token, ticketId) =>

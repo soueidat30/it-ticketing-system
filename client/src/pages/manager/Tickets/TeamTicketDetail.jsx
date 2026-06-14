@@ -10,6 +10,8 @@ import {
   updateTicketStatus,
   getStatuses,
   deleteTicketComment,
+  assignTicket,
+  getUsersByRole,
 } from "../../../services/ticketService";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -53,22 +55,45 @@ export default function TeamTicketDetail() {
   const [ticket,   setTicket]   = useState(null);
   const [comments, setComments] = useState([]);
   const [history,  setHistory]  = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [statuses, setStatuses] = useState([]);
+
   const [loading,  setLoading]  = useState(true);
 
-  // comment form
   const [text,        setText]        = useState("");
   const [recipientType, setRecipientType] = useState("employee"); 
   const [sending,     setSending]     = useState(false);
 
+  const [agents, setAgents] = useState([]);
+  const [agentId, setAgentId] = useState("");
+  const [assignNote, setAssignNote] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignSuccess, setAssignSuccess] = useState("");
 
-  // status update
   const [newStatusId,    setNewStatusId]    = useState("");
   const [statusNote,     setStatusNote]     = useState("");
+  // eslint-disable-next-line no-unused-vars
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [statusSuccess,  setStatusSuccess]  = useState("");
 
-  // active tab: "comments" | "history"
+  const handleAssignTicket = async () => {
+    if (!agentId) return;
+    setAssigning(true);
+    setAssignSuccess("");
+    try {
+      await assignTicket(token, id, agentId, assignNote);
+      setAssignSuccess("Ticket assigned successfully.");
+      setTimeout(() => setAssignSuccess(""), 3000);
+      const updated = await getTicketById(token, id);
+      setTicket(updated);
+    } catch (err) {
+      console.error("Assign failed:", err);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const [tab, setTab] = useState("comments");
 
   // ── fetch everything ────────────────────────────────────────────────────────
@@ -83,6 +108,28 @@ export default function TeamTicketDetail() {
           getTicketHistory(token, id),
           getStatuses(token),
         ]);
+
+        let agentUsers = [];
+        try {
+          agentUsers = await getUsersByRole(token, "agent");
+        } catch (e) {
+          console.error("Failed to load agents dropdown:", e);
+          agentUsers = [];
+        }
+
+
+        const normalizedAgents = Array.isArray(agentUsers)
+          ? agentUsers
+          : Array.isArray(agentUsers?.data)
+            ? agentUsers.data
+            : [];
+
+
+
+        setAgents(normalizedAgents);
+
+        const currentAssigneeId = t?.assignee?.id ?? "";
+        setAgentId(currentAssigneeId ? String(currentAssigneeId) : "");
 
         setTicket(t);
         setComments(Array.isArray(c) ? c : []);
@@ -104,10 +151,6 @@ export default function TeamTicketDetail() {
 
     const internal = recipientType === "internal";
 
-    // Who should receive the notification for a *public* comment?
-    // - employee: notify the ticket requester (ticket.user_id)
-    // - agent: notify the assigned agent (ticket.assigned_to)
-    // - internal: no notification
     const notifyUserId = (() => {
       if (internal) return null;
       if (!ticket) return null;
@@ -142,14 +185,15 @@ export default function TeamTicketDetail() {
 
 
   // ── update status ───────────────────────────────────────────────────────────
+  // eslint-disable-next-line no-unused-vars
   const handleStatusUpdate = async () => {
+
     if (!newStatusId) return;
     setUpdatingStatus(true);
     setStatusSuccess("");
     try {
       const updated = await updateTicketStatus(token, id, newStatusId, statusNote);
       setTicket(updated);
-      // refresh history
       const h = await getTicketHistory(token, id);
       setHistory(Array.isArray(h) ? h : []);
       setStatusNote("");
@@ -401,6 +445,58 @@ export default function TeamTicketDetail() {
 
         {/* ── RIGHT SIDEBAR ── */}
         <div className="ttd-sidebar">
+
+          {/* Assignment */}
+          <div className="ttd-card">
+            <h3 className="ttd-card__title">Assign Ticket</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 6 }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Agent</span>
+                <select
+                  className="ttd-select"
+                  value={agentId}
+                  onChange={(e) => setAgentId(e.target.value)}
+                  disabled={!agents || agents.length === 0}
+                >
+                  <option value="">{agents?.length ? "Select an agent" : "No agents found"}</option>
+                  {Array.isArray(agents) && agents.map((a) => (
+                    <option key={a.id} value={String(a.id)}>
+                      {a.full_name || a.username || `Agent #${a.id}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Note (optional)</span>
+                <input
+                  className="ttd-input"
+                  value={assignNote}
+                  onChange={(e) => setAssignNote(e.target.value)}
+                  placeholder="Add note for this assignment"
+                />
+              </label>
+
+              {assignSuccess && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>{assignSuccess}</div>
+              )}
+
+              <button
+                className="ttd-btn ttd-btn--primary"
+                onClick={handleAssignTicket}
+                disabled={assigning || !agentId}
+              >
+                {assigning ? (
+                  <><i className="ti ti-loader ttd-spin" /> Assigning…</>
+                ) : (
+                  <><i className="ti ti-user-check" /> Assign</>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Ticket Info */}
+
 
           {/* Ticket Info */}
           <div className="ttd-card">

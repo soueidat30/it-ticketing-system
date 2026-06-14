@@ -118,6 +118,7 @@ class TicketController extends Controller
     {
         $agentId = Auth::id();   // ← was returning ALL tickets before
 
+
         $tickets = Ticket::with([
             'category',
             'priority',
@@ -168,13 +169,27 @@ class TicketController extends Controller
 
         try {
 
+            $senderId = Auth::id();
+
+            // Receiver targeting:
+            // - internal notes: receiver is null (no public notification)
+            // - otherwise receiver is either explicitly passed by frontend (notify_user_id)
+            //   or falls back to ticket requester.
+            $receiverId = null;
+            $isInternal = $request->boolean('internal', false);
+
+            if (!$isInternal) {
+                $receiverId = $request->input('notify_user_id') ?? $ticket->user_id;
+            }
+
             $comment = Comment::create([
                 'ticket_id' => $ticket->id,
-                'user_id'   => Auth::id(),
-            'content'          => $request->content,
-                'internal'         => $request->boolean('internal', false),
-                'notify_user_id'   => $request->input('notify_user_id') ?? $ticket->user_id,
-
+                'user_id'   => $senderId,
+                'sender_id' => $senderId,
+                'receiver_id' => $receiverId,
+                'content'   => $request->content,
+                'internal'  => $isInternal,
+                'notify_user_id' => $receiverId,
             ]);
         } catch (\Throwable $e) {
 
@@ -195,19 +210,13 @@ class TicketController extends Controller
 
         // Notify the intended recipient about a new public comment.
         if (!$request->boolean('internal', false)) {
-
-            // Frontend can optionally pass notify_user_id to target a specific user.
-            $notifyUserId = $request->input('notify_user_id');
-
-            // Fallback to current behavior: notify ticket requester.
-            if (!$notifyUserId) {
-                $notifyUserId = $ticket->user_id;
-            }
+            // Receiver is driven by receiver_id (set from frontend notify_user_id or fallback).
+            $notifyUserId = $comment->receiver_id ?? $ticket->user_id;
 
             Notification::notify(
                 user_id:      (int) $notifyUserId,
                 ticket_id:    $ticket->id,
-                triggered_by: Auth::id(),
+                triggered_by: $senderId,
                 type:         'comment_added',
                 title:        'New reply on your ticket',
                 message:      "A new reply was added to ticket {$ticket->ticket_number}.",
@@ -439,28 +448,53 @@ class TicketController extends Controller
         'assigned_to' => $request->agent_id,
     ]);
 
-    // Log assignment in history
-    \DB::table('ticket_assignments')->insert([
+        // Insert assignment history (ticket_assignments)
+        \DB::table('ticket_assignments')->insert([
+            'ticket_id'    => $ticket->id,
+            'assigned_by'  => Auth::id(),
+            'assigned_to'  => $request->agent_id,
+            'assigned_at'  => now(),
+            // migration uses `notes` column (not `note`)
+            'notes'         => $request->note,
+            'created_at'   => now(),
+            'updated_at'   => now(),
+        ]);
+
+
+    // Insert activity log
+    \DB::table('activity_logs')->insert([
+        'user_id'     => Auth::id(),
+        'action'      => 'ticket_assigned',
+        'description' => "Ticket #{$ticket->ticket_number} assigned to user {$request->agent_id}",
         'ticket_id'   => $ticket->id,
-        'assigned_by' => Auth::id(),
-        'assigned_to' => $request->agent_id,
-        'note'        => $request->note,
         'created_at'  => now(),
         'updated_at'  => now(),
     ]);
 
-    $this->logActivity($ticket->id, 'assign', "Assigned to user {$request->agent_id}");
-
-    // Notify the assigned agent that a new ticket was assigned to them.
+    // Notify the assigned agent
     $ticketNumber = $ticket->ticket_number;
     if ($agent) {
+        // Determine if this is a reassignment (agent already had this ticket before)
+        $previousAssignment = \DB::table('ticket_assignments')
+            ->where('ticket_id', $ticket->id)
+            ->where('assigned_to', $request->agent_id)
+            ->orderByDesc('assigned_at')
+            ->first();
+
+        $isReassignedToSameAgent = $previousAssignment && ($previousAssignment->assigned_at ?? null);
+
+        $notificationTitle = $isReassignedToSameAgent ? 'Ticket Reassigned' : 'New Ticket Assigned';
+        $notificationMessage = $isReassignedToSameAgent
+            ? "Ticket {$ticketNumber} has been reassigned to you."
+            : "Ticket {$ticketNumber} has been assigned to you by Manager.";
+
         Notification::notify(
             user_id:      $agent->id,
             ticket_id:    $ticket->id,
             triggered_by: Auth::id(),
             type:         'ticket_assigned',
-            title:        'New ticket assigned to you',
-            message:      "Ticket {$ticketNumber} \"{$ticket->title}\" has been assigned to you.",
+            title:        $notificationTitle,
+            message:      $notificationMessage,
         );
     }
 
@@ -469,6 +503,23 @@ class TicketController extends Controller
 
 
 
+
+    public function pendingForManager()
+{
+    // Tickets waiting to be assigned by a manager
+    $tickets = Ticket::with([
+        'category',
+        'priority',
+        'status',
+        'user',
+        'assignee',
+    ])
+        ->whereNull('assigned_to')
+        ->orderByDesc('created_at')
+        ->get();
+
+    return response()->json($tickets);
+}
 
 public function history($id)
 {
@@ -546,8 +597,8 @@ private function logActivity($ticketId, $action, $details)
 
         return response()->json(['message' => 'Comment deleted successfully.']);
     }
-public function showSingle($id)
-{
+    public function showSingle($id)
+    {
     $ticket = Ticket::with(['status', 'priority', 'category', 'user', 'assignee'])
         ->where('id', $id)
         ->orWhere('ticket_number', $id)

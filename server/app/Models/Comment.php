@@ -12,6 +12,8 @@ class Comment extends Model
     protected $fillable = [
         'ticket_id',
         'user_id',
+        'sender_id',
+        'receiver_id',
         'notify_user_id',
         'content',
         'internal',
