@@ -109,6 +109,7 @@ export default function TeamTicketDetail() {
           getStatuses(token),
         ]);
 
+
         let agentUsers = [];
         try {
           agentUsers = await getUsersByRole(token, "agent");
@@ -132,9 +133,11 @@ export default function TeamTicketDetail() {
         setAgentId(currentAssigneeId ? String(currentAssigneeId) : "");
 
         setTicket(t);
-        setComments(Array.isArray(c) ? c : []);
+
+        setComments(Array.isArray(c) ? c : (Array.isArray(c?.data) ? c.data : []));
         setHistory(Array.isArray(h) ? h : []);
         setStatuses(Array.isArray(s) ? s : s?.data || []);
+
       } catch (err) {
         console.error("Error loading ticket detail:", err);
       } finally {
@@ -151,6 +154,7 @@ export default function TeamTicketDetail() {
 
     const internal = recipientType === "internal";
 
+  
     const notifyUserId = (() => {
       if (internal) return null;
       if (!ticket) return null;
@@ -161,7 +165,9 @@ export default function TeamTicketDetail() {
 
     setSending(true);
     try {
+
       const created = await addTicketComment(token, id, text.trim(), internal, notifyUserId);
+
 
       if (created && typeof created === "object" && created.id != null) {
         setComments((prev) => {
