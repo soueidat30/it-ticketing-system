@@ -163,6 +163,13 @@ class TicketController extends Controller
             'notify_user_id'   => 'nullable|exists:users,id',
         ]);
 
+        \Log::info('storeComment incoming', [
+            'ticket_param' => $id,
+            'auth_user_id' => Auth::id(),
+            'payload' => $request->only(['content', 'internal', 'notify_user_id']),
+        ]);
+
+
         $ticket = (is_numeric($id)
             ? Ticket::findOrFail($id)
             : Ticket::where('ticket_number', $id)->firstOrFail());
@@ -193,6 +200,13 @@ class TicketController extends Controller
             ]);
         } catch (\Throwable $e) {
 
+            \Log::error('storeComment failed', [
+                'ticket_param' => $id,
+                'auth_user_id' => Auth::id(),
+                'error_message' => $e->getMessage(),
+                'exception_class' => get_class($e),
+            ]);
+
             $msg = $e->getMessage();
             $friendly = str_contains($msg, 'Base table or view not found') && str_contains($msg, 'comments')
                 ? 'Database table `comments` is missing in the current DB. Run migrations / verify DB connection.'
@@ -205,6 +219,7 @@ class TicketController extends Controller
                 ],
             ], 500);
         }
+
 
         $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}");
 

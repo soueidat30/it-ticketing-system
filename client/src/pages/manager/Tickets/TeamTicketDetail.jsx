@@ -63,6 +63,8 @@ export default function TeamTicketDetail() {
   const [text,        setText]        = useState("");
   const [recipientType, setRecipientType] = useState("employee"); 
   const [sending,     setSending]     = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
 
   const [agents, setAgents] = useState([]);
   const [agentId, setAgentId] = useState("");
@@ -165,9 +167,7 @@ export default function TeamTicketDetail() {
 
     setSending(true);
     try {
-
       const created = await addTicketComment(token, id, text.trim(), internal, notifyUserId);
-
 
       if (created && typeof created === "object" && created.id != null) {
         setComments((prev) => {
@@ -180,8 +180,11 @@ export default function TeamTicketDetail() {
         setComments(Array.isArray(updated) ? updated : []);
       }
 
+      // Success UX
       setText("");
       setRecipientType("employee");
+      setSuccessMessage("Comment sent");
+      setTimeout(() => setSuccessMessage(""), 2000);
     } catch (err) {
       console.error("Comment failed:", err);
     } finally {
@@ -384,8 +387,25 @@ export default function TeamTicketDetail() {
                     }}
                   />
 
-                  <div className="ttd-comment-input__footer">
+              <div className="ttd-comment-input__footer">
                     <span className="ttd-hint">Ctrl+Enter to send</span>
+                  </div>
+
+                  {successMessage && (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "#16a34a",
+                        marginTop: 8,
+                        textAlign: "left",
+                      }}
+                    >
+                      {successMessage}
+                    </div>
+                  )}
+
+                  <div className="ttd-comment-input__footer">
                     <button
                       className="ttd-btn ttd-btn--primary"
                       onClick={handleAddComment}

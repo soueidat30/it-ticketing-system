@@ -16,21 +16,44 @@ class DatabaseSeeder extends Seeder
      * Seed the application's database.
      */
     public function run(): void
-    {
-        // Seed roles first
-        $this->call(RoleSeeder::class);
+{
+    // Seed roles first
+    $this->call(RoleSeeder::class);
 
-        // Create an admin user with bcrypt password
-        $adminRole = Role::firstWhere('name', 'admin');
+    // Admin
+    $adminRole = Role::firstWhere('name', 'admin');
+    User::firstOrCreate(
+        ['username' => 'admin'],
+        [
+            'full_name' => 'Administrator',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
+            'role_id' => $adminRole?->id,
+        ]
+    );
 
-        User::firstOrCreate(
-            ['username' => 'admin'],
-            [
-                'full_name' => 'Administrator',
-                'email' => 'admin@example.com',
-                'password' => Hash::make('password'),
-                'role_id' => $adminRole ? $adminRole->id : null,
-            ]
-        );
-    }
+    // Agent
+    $agentRole = Role::firstWhere('name', 'agent');
+    User::firstOrCreate(
+        ['username' => 'agent'],
+        [
+            'full_name' => 'Agent User',
+            'email' => 'agent@example.com',
+            'password' => Hash::make('password'),
+            'role_id' => $agentRole?->id,
+        ]
+    );
+
+    // Employee
+    $employeeRole = Role::firstWhere('name', 'employee');
+    User::firstOrCreate(
+        ['username' => 'employee'],
+        [
+            'full_name' => 'Employee User',
+            'email' => 'employee@example.com',
+            'password' => Hash::make('password'),
+            'role_id' => $employeeRole?->id,
+        ]
+    );
 }
+    }

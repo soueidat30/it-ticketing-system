@@ -1,45 +1,173 @@
 .team {
-  padding: 20px;
+  font-family: "Inter", Arial, sans-serif;
+  padding: 2rem;
+  background: #f9fafb; /* light background */
+  min-height: 100vh;
+  color: #111827; /* dark text */
 }
 
+/* Header */
 .team__header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
 }
 
+.team__title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1e3a8a; /* deep blue */
+  margin: 0;
+}
+
+.team__subtitle {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* Controls */
 .team__controls {
   display: flex;
-  gap: 10px;
+  gap: 1rem;
 }
 
-.team__controls input,
-.team__controls select {
-  padding: 8px;
-  border: 1px solid #ddd;
+.team__search {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.team__search i {
+  color: #9ca3af;
+  margin-right: 0.5rem;
+}
+
+.team__search input {
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+  flex: 1;
+  background: transparent;
+  color: #111827;
+}
+
+.team__filter {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  background: #fff;
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+/* Loading & Empty states */
+.team__loading,
+.team__empty {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+.team__spinner {
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #2563eb; /* blue accent */
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Table */
+.team__table-wrap {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  overflow-x: auto;
 }
 
 .team__table {
   width: 100%;
-  margin-top: 20px;
   border-collapse: collapse;
 }
 
 .team__table th,
 .team__table td {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.9rem;
 }
 
-.badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
+.team__table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  color: #1e3a8a; /* deep blue */
 }
 
-.status-open { background: #dbeafe; }
-.status-in-progress { background: #fef3c7; }
-.status-pending { background: #fee2e2; }
-.status-resolved { background: #dcfce7; }
-.status-closed { background: #e5e7eb; }
+.team__row {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.team__row:hover {
+  background: #f0f9ff; /* light blue hover */
+}
+
+/* Priority Badges - Blue Theme */
+.priority-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.priority-badge--low { background: #93c5fd; }       /* light blue */
+.priority-badge--medium { background: #3b82f6; }    /* medium blue */
+.priority-badge--high { background: #1d4ed8; }      /* darker blue */
+.priority-badge--urgent { background: #1e3a8a; }    /* deep navy blue */
+
+/* Status Badges - Blue Theme */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  color: #fff;
+}
+
+.status-open { background: #2563eb; }          /* bright blue */
+.status-in-progress { background: #1d4ed8; }   /* darker blue */
+.status-resolved { background: #3b82f6; }      /* medium blue */
+.status-closed { background: #6b7280; }        /* gray for closed */
+
+/* Ticket ID & Title */
+.team__ticket-id {
+  font-weight: 600;
+  color: #2563eb; /* blue accent */
+}
+
+.team__ticket-title {
+  font-weight: 500;
+  color: #111827;
+}
+
+.team__employee,
+.team__category,
+.team__time {
+  color: #6b7280;
+  font-size: 0.85rem;
+}

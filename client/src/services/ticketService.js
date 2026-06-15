@@ -127,8 +127,7 @@ export const addTicketComment = (
     body: JSON.stringify({
       content,
       internal: isInternal,
-      // optional: lets backend notify a specific user (e.g., manager -> employee)
-      notify_user_id: notifyUserId,
+      ...(notifyUserId != null ? { notify_user_id: notifyUserId } : {}),
     }),
   }).then(async (r) => {
     const d = await r.json().catch(() => ({}));

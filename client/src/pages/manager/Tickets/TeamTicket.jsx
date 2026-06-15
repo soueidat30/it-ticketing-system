@@ -13,7 +13,7 @@ import {
 export default function TeamTickets() {
   const [tickets, setTickets] = useState([]);
   const [statuses, setStatuses] = useState([]);
-  const [agents, setAgents] = useState([]); // will fetch from backend later
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -21,7 +21,6 @@ export default function TeamTickets() {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  // Load tickets + statuses
   useEffect(() => {
     let ignore = false;
 
@@ -52,7 +51,6 @@ export default function TeamTickets() {
     };
   }, []);
 
-  // Assign ticket
   const handleAssign = async (ticketId, agentId) => {
     try {
       await assignTicket(token, ticketId, agentId);
@@ -63,7 +61,6 @@ export default function TeamTickets() {
     }
   };
 
-  // Update status
   const handleStatusChange = async (ticketId, statusId) => {
     try {
       await updateTicketStatus(token, ticketId, statusId, "Updated by manager");
@@ -74,7 +71,6 @@ export default function TeamTickets() {
     }
   };
 
-  // Filtering
   const filtered = tickets.filter((t) => {
     const q = search.toLowerCase();
     const matchSearch =
@@ -92,17 +88,27 @@ export default function TeamTickets() {
     <div className="team">
       {/* HEADER */}
       <div className="team__header">
-        <h1>Team Tickets</h1>
+        <div>
+          <h1 className="team__title">Team Tickets</h1>
+          <p className="team__subtitle">Monitor and track all employee support requests</p>
+        </div>
 
         <div className="team__controls">
-          <input
-            placeholder="Search tickets..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="team__search">
+            <i className="ti ti-search" />
+            <input
+              placeholder="Search tickets..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="All">All</option>
+          <select
+            className="team__filter"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="All">All Statuses</option>
             {statuses.map((s) => (
               <option key={s.id} value={s.status_name}>
                 {s.status_name}
@@ -114,77 +120,57 @@ export default function TeamTickets() {
 
       {/* TABLE */}
       {loading ? (
-        <p>Loading...</p>
+        <div className="team__loading">
+          <span className="team__spinner" />
+          Loading tickets...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="team__empty">
+          <i className="ti ti-ticket" />
+          <p>No tickets found</p>
+        </div>
       ) : (
-        <table className="team__table">
-          <thead>
-            <tr>
-              <th>Ticket</th>
-              <th>Title</th>
-              <th>Employee</th>
-              <th>Status</th>
-              <th>Assign</th>
-              <th>Change Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.map((t) => (
-              <tr key={t.id}>
-                <td>{t.ticket_number || `#${t.id}`}</td>
-                <td
-                  onClick={() => navigate(`/manager/team-tickets/${t.id}`)}
-                  style={{ cursor: "pointer" }}
-                >
-                  {t.title || "—"}
-                </td>
-                <td>{t.user?.full_name || "Unassigned"}</td>
-
-                {/* STATUS */}
-                <td>
-                  <span
-                    className={`badge status-${(t.status?.status_name || "")
-                      .toLowerCase()
-                      .replace(/ /g, "-")}`}
-                  >
-                    {t.status?.status_name || "Open"}
-                  </span>
-                </td>
-
-                {/* ASSIGN */}
-                <td>
-                  <select
-                    onChange={(e) => handleAssign(t.id, e.target.value)}
-                    defaultValue=""
-                  >
-                    <option value="" disabled>
-                      Assign
-                    </option>
-                    {agents.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-
-                {/* STATUS UPDATE */}
-                <td>
-                  <select
-                    value={t.status?.id || ""}
-                    onChange={(e) => handleStatusChange(t.id, e.target.value)}
-                  >
-                    {statuses.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.status_name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
+        <div className="team__table-wrap">
+          <table className="team__table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Title</th>
+                <th>Employee</th>
+                <th>Category</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Created</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {filtered.map((t) => (
+                <tr
+                  key={t.id}
+                  className="team__row"
+                  onClick={() => navigate(`/manager/team-tickets/${t.id}`)}
+                >
+                  <td><span className="team__ticket-id">{t.ticket_number || `#${t.id}`}</span></td>
+                  <td><span className="team__ticket-title">{t.title || "—"}</span></td>
+                  <td><span className="team__employee">{t.user?.full_name || "Unknown"}</span></td>
+                  <td><span className="team__category">{t.category?.category_name || "—"}</span></td>
+                  <td>
+                    <span className={`priority-badge priority-badge--${(t.priority?.priority_name || "").toLowerCase()}`}>
+                      {t.priority?.priority_name || "—"}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge status-${(t.status?.status_name || "open").toLowerCase().replace(/ /g, "-")}`}>
+                      {t.status?.status_name || "Open"}
+                    </span>
+                  </td>
+                  <td><span className="team__time">{t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
