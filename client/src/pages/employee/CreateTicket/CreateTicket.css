@@ -221,6 +221,33 @@
 .ct-upload__sub  { font-size: 11.5px; color: #9ca3af; }
 .ct-upload__input { display: none; }
 
+.ct-upload--disabled {
+  cursor: not-allowed;
+  border-color: rgba(3,54,61,0.08);
+  background: #f9fafb;
+}
+.ct-upload--disabled:hover {
+  border-color: rgba(3,54,61,0.08);
+  background: #f9fafb;
+}
+.ct-upload--disabled .ct-upload__icon { color: #d1d5db; }
+.ct-upload--disabled .ct-upload__text { color: #9ca3af; }
+
+.ct-file-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #dc2626;
+  line-height: 1.5;
+}
+.ct-file-error i { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
 .ct-file-list {
   display: flex;
   flex-direction: column;

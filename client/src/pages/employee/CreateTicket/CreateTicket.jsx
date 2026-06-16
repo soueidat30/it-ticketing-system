@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import "./CreateTicket.css";
 import { createTicket, getCategories, getPriorities } from "../../../services/ticketService";
 
+const MAX_FILES = 3;
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "application/pdf"];
 
 export default function CreateTicket() {
   const navigate = useNavigate();
@@ -15,6 +19,7 @@ export default function CreateTicket() {
   const [priorities, setPriorities] = useState([]);
   const [ticketRef, setTicketRef]   = useState("");
   const [attachments, setAttachments] = useState([]);
+  const [fileError, setFileError]   = useState("");
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -66,18 +71,61 @@ export default function CreateTicket() {
 
   const handleReset = () => {
     setForm({ title: "", category_id: "", priority_id: "", description: "" });
-    setErrors({}); setSubmitted(false); setApiError(""); setAttachments([]);
+    setErrors({}); setSubmitted(false); setApiError(""); setAttachments([]); setFileError("");
   };
 
+  // ── File validation ──
   const handleFile = (e) => {
-    setAttachments(prev => [...prev, ...Array.from(e.target.files)]);
+    const incoming = Array.from(e.target.files);
+    setFileError("");
+
+    // Check max file count BEFORE adding
+    const availableSlots = MAX_FILES - attachments.length;
+    if (availableSlots <= 0) {
+      setFileError(`You can only attach up to ${MAX_FILES} files.`);
+      e.target.value = "";
+      return;
+    }
+
+    const accepted = [];
+    const rejected = [];
+
+    incoming.forEach((file) => {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        rejected.push(`${file.name} — unsupported file type`);
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        rejected.push(`${file.name} — exceeds ${MAX_FILE_SIZE_MB}MB`);
+        return;
+      }
+      accepted.push(file);
+    });
+
+    // Trim accepted to remaining slots
+    const toAdd = accepted.slice(0, availableSlots);
+    if (accepted.length > availableSlots) {
+      rejected.push(`Only ${availableSlots} more file(s) could be added (max ${MAX_FILES} total)`);
+    }
+
+    if (rejected.length > 0) {
+      setFileError(rejected.join(" · "));
+    }
+
+    if (toAdd.length > 0) {
+      setAttachments(prev => [...prev, ...toAdd]);
+    }
+
+    e.target.value = ""; // allow re-selecting same file later
   };
 
   const removeFile = (i) => {
     setAttachments(prev => prev.filter((_, idx) => idx !== i));
+    setFileError("");
   };
 
   const selectedPriority = priorities.find(p => String(p.id) === String(form.priority_id));
+  const remainingSlots = MAX_FILES - attachments.length;
 
   // ── Success ──
   if (submitted) {
@@ -96,7 +144,7 @@ export default function CreateTicket() {
         </div>
         <div className="ct-success__actions">
           <button className="ct-btn ct-btn--outline" onClick={handleReset}>Create Another</button>
-          <button className="ct-btn ct-btn--primary" onClick={() => navigate("/employee/my-tickets")}> View My ticket</button>
+          <button className="ct-btn ct-btn--primary" onClick={() => navigate("/employee/my-tickets")}>View My Tickets</button>
         </div>
       </div>
     );
@@ -207,22 +255,49 @@ export default function CreateTicket() {
           {/* Attachments */}
           <div className="ct-card">
             <div className="ct-card__header">
-              <h2 className="ct-card__title">Attachments <span className="ct-optional">(optional)</span></h2>
+              <h2 className="ct-card__title">
+                Attachments <span className="ct-optional">(optional)</span>
+              </h2>
             </div>
             <div className="ct-card__body">
-              <label className="ct-upload">
-                <i className="ti ti-paperclip ct-upload__icon" />
-                <span className="ct-upload__text">Click to attach files</span>
-                <span className="ct-upload__sub">PNG, JPG, PDF up to 10MB</span>
-                <input type="file" multiple className="ct-upload__input" onChange={handleFile} />
-              </label>
+
+              {remainingSlots > 0 ? (
+                <label className="ct-upload">
+                  <i className="ti ti-paperclip ct-upload__icon" />
+                  <span className="ct-upload__text">Click to attach files</span>
+                  <span className="ct-upload__sub">
+                    PNG, JPG, PDF — up to {MAX_FILE_SIZE_MB}MB each · {remainingSlots} of {MAX_FILES} slots left
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".png,.jpg,.jpeg,.pdf"
+                    className="ct-upload__input"
+                    onChange={handleFile}
+                  />
+                </label>
+              ) : (
+                <div className="ct-upload ct-upload--disabled">
+                  <i className="ti ti-lock ct-upload__icon" />
+                  <span className="ct-upload__text">Maximum {MAX_FILES} files reached</span>
+                  <span className="ct-upload__sub">Remove a file to add another</span>
+                </div>
+              )}
+
+              {fileError && (
+                <div className="ct-file-error">
+                  <i className="ti ti-alert-circle" />
+                  {fileError}
+                </div>
+              )}
+
               {attachments.length > 0 && (
                 <div className="ct-file-list">
                   {attachments.map((f, i) => (
                     <div key={i} className="ct-file-item">
                       <i className="ti ti-file" />
                       <span className="ct-file-name">{f.name}</span>
-                      <span className="ct-file-size">({(f.size/1024).toFixed(1)} KB)</span>
+                      <span className="ct-file-size">({(f.size/1024/1024).toFixed(2)} MB)</span>
                       <button className="ct-file-remove" onClick={() => removeFile(i)}>
                         <i className="ti ti-x" />
                       </button>
