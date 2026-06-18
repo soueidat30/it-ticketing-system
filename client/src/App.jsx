@@ -21,6 +21,8 @@ import TicketDetails from "./pages/agent/TicketDetails/TicketDetails";
 import UpdateStatus from "./pages/agent/UpdateStatus/UpdateStatus";
 import ResolveTicket from "./pages/agent/ResolveTicket/ResolveTicket";
 import Profile from "./pages/agent/Profile/Profile";
+import Comments from "./pages/agent/Comments/Comments";
+import History from "./pages/agent/History/History";
 import EmployeeDashboard from "./pages/employee/Dashboard/Dashboard";
 import AdminLayout    from "./layouts/AdminLayout";
 
@@ -105,6 +107,8 @@ function App() {
           <Route path="update-status" element={<UpdateStatus />} />
           <Route path="resolve-ticket" element={<ResolveTicket />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="comments" element={<Comments />} />
+          <Route path="history" element={<History />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
 
         </Route>

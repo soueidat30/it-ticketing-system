@@ -27,6 +27,8 @@ const Icons = {
   update:
     "M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7 M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",
   resolve: "M22 11.08V12a10 10 0 11-5.93-9.14 M22 4L12 14.01l-3-3",
+  history: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 6v6l4 2",
+  comments: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z",
   bell: "M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 01-3.46 0",
   search: "M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0",
   logout: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
@@ -104,7 +106,7 @@ export default function AgentLayout() {
             <Icon d={Icons.support} />
           </div>
           <div className="agent-sidebar__brand-text">
-            <span className="agent-sidebar__brand-name">IDS HelpDesk</span>
+            <span className="agent-sidebar__brand-name">Tickora</span>
             <span className="agent-sidebar__brand-role">Agent Portal</span>
           </div>
         </a>
@@ -175,6 +177,34 @@ export default function AgentLayout() {
                 <Icon d={Icons.resolve} />
               </span>
               <span className="agent-nav-label">Resolve Ticket</span>
+            </NavLink>
+          </div>
+
+          <div className="agent-sidebar__nav-group">
+            <div className="agent-sidebar__nav-label">Activity</div>
+
+            <NavLink
+              to="/agent/comments"
+              className={({ isActive }) =>
+                `agent-sidebar__nav-item${isActive ? " active" : ""}`
+              }
+            >
+              <span className="agent-nav-icon">
+                <Icon d={Icons.comments} />
+              </span>
+              <span className="agent-nav-label">Comments</span>
+            </NavLink>
+
+            <NavLink
+              to="/agent/history"
+              className={({ isActive }) =>
+                `agent-sidebar__nav-item${isActive ? " active" : ""}`
+              }
+            >
+              <span className="agent-nav-icon">
+                <Icon d={Icons.history} />
+              </span>
+              <span className="agent-nav-label">History</span>
             </NavLink>
           </div>
 
@@ -251,4 +281,3 @@ export default function AgentLayout() {
     </div>
   );
 }
-

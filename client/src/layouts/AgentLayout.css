@@ -504,6 +504,12 @@
 }
 
 .agent-main {
+  /* FIX: this is the only normal-flow child left in the flex shell
+     (sidebar + topbar are both position:fixed), so without flex:1 it
+     was shrinking to fit its content instead of filling the viewport —
+     that's what was causing the big empty gap on the right. */
+  flex: 1 1 auto;
+  min-width: 0;
   margin-left: var(--agent-sidebar-width);
   margin-top: var(--agent-topbar-height);
   padding: 28px;

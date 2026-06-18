@@ -24,7 +24,6 @@ const SUMMARY_CHIPS = [
   { label: "Open",        color: "#1d4ed8", filter: "open"        },
   { label: "In Progress", color: "#6d28d9", filter: "in-progress" },
   { label: "Pending",     color: "#d97706", filter: "pending"     },
-  { label: "Overdue",     color: "#dc2626", filter: "overdue"     },
 ];
 
 const initials = (name) =>
@@ -373,11 +372,7 @@ export default function AssignedTickets() {
                   <tr key={t.id} onClick={() => go("/agent/ticket-details", t.id)}>
                     <td>
                       <span className="at-ticket-id">#{t.id}</span>
-                      {t.overdue && (
-                        <div style={{ fontSize: 10, color: "var(--agent-danger)", fontWeight: 700, marginTop: 2 }}>
-                          OVERDUE
-                        </div>
-                      )}
+                      
                     </td>
                     <td>
                       <div className="at-ticket-subject">{t.subject}</div>
@@ -395,7 +390,7 @@ export default function AssignedTickets() {
                     <td><StatusBadge s={t.status} /></td>
                     <td><span className="agent-badge" style={{ background: "#f1f5f9", color: "#475569" }}>{t.category}</span></td>
                     <td>
-                      <span className={`at-age${t.overdue ? " at-age--overdue" : ""}`}>
+                      <span>
                         {t.createdAtLabel}
                       </span>
                     </td>

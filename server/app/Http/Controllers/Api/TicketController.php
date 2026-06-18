@@ -124,6 +124,9 @@ class TicketController extends Controller
             'priority',
             'status',
             'user',
+            // eager-load comments so a sidebar-level Comments feed
+            // can flatten them across all of this agent's tickets
+            'comments.user.role',
         ])
         ->where('assigned_to', $agentId)
         ->get();
@@ -135,6 +138,45 @@ class TicketController extends Controller
     public function dashboardStats()
     {
         $agentId = Auth::id();
+
+        // Priority breakdown (critical/high/medium/low) for this agent
+        // NOTE: frontend expects keys in lowercase: critical, high, medium, low
+        $priority_breakdown = collect(['critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0]);
+
+        try {
+            // More robust: bucket by substring of priority_name
+            $priorityRows = Ticket::query()
+                ->selectRaw('priorities.priority_name as priority_name, COUNT(*) as cnt')
+                ->join('priorities', 'tickets.priority_id', '=', 'priorities.id')
+                ->where('tickets.assigned_to', $agentId)
+                ->groupBy('priorities.priority_name')
+                ->get();
+
+            $bucketFor = function (?string $name): ?string {
+                $n = strtolower(trim($name ?? ''));
+                if (str_contains($n, 'crit')) return 'critical';
+                if (str_contains($n, 'high')) return 'high';
+                if (str_contains($n, 'med')) return 'medium';
+                if (str_contains($n, 'low')) return 'low';
+                return null;
+            };
+
+            foreach ($priorityRows as $row) {
+                $bucket = $bucketFor($row->priority_name);
+                if ($bucket && $priority_breakdown->has($bucket)) {
+                    $priority_breakdown[$bucket] = (int) $row->cnt;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Don’t break the whole dashboard if priority join fails
+            \Log::error('dashboardStats priority_breakdown failed', [
+                'agent_id' => $agentId,
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+            ]);
+        }
+
+
 
         return response()->json([
             'assigned' => Ticket::where('assigned_to', $agentId)->count(),
@@ -150,6 +192,9 @@ class TicketController extends Controller
             'resolved' => Ticket::where('assigned_to', $agentId)
                 ->whereHas('status', fn($q) => $q->where('status_name', 'Resolved'))
                 ->count(),
+
+            // Used by Agent Dashboard "Priority Breakdown"
+            'priority_breakdown' => $priority_breakdown->all(),
         ]);
     }
 
@@ -354,6 +399,86 @@ class TicketController extends Controller
     return response()->json($ticket->load(['status', 'priority', 'category', 'user', 'assignee']));
 }
 
+
+    // ── POST /agent/tickets/{id}/resolve ─────────────────────
+    public function resolveTicket(Request $request, $id)
+    {
+        $request->validate([
+            'resolution_type' => 'required|string|max:50',
+            'solution'         => 'required|string|min:20',
+            'root_cause'       => 'nullable|string',
+            'time_spent'       => 'nullable|numeric',
+            'time_unit'        => 'nullable|in:minutes,hours',
+            'internal_notes'   => 'nullable|string',
+            'rating'           => 'nullable|integer|min:1|max:5',
+            'notify_user'      => 'boolean',
+            'notify_manager'   => 'boolean',
+        ]);
+
+        $user   = $request->user();
+        $ticket = Ticket::with(['user', 'status'])->findOrFail($id);
+
+        // Save the resolution record
+        \DB::table('ticket_resolutions')->insert([
+            'ticket_id'       => $ticket->id,
+            'resolved_by'     => $user->id,
+            'resolution_type' => $request->resolution_type,
+            'solution'        => $request->solution,
+            'root_cause'      => $request->root_cause,
+            'time_spent'      => $request->time_spent,
+            'time_unit'       => $request->time_unit,
+            'internal_notes'  => $request->internal_notes,
+            'rating'          => $request->rating,
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+
+        // Move the ticket itself to "Resolved"
+        $resolvedStatus = \DB::table('statuses')->where('status_name', 'Resolved')->first();
+        $resolvedStatusId = $resolvedStatus ? $resolvedStatus->id : $ticket->status_id;
+
+        $ticket->update([
+            'status_id'   => $resolvedStatusId,
+            'resolved_at' => now(),
+        ]);
+
+        // Log it in the status history so the History/timeline views pick it up
+        \DB::table('ticket_status_histories')->insert([
+            'ticket_id'  => $ticket->id,
+            'status_id'  => $resolvedStatusId,
+            'changed_by' => $user->id,
+            'note'       => $request->solution,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Activity log
+        \DB::table('activity_logs')->insert([
+            'user_id'     => $user->id,
+            'action'      => 'ticket_resolved',
+            'description' => "Ticket #{$ticket->ticket_number} marked as resolved",
+            'ticket_id'   => $ticket->id,
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        // Notify the requester, unless the agent resolved their own ticket
+        if ($request->boolean('notify_user', true) && $ticket->user_id !== $user->id) {
+            Notification::notify(
+                user_id:      $ticket->user_id,
+                ticket_id:    $ticket->id,
+                triggered_by: $user->id,
+                type:         'ticket_resolved',
+                title:        'Your ticket has been resolved',
+                message:      "Ticket {$ticket->ticket_number} has been marked as resolved.",
+            );
+        }
+
+        return response()->json([
+            'message' => 'Ticket resolved successfully',
+            'ticket'  => $ticket->refresh()->load(['status', 'priority', 'category', 'user', 'assignee']),
+        ]);
+    }
 
     // ── Helper: human-readable file size ─────────────────────
     private function formatBytes(int $bytes): string

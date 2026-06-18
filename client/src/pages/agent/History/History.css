@@ -1,0 +1,134 @@
+.hist-page {
+  text-align: left;
+}
+
+.hist-search-card {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.hist-search-wrap {
+  position: relative;
+  max-width: 320px;
+}
+
+.hist-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--agent-muted);
+  display: flex;
+}
+
+.hist-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  border: 1.5px solid var(--agent-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--agent-text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.hist-search-input:focus {
+  border-color: var(--agent-primary);
+}
+
+.hist-table-card {
+  overflow: hidden;
+}
+
+.hist-state {
+  padding: 32px;
+  text-align: center;
+  color: var(--agent-muted);
+  font-size: 13.5px;
+}
+
+.hist-state--error {
+  color: var(--agent-danger);
+}
+
+.hist-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--agent-muted);
+}
+
+.hist-empty-title {
+  margin-top: 8px;
+  font-weight: 600;
+  color: var(--agent-text);
+  font-size: 14px;
+}
+
+.hist-empty p {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.hist-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.hist-table thead tr {
+  text-align: left;
+  border-bottom: 1px solid var(--agent-border);
+}
+
+.hist-table th {
+  padding: 12px 16px;
+  color: var(--agent-muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hist-table td {
+  padding: 12px 16px;
+}
+
+.hist-row {
+  border-bottom: 1px solid var(--agent-border);
+  transition: background 0.15s;
+}
+
+.hist-row:last-child {
+  border-bottom: none;
+}
+
+.hist-row:hover {
+  background: var(--agent-bg);
+}
+
+.hist-cell-id {
+  font-weight: 600;
+  color: var(--agent-text);
+  white-space: nowrap;
+}
+
+.hist-cell-date {
+  color: var(--agent-muted);
+  white-space: nowrap;
+}
+
+.hist-cell-action {
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .hist-table {
+    font-size: 12.5px;
+  }
+  .hist-table th,
+  .hist-table td {
+    padding: 10px;
+  }
+}

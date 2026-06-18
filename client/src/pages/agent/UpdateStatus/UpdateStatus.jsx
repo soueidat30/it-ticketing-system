@@ -128,7 +128,7 @@ export default function UpdateStatus() {
   // ── Submit state ──────────────────────────────────────────────────────────
   const [submitting,  setSubmitting]  = useState(false);
   const [submitError, setSubmitError] = useState(null);
-  const [toast,       setToast]       = useState(false);
+  const [success,     setSuccess]     = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -258,11 +258,7 @@ export default function UpdateStatus() {
           return;
         }
 
-        setToast(true);
-        setTimeout(() => {
-          setToast(false);
-          navigate("/agent/assigned-tickets");
-        }, 2200);
+        setSuccess(true);
         return;
       }
 
@@ -272,13 +268,10 @@ export default function UpdateStatus() {
         return;
       }
 
+      setSuccess(true);
 
-      setToast(true);
-      setTimeout(() => {
-        setToast(false);
-        navigate("/agent/assigned-tickets");
-      }, 2200);
-    } catch (err) {
+      // Keep the current layout stable while success overlay is visible
+      // (prevents awkward 
       console.error(err);
       setSubmitError("Network error — could not update status.");
     } finally {
@@ -699,14 +692,30 @@ export default function UpdateStatus() {
         </div>
       </div>
 
-      {/* ── Success toast ── */}
-      {toast && (
-        <div className="us-toast">
-          <Icon d={IC.check} size={18} />
-          Status updated to{" "}
-          <strong style={{ color: "var(--agent-accent)", marginLeft: 4 }}>
-            {selObj?.label}
-          </strong>
+      {/* ── Success modal ── */}
+      {success && (
+        <div className="us-success-overlay">
+          <div className="us-success-modal">
+            <div className="us-success-icon">
+              <Icon d={IC.check} size={32} />
+            </div>
+            <div className="us-success-title">Status Updated!</div>
+            <div className="us-success-desc">
+              Ticket <strong>#{ticketNumber}</strong> is now{" "}
+              <strong style={{ color: selObj?.icon.color }}>{selObj?.label}</strong>.
+              {notifyUser && " The requester has been notified."}
+            </div>
+            <div className="us-success-actions">
+              <button className="agent-btn agent-btn--ghost"
+                onClick={() => navigate("/agent/assigned-tickets")}>
+                <Icon d={IC.ticket} /> Assigned Tickets
+              </button>
+              <button className="agent-btn agent-btn--primary"
+                onClick={() => navigate("/agent/ticket-details", { state: { ticketId } })}>
+                <Icon d={IC.eye} /> View Ticket
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

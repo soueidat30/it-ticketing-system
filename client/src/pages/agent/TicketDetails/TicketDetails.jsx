@@ -131,10 +131,17 @@ export default function TicketDetails() {
   const status    = String(ticket?.status?.status_name ?? "open").toLowerCase().replace(/\s+/g, "-");
   const createdLabel = formatDate(ticket?.created_at);
   const updatedLabel = formatDate(ticket?.updated_at);
-  const dueLabel     = formatDate(ticket?.due_at);
+  // Some fields may come from backend as due_at / due_date (or not at all).
+  // Show "—" when missing, instead of formatting invalid values.
+  const dueRaw = ticket?.due_at ?? ticket?.due_date ?? ticket?.dueDate;
+  const dueLabel = dueRaw ? formatDate(dueRaw) : "—";
+
   const slaBreached  = ticket?.sla_breached ?? false;
   const slaPercent   = Number(ticket?.sla_percent ?? 0);
-  const timeOpen     = ticket?.time_open ?? "—";
+
+  // Backend may return time_open as a formatted string or as a timestamp. If missing, show "—".
+  const timeOpen = ticket?.time_open ?? "—";
+
   const tags         = ticket?.tags ?? [];
 
   // ── Can current user see internal notes? ────────────────
@@ -299,7 +306,7 @@ export default function TicketDetails() {
                   <div className="td-requester-meta">{requesterDept} · Member since {requesterJoined}</div>
                   <div className="td-requester-contact">
                     <button className="agent-btn agent-btn--ghost agent-btn--sm"><Icon d={IC.mail} size={12} /> {requesterEmail}</button>
-                    <button className="agent-btn agent-btn--ghost agent-btn--sm"><Icon d={IC.phone} size={12} /> {requesterPhone}</button>
+                    
                   </div>
                 </div>
               </div>
@@ -692,7 +699,6 @@ export default function TicketDetails() {
               </div>
               {[
                 { label: "Email", val: requesterEmail },
-                { label: "Phone", val: requesterPhone },
                 { label: "Since", val: requesterJoined },
               ].map(row => (
                 <div className="td-side-row" key={row.label}>
@@ -700,21 +706,6 @@ export default function TicketDetails() {
                   <span className="td-side-val" style={{ fontSize: 12 }}>{row.val}</span>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div className="td-side-card">
-            <div className="td-side-header">Tags</div>
-            <div className="td-side-body">
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {tags.length > 0 ? tags.map(tag => (
-                  <span key={tag} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 10px", background: "rgba(3,54,61,0.06)", color: "var(--agent-primary)", borderRadius: 20, border: "1px solid rgba(3,54,61,0.12)" }}>
-                    #{tag}
-                  </span>
-                )) : (
-                  <span style={{ fontSize: 12, color: "var(--agent-muted)" }}>No tags assigned</span>
-                )}
-              </div>
             </div>
           </div>
         </div>
