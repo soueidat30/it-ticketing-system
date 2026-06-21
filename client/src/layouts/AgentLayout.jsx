@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "../context/ThemeContext";
+
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+
 import NotificationPanel from "../pages/agent/NotifcationPanel/Notificationpanel";
 import "./AgentLayout.css";
 
-
+import "../context/theme.css";
 
 const Icon = ({ d, ...p }) => (
+
   <svg
     viewBox="0 0 24 24"
     fill="none"
@@ -40,7 +44,29 @@ const Icons = {
 
 const API_URL = "http://127.0.0.1:8000/api";
 
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+
+
+
+
+
+  return (
+    <button
+
+      type="button"
+      className="agent-topbar__action-btn"
+      onClick={toggleTheme}
+      aria-label="Toggle dark mode"
+      title="Toggle theme"
+    >
+      {theme === "dark" ? "🌙" : "☀️"}
+    </button>
+  );
+}
+
 export default function AgentLayout() {
+
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen] = useState(false);
 
@@ -97,7 +123,8 @@ export default function AgentLayout() {
   }, []);
 
   return (
-    <div className={`agent-shell${collapsed ? " collapsed" : ""}`}>
+    <div className="agent-shell">
+
       <aside
         className={`agent-sidebar${collapsed ? " collapsed" : ""}${mobileOpen ? " mobile-open" : ""}`}
       >
@@ -267,7 +294,11 @@ export default function AgentLayout() {
 
         <div className="agent-topbar__actions">
           <NotificationPanel />
+
+          <ThemeToggle />
+
           <div className="agent-topbar__user">
+
 
             <div className="agent-topbar__user-avatar">{initials}</div>
             <span className="agent-topbar__user-name">{displayName}</span>

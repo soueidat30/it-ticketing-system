@@ -1,50 +1,103 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./Dashboard.css";
+import { getAdminDashboardStats } from "../../../services/adminDashboardService";
 
-const STATS = [
-  { label: "Open Tickets",     value: 142, delta: "+12", up: true,  icon: "ti-ticket",        color: "blue"   },
-  { label: "Resolved Today",   value:  38, delta: "+5",  up: true,  icon: "ti-circle-check",  color: "green"  },
-  { label: "Avg. Response",    value: "2h 14m", delta: "-18m", up: true, icon: "ti-clock", color: "lime" },
-  { label: "Overdue",          value:   9, delta: "+3",  up: false, icon: "ti-alert-triangle", color: "red"   },
-];
 
-const RECENT_TICKETS = [
-  { id: "#4821", subject: "Cannot access VPN after password reset", user: "Sara El-Khoury",   dept: "Finance",   priority: "High",   status: "Open",        time: "4m ago"  },
-  { id: "#4820", subject: "Laptop screen flickering on startup",   user: "Karim Mansour",    dept: "Marketing", priority: "Medium", status: "In Progress", time: "22m ago" },
-  { id: "#4819", subject: "New employee onboarding — account setup", user: "Lara Haddad",   dept: "HR",        priority: "Low",    status: "Open",        time: "1h ago"  },
-  { id: "#4818", subject: "Outlook not syncing on mobile device",  user: "Nour Khalil",      dept: "Sales",     priority: "High",   status: "Pending",     time: "2h ago"  },
-  { id: "#4817", subject: "Printer offline in 3rd floor office",   user: "Ziad Nassar",      dept: "Legal",     priority: "Medium", status: "Resolved",    time: "3h ago"  },
-  { id: "#4816", subject: "Software license request — Adobe CC",   user: "Maya Salameh",     dept: "Design",    priority: "Low",    status: "Resolved",    time: "5h ago"  },
-];
 
-const AGENTS = [
-  { name: "Ali Hassan",    tickets: 14, resolved: 9,  avatar: "A", rating: 4.9 },
-  { name: "Dina Farhat",   tickets: 11, resolved: 8,  avatar: "D", rating: 4.8 },
-  { name: "Omar Saab",     tickets: 10, resolved: 6,  avatar: "O", rating: 4.7 },
-  { name: "Rana Moussa",   tickets:  8, resolved: 7,  avatar: "R", rating: 4.9 },
-];
 
-const ACTIVITY = [
-  { icon: "ti-ticket",       text: "Ticket #4821 assigned to Ali Hassan",     time: "Just now",  color: "blue"  },
-  { icon: "ti-circle-check", text: "Ticket #4815 marked resolved by Dina",    time: "12m ago",   color: "green" },
-  { icon: "ti-user-plus",    text: "New user Lara Haddad added to HR dept",   time: "34m ago",   color: "lime"  },
-  { icon: "ti-alert-triangle",text: "SLA breached on ticket #4810",           time: "1h ago",    color: "red"   },
-  { icon: "ti-settings",     text: "System settings updated by Admin",         time: "2h ago",    color: "muted" },
-];
 
-const PRIORITY_BAR = [
-  { label: "Critical", count: 4,  pct: 8,  color: "#ef4444" },
-  { label: "High",     count: 28, pct: 32, color: "#f97316" },
-  { label: "Medium",   count: 63, pct: 44, color: "#eab308" },
-  { label: "Low",      count: 47, pct: 16, color: "#22c55e" },
-];
+
+
+
 
 export default function Dashboard() {
   const [range, setRange] = useState("7d");
+  const [stats, setStats] = useState([
+    { label: "Open Tickets", value: 0, delta: "+12", up: true, icon: "ti-ticket", color: "blue" },
+    { label: "Resolved Today", value: 0, delta: "+5", up: true, icon: "ti-circle-check", color: "green" },
+    { label: "Avg. Response", value: "0h 0m", delta: "-18m", up: true, icon: "ti-clock", color: "lime" },
+  ]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    getAdminDashboardStats(token)
+      .then((data) => {
+        setStats([
+          {
+            label: "Total Tickets",
+            value: data.totalTickets ?? 0,
+            delta: "+12",
+            up: true,
+            icon: "ti-ticket",
+            color: "blue",
+          },
+          {
+            label: "Open Tickets",
+            value: data.openTickets ?? 0,
+            delta: "+12",
+            up: true,
+            icon: "ti-ticket",
+            color: "blue",
+          },
+          {
+            label: "Resolved Today",
+            value: data.resolvedToday ?? 0,
+            delta: "+5",
+            up: true,
+            icon: "ti-circle-check",
+            color: "green",
+          },
+          {
+            label: "SLA Breaches",
+            value: data.slaBreaches ?? 0,
+            delta: "+0",
+            up: true,
+            icon: "ti-alert-triangle",
+            color: "red",
+          },
+          {
+            label: "Avg. Response",
+            value: data.avgResponse ?? "0h 0m",
+            delta: "-18m",
+            up: true,
+            icon: "ti-clock",
+            color: "lime",
+          },
+        ]);
+      })
+      .catch(() => {
+        // keep defaults on error
+      });
+
+  }, []);
+
+  const [recentTickets, setRecentTickets] = useState([]);
+  const [priorityBreakdown, setPriorityBreakdown] = useState([]);
+  const [topAgents, setTopAgents] = useState([]);
+  const [activityFeed, setActivityFeed] = useState([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    getAdminDashboardStats(token)
+      .then((data) => {
+        setRecentTickets(data.recentTickets ?? []);
+        setPriorityBreakdown(data.priorityBreakdown ?? []);
+        setTopAgents(data.topAgents ?? []);
+        setActivityFeed(data.activityFeed ?? []);
+      })
+      .catch(() => {
+        // keep empty sections on error
+      });
+  }, []);
 
   return (
     <div className="dashboard-container">
+
 
       <div className="dashboard-header">
         <div>
@@ -68,8 +121,9 @@ export default function Dashboard() {
       </div>
 
       <div className="stats-grid">
-        {STATS.map(s => (
+        {stats.map(s => (
           <div key={s.label} className={`stat-card stat-card--${s.color}`}>
+
             <div className="stat-icon">
               <i className={`ti ${s.icon}`} />
             </div>
@@ -105,7 +159,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {RECENT_TICKETS.map(t => (
+                {recentTickets.map(t => (
                   <tr key={t.id} className="ticket-row">
                     <td><span className="ticket-id">{t.id}</span></td>
                     <td>
@@ -133,11 +187,11 @@ export default function Dashboard() {
           <div className="card">
             <div className="card-header">
               <h2 className="card-title">Priority Breakdown</h2>
-              <span className="card-subtitle">142 total</span>
+              <span className="card-subtitle">{priorityBreakdown.reduce((sum, p) => sum + (p.count ?? 0), 0)} total</span>
             </div>
             <div className="priority-section">
               <div className="priority-bars">
-                {PRIORITY_BAR.map(p => (
+                {priorityBreakdown.map(p => (
                   <div
                     key={p.label}
                     className="priority-segment"
@@ -147,7 +201,7 @@ export default function Dashboard() {
                 ))}
               </div>
               <div className="priority-legend">
-                {PRIORITY_BAR.map(p => (
+                {priorityBreakdown.map(p => (
                   <div key={p.label} className="priority-item">
                     <span className="priority-dot" style={{ background: p.color }} />
                     <span className="priority-name">{p.label}</span>
@@ -164,7 +218,7 @@ export default function Dashboard() {
               <Link to="/admin/users" className="card-link">View all <i className="ti ti-arrow-right" /></Link>
             </div>
             <div className="agents-list">
-              {AGENTS.map((a, i) => (
+              {topAgents.map((a, i) => (
                 <div key={a.name} className="agent-item">
                   <span className="agent-rank">#{i+1}</span>
                   <div className="agent-avatar">{a.avatar}</div>
@@ -187,7 +241,7 @@ export default function Dashboard() {
               <Link to="/admin/activity-logs" className="card-link">All logs <i className="ti ti-arrow-right" /></Link>
             </div>
             <div className="activity-feed">
-              {ACTIVITY.map((a, i) => (
+              {activityFeed.map((a, i) => (
                 <div key={i} className="activity-item">
                   <div className={`activity-icon activity-icon--${a.color}`}>
                     <i className={`ti ${a.icon}`} />

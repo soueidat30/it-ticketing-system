@@ -15,6 +15,7 @@ const TYPE_META = {
   ticket_created: { icon: "ti-ticket", color: "green", label: "Ticket Created" },
   ticket_resolved: { icon: "ti-circle-check", color: "green", label: "Resolved" },
   ticket_closed: { icon: "ti-lock", color: "gray", label: "Closed" },
+  attachment_added: { icon: "ti-paperclip", color: "teal", label: "Attachment" },
 };
 
 const getMeta = (type) =>
@@ -247,8 +248,8 @@ export default function Notifications() {
                             <span className="notif-item__time">{timeAgo(n.created_at)}</span>
                           </div>
 
-                          <p className="notif-item__title">{n.title}</p>
-                          <p className="notif-item__message">{n.message}</p>
+                    <p className="notif-item__title">{n.title}</p>
+                    <p className="notif-item__message">{n.message}</p>
 
                           {n.ticket && (
                             <span className="notif-item__ticket">

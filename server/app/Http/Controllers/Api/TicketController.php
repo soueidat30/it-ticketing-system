@@ -8,12 +8,45 @@ use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketStatusHistory;
 use App\Models\Notification;
+use App\Models\SlaPolicy;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TicketController extends Controller
 {
+    private function activityDefaults(string $action, ?Ticket $ticket = null): array
+    {
+        $module = 'Tickets';
+        $severity = 'info';
+
+        $a = strtolower($action);
+        if (str_contains($a, 'resolve')) {
+            $module = 'Tickets';
+            $severity = 'info';
+        } elseif (str_contains($a, 'status_changed')) {
+            $module = 'Tickets';
+            $severity = 'warning';
+        } elseif (str_contains($a, 'assigned')) {
+            $module = 'Tickets';
+            $severity = 'info';
+        } elseif (str_contains($a, 'comment')) {
+            $module = 'Comments';
+            $severity = 'info';
+        } elseif (str_contains($a, 'attachment')) {
+            $module = 'Attachments';
+            $severity = 'info';
+        }
+
+        $affected = $ticket?->ticket_number ? "Ticket #{$ticket->ticket_number}" : null;
+
+        return [
+            'module' => $module,
+            'severity' => $severity,
+            'affected_ticket' => $affected,
+        ];
+    }
+
 
     public function index()
     {
@@ -37,11 +70,8 @@ class TicketController extends Controller
             'status',
             'user',
             'assignee',
-            // comments — eager-load the author so the frontend gets full_name & role
             'comments.user.role',
-            // attachments — eager-load the uploader
             'attachments.uploader',
-            // history — eager-load the new status label and the actor's name
             'history.status',
             'history.changer',
         ]);
@@ -65,12 +95,10 @@ class TicketController extends Controller
 
         $commentsQuery = $ticket->comments;
         if (!$isEmployee) {
-            // non-employee: only allow internal notes if role is agent
             if ($role !== 'agent') {
                 $commentsQuery = $commentsQuery->where('internal', false);
             }
         } else {
-            // employee
             $commentsQuery = $commentsQuery->where('internal', false);
         }
 
@@ -79,31 +107,72 @@ class TicketController extends Controller
             'id'       => $c->id,
             'author'   => $c->user->full_name ?? $c->user->username ?? 'Unknown',
             'role'     => $c->user->role->name ?? 'employee',
-            'text'     => $c->content,          // frontend reads c.text
+            'text'     => $c->content,
             'internal' => $c->internal,
             'time'     => $c->created_at->diffForHumans(),
         ]);
 
 
-        // ── Shape attachments ─────────────────────────────────
         $attachments = $ticket->attachments->map(fn($a) => [
-            'id'       => $a->id,
-            'name'     => $a->file_name,        // frontend reads a.name
-            'type'     => $a->file_type,        // frontend reads a.type (pdf / img / log / doc)
-            'size'     => $this->formatBytes($a->file_size), // frontend reads a.size
-            'uploaded' => $a->created_at->format('M j, Y'), // frontend reads a.uploaded
-            'path'     => $a->file_path,
+            'id'               => $a->id,
+            'name'             => $a->file_name,
+            'type'             => $a->file_type,
+            'size'             => $this->formatBytes($a->file_size),
+            'uploaded'         => $a->created_at->format('M j, Y'),
+            'path'             => $a->file_path,
+            'uploaded_by'      => $a->uploaded_by,
+            'uploaded_by_name' => $a->uploader->full_name ?? $a->uploader->username ?? null,
         ]);
 
-        // ── Shape history ─────────────────────────────────────
         $history = $ticket->history->map(fn($h) => [
             'id'    => $h->id,
             'event' => 'Status changed to ' . ($h->status->status_name ?? '—'),
             'actor' => 'By ' . ($h->changer->full_name ?? $h->changer->username ?? 'System'),
             'time'  => $h->created_at->diffForHumans(),
-            'type'  => 'status',   // drives the CSS dot colour (td-history-dot--status)
+            'type'  => 'status',
             'note'  => $h->note,
         ]);
+
+        $now = now();
+
+        $responseDueAt   = $ticket->response_due_at;
+        $resolutionDueAt = $ticket->resolution_due_at;
+
+        $slaBreached = (bool) ($ticket->response_breached || $ticket->resolution_breached);
+
+        $isResolvedLike = in_array(strtolower($ticket->status?->status_name ?? ''), ['resolved', 'closed'], true);
+
+        $progressDueAt = null;
+        $progressNow   = $now;
+
+        if (!empty($resolutionDueAt) && !$isResolvedLike) {
+            $progressDueAt = $resolutionDueAt;
+        } else {
+            $progressDueAt = $responseDueAt;
+        }
+        $slaPercent = 0;
+        if (!empty($progressDueAt) && !empty($ticket->created_at)) {
+            $createdAt = $ticket->created_at;
+
+            $totalSeconds = max(1, $progressDueAt->getTimestamp() - $createdAt->getTimestamp());
+            $elapsedSeconds = $progressNow->getTimestamp() - $createdAt->getTimestamp();
+
+            $ratio = 1 - ($elapsedSeconds / $totalSeconds);
+            $slaPercent = (int) round(max(0, min(1, $ratio)) * 100);
+        }
+
+        $dueAt = !empty($resolutionDueAt) ? $resolutionDueAt : $responseDueAt;
+
+        $timeOpen = '—';
+        if (!empty($ticket->created_at)) {
+            $end = $isResolvedLike && !empty($ticket->resolved_at) ? $ticket->resolved_at : $now;
+            $timeOpen = $ticket->created_at->diffForHumans($end, true);
+        }
+
+        $ticket->sla_breached = $slaBreached;
+        $ticket->sla_percent  = $slaPercent;
+        $ticket->due_at       = $dueAt;
+        $ticket->time_open    = $timeOpen;
 
         return response()->json([
             'ticket'      => $ticket,
@@ -113,10 +182,9 @@ class TicketController extends Controller
         ]);
     }
 
-    // ── GET /agent/tickets  (only MY assigned tickets) ───────
     public function assignedTickets()
     {
-        $agentId = Auth::id();   // ← was returning ALL tickets before
+        $agentId = Auth::id();
 
 
         $tickets = Ticket::with([
@@ -124,8 +192,6 @@ class TicketController extends Controller
             'priority',
             'status',
             'user',
-            // eager-load comments so a sidebar-level Comments feed
-            // can flatten them across all of this agent's tickets
             'comments.user.role',
         ])
         ->where('assigned_to', $agentId)
@@ -134,17 +200,29 @@ class TicketController extends Controller
         return response()->json($tickets);
     }
 
-    // ── GET /agent/dashboard/stats ───────────────────────────
     public function dashboardStats()
     {
         $agentId = Auth::id();
 
-        // Priority breakdown (critical/high/medium/low) for this agent
-        // NOTE: frontend expects keys in lowercase: critical, high, medium, low
+        $recentTickets = Ticket::with(['status'])
+            ->where('assigned_to', $agentId)
+            ->orderByDesc('updated_at')
+            ->limit(5)
+            ->get()
+            ->map(fn ($t) => [
+                'ticket_number' => $t->ticket_number,
+                'title' => $t->title,
+                'status' => [
+                    'status_name' => $t->status?->status_name,
+                ],
+                'created_at' => $t->created_at,
+                'updated_at' => $t->updated_at,
+            ]);
+
         $priority_breakdown = collect(['critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0]);
 
+
         try {
-            // More robust: bucket by substring of priority_name
             $priorityRows = Ticket::query()
                 ->selectRaw('priorities.priority_name as priority_name, COUNT(*) as cnt')
                 ->join('priorities', 'tickets.priority_id', '=', 'priorities.id')
@@ -168,7 +246,6 @@ class TicketController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            // Don’t break the whole dashboard if priority join fails
             \Log::error('dashboardStats priority_breakdown failed', [
                 'agent_id' => $agentId,
                 'error' => $e->getMessage(),
@@ -178,27 +255,40 @@ class TicketController extends Controller
 
 
 
+        $openCount = Ticket::where('assigned_to', $agentId)
+            ->whereHas('status', fn($q) => $q->where('status_name', 'Open'))
+            ->count();
+
+        $inProgressCount = Ticket::where('assigned_to', $agentId)
+            ->whereHas('status', fn($q) => $q->where('status_name', 'In Progress'))
+            ->count();
+
+        $resolvedCount = Ticket::where('assigned_to', $agentId)
+            ->whereHas('status', fn($q) => $q->where('status_name', 'Resolved'))
+            ->count();
+
         return response()->json([
             'assigned' => Ticket::where('assigned_to', $agentId)->count(),
+            'open' => $openCount,
+            'in_progress' => $inProgressCount,
+            'resolved' => $resolvedCount,
 
-            'open' => Ticket::where('assigned_to', $agentId)
-                ->whereHas('status', fn($q) => $q->where('status_name', 'Open'))
-                ->count(),
+            'stats' => [
+                'assigned' => Ticket::where('assigned_to', $agentId)->count(),
+                'resolved_today' => $resolvedCount,
+                'pending_review' => Ticket::where('assigned_to', $agentId)
+                    ->whereHas('status', fn($q) => $q->where('status_name', 'Pending'))
+                    ->count(),
+                'in_progress' => $inProgressCount,
+            ],
 
-            'in_progress' => Ticket::where('assigned_to', $agentId)
-                ->whereHas('status', fn($q) => $q->where('status_name', 'In Progress'))
-                ->count(),
+            'recent_tickets' => $recentTickets,
 
-            'resolved' => Ticket::where('assigned_to', $agentId)
-                ->whereHas('status', fn($q) => $q->where('status_name', 'Resolved'))
-                ->count(),
-
-            // Used by Agent Dashboard "Priority Breakdown"
             'priority_breakdown' => $priority_breakdown->all(),
         ]);
     }
 
-    // ── POST /agent/tickets/{id}/comments ────────────────────
+
     public function storeComment(Request $request, $id)
     {
 
@@ -222,11 +312,6 @@ class TicketController extends Controller
         try {
 
             $senderId = Auth::id();
-
-            // Receiver targeting:
-            // - internal notes: receiver is null (no public notification)
-            // - otherwise receiver is either explicitly passed by frontend (notify_user_id)
-            //   or falls back to ticket requester.
             $receiverId = null;
             $isInternal = $request->boolean('internal', false);
 
@@ -267,10 +352,8 @@ class TicketController extends Controller
 
 
         $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}");
-
-        // Notify the intended recipient about a new public comment.
         if (!$request->boolean('internal', false)) {
-            // Receiver is driven by receiver_id (set from frontend notify_user_id or fallback).
+
             $notifyUserId = $comment->receiver_id ?? $ticket->user_id;
 
             Notification::notify(
@@ -282,9 +365,6 @@ class TicketController extends Controller
                 message:      "A new reply was added to ticket {$ticket->ticket_number}.",
             );
         }
-
-
-        // Return the same shape the frontend expects
         $comment->load('user.role');
 
         return response()->json([
@@ -304,7 +384,10 @@ class TicketController extends Controller
             'file' => 'required|file|max:10240|mimes:jpg,jpeg,png,pdf,doc,docx,txt,log,zip',
         ]);
 
-        $ticket = Ticket::findOrFail($id);
+        $ticket = is_numeric($id)
+            ? Ticket::findOrFail($id)
+            : Ticket::where('ticket_number', $id)->firstOrFail();
+
         $file   = $request->file('file');
         $path   = $file->store("tickets/{$ticket->id}/attachments", 'local');
         $ext    = strtolower($file->getClientOriginalExtension());
@@ -321,25 +404,166 @@ class TicketController extends Controller
             'file_size'   => $file->getSize(),
         ]);
 
+        $receiverId = $ticket->user_id;
+        if ($receiverId && $receiverId !== Auth::id()) {
+            Notification::notify(
+                user_id:      (int) $receiverId,
+                ticket_id:    $ticket->id,
+                triggered_by: Auth::id(),
+                type:         'attachment_added',
+                title:        'New attachment added',
+                message:      "A new attachment \"{$attachment->file_name}\" was added to ticket {$ticket->ticket_number}.",
+            );
+        }
+
         return response()->json([
-            'id'       => $attachment->id,
-            'name'     => $attachment->file_name,
-            'type'     => $attachment->file_type,
-            'size'     => $this->formatBytes($attachment->file_size),
-            'uploaded' => $attachment->created_at->format('M j, Y'),
+            'id'               => $attachment->id,
+            'name'             => $attachment->file_name,
+            'type'             => $attachment->file_type,
+            'size'             => $this->formatBytes($attachment->file_size),
+            'uploaded'         => $attachment->created_at->format('M j, Y'),
+            'uploaded_by'      => $attachment->uploaded_by,
+            'uploaded_by_name' => Auth::user()->full_name ?? Auth::user()->username ?? null,
         ], 201);
     }
 
     public function downloadAttachment($ticketId, $attachmentId)
     {
-        $attachment = TicketAttachment::where('ticket_id', $ticketId)
-                                      ->findOrFail($attachmentId);
+        $ticket = is_numeric($ticketId)
+            ? Ticket::findOrFail($ticketId)
+            : Ticket::where('ticket_number', $ticketId)->firstOrFail();
 
-        return response()->download(
-            storage_path('app/' . $attachment->file_path),
-            $attachment->file_name
-        );
+        $attachment = TicketAttachment::findOrFail($attachmentId);
+
+        if ((int) $attachment->ticket_id !== (int) $ticket->id) {
+            return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
+        }
+
+        $fullPath = storage_path('app/' . $attachment->file_path);
+        if (!file_exists($fullPath)) {
+            return response()->json(['message' => 'Attachment file not found.'], 404);
+        }
+
+        return response()->download($fullPath, $attachment->file_name);
     }
+
+    public function previewAttachment($ticketId, $attachmentId)
+    {
+        $ticket = is_numeric($ticketId)
+            ? Ticket::findOrFail($ticketId)
+            : Ticket::where('ticket_number', $ticketId)->firstOrFail();
+
+        $attachment = TicketAttachment::findOrFail($attachmentId);
+
+        if ((int) $attachment->ticket_id !== (int) $ticket->id) {
+            return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
+        }
+
+        $fullPath = null;
+        if (!empty($attachment->file_path)) {
+            $candidate = storage_path('app/' . $attachment->file_path);
+            if (file_exists($candidate)) {
+                $fullPath = $candidate;
+            }
+        }
+
+        if ($fullPath === null) {
+            $ticketAttachmentsDir = storage_path('app/tickets/' . $ticket->id . '/attachments');
+
+            if (!is_dir($ticketAttachmentsDir)) {
+                return response()->json([
+                    'message' => 'Attachment file not found.',
+                    'debug' => [
+                        'attachment_id'   => $attachmentId,
+                        'ticket_id'       => $ticket->id,
+                        'expected_dir'    => $ticketAttachmentsDir,
+                        'stored_file_path'=> $attachment->file_path,
+                        'stored_file_name'=> $attachment->file_name,
+                    ],
+                ], 404);
+            }
+
+            $matches = glob($ticketAttachmentsDir . DIRECTORY_SEPARATOR . '*') ?: [];
+            $targetName = (string) ($attachment->file_name ?? '');
+
+            $exact = null;
+            foreach ($matches as $m) {
+                if (is_file($m) && basename($m) === $targetName) {
+                    $exact = $m;
+                    break;
+                }
+            }
+
+            if ($exact !== null) {
+                $fullPath = $exact;
+            } else {
+                $targetLower = strtolower($targetName);
+                foreach ($matches as $m) {
+                    $baseLower = strtolower(basename($m));
+                    if (is_file($m) && $targetLower !== '' && str_starts_with($baseLower, $targetLower)) {
+                        $fullPath = $m;
+                        break;
+                    }
+                }
+            }
+
+            if ($fullPath === null) {
+                return response()->json([
+                    'message' => 'Attachment file not found.',
+                    'debug' => [
+                        'attachment_id'   => $attachmentId,
+                        'ticket_id'       => $ticket->id,
+                        'expected_dir'    => $ticketAttachmentsDir,
+                        'stored_file_path'=> $attachment->file_path,
+                        'stored_file_name'=> $attachment->file_name,
+                    ],
+                ], 404);
+            }
+        }
+
+        $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
+        return response()->file($fullPath, [
+            'Content-Type' => $mime,
+        ]);
+    }
+
+    public function deleteAttachment(Request $request, $ticketId, $attachmentId)
+    {
+        $ticket = is_numeric($ticketId)
+            ? Ticket::findOrFail($ticketId)
+            : Ticket::where('ticket_number', $ticketId)->firstOrFail();
+
+        $attachment = TicketAttachment::findOrFail($attachmentId);
+
+        if ((int) $attachment->ticket_id !== (int) $ticket->id) {
+            return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
+        }
+
+        $userId = Auth::id();
+        $role   = optional(Auth::user()->role)->name;
+
+        $canDelete = (int) $attachment->uploaded_by === (int) $userId
+            || in_array($role, ['admin', 'manager'], true);
+
+        if (!$canDelete) {
+            return response()->json([
+                'message' => 'You can only delete attachments you uploaded.',
+            ], 403);
+        }
+
+        if (!empty($attachment->file_path)) {
+            \Storage::disk('local')->delete($attachment->file_path);
+        }
+
+        $fileName = $attachment->file_name;
+        $attachment->delete();
+
+        $this->logActivity($ticket->id, 'attachment_deleted', "Deleted attachment: {$fileName}");
+
+        return response()->json(['message' => 'Attachment deleted successfully.']);
+    }
+
+
 
     public function updateStatus(Request $request, $id)
 {
@@ -356,7 +580,11 @@ class TicketController extends Controller
     $ticket->update(['status_id' => $request->status_id]);
     $ticket->refresh()->load('status');
 
-    // Save to ticket_status_histories (matches your real columns)
+    if (!$ticket->first_response_at) {
+
+        $ticket->first_response_at = now();
+        $ticket->save();
+    }
     \DB::table('ticket_status_histories')->insert([
         'ticket_id'  => $ticket->id,
         'status_id'  => $request->status_id,
@@ -366,18 +594,20 @@ class TicketController extends Controller
         'updated_at' => now(),
     ]);
 
+        $defaults = $this->activityDefaults('status_changed', $ticket);
 
-    // Activity log
-    \DB::table('activity_logs')->insert([
-        'user_id'     => $user->id,
-        'action'      => 'status_changed',
-        'description' => "Status changed to {$ticket->status->status_name} on #{$ticket->ticket_number}",
-        'ticket_id'   => $ticket->id,
-        'created_at'  => now(),
-        'updated_at'  => now(),
-    ]);
+        \DB::table('activity_logs')->insert([
+            'user_id'          => $user->id,
+            'action'           => 'status_changed',
+            'description'      => "Status changed to {$ticket->status->status_name} on #{$ticket->ticket_number}",
+            'ticket_id'        => $ticket->id,
+            'module'           => $defaults['module'],
+            'severity'         => $defaults['severity'],
+            'affected_ticket' => $defaults['affected_ticket'],
+            'created_at'       => now(),
+            'updated_at'       => now(),
+        ]);
 
-    // Notify employee
         if ($ticket->user_id !== $user->id) {
             $newStatusName = \App\Models\Status::find($request->status_id)->status_name ?? 'Updated';
 
@@ -399,8 +629,6 @@ class TicketController extends Controller
     return response()->json($ticket->load(['status', 'priority', 'category', 'user', 'assignee']));
 }
 
-
-    // ── POST /agent/tickets/{id}/resolve ─────────────────────
     public function resolveTicket(Request $request, $id)
     {
         $request->validate([
@@ -416,9 +644,14 @@ class TicketController extends Controller
         ]);
 
         $user   = $request->user();
-        $ticket = Ticket::with(['user', 'status'])->findOrFail($id);
 
-        // Save the resolution record
+        $ticket = null;
+        if (is_numeric($id)) {
+            $ticket = Ticket::with(['user', 'status'])->findOrFail($id);
+        } else {
+            $ticketNumber = (string) $id;
+            $ticket = Ticket::with(['user', 'status'])->where('ticket_number', $ticketNumber)->firstOrFail();
+        }
         \DB::table('ticket_resolutions')->insert([
             'ticket_id'       => $ticket->id,
             'resolved_by'     => $user->id,
@@ -433,7 +666,6 @@ class TicketController extends Controller
             'updated_at'      => now(),
         ]);
 
-        // Move the ticket itself to "Resolved"
         $resolvedStatus = \DB::table('statuses')->where('status_name', 'Resolved')->first();
         $resolvedStatusId = $resolvedStatus ? $resolvedStatus->id : $ticket->status_id;
 
@@ -442,7 +674,6 @@ class TicketController extends Controller
             'resolved_at' => now(),
         ]);
 
-        // Log it in the status history so the History/timeline views pick it up
         \DB::table('ticket_status_histories')->insert([
             'ticket_id'  => $ticket->id,
             'status_id'  => $resolvedStatusId,
@@ -452,17 +683,20 @@ class TicketController extends Controller
             'updated_at' => now(),
         ]);
 
-        // Activity log
+        $defaults = $this->activityDefaults('ticket_resolved', $ticket);
+
         \DB::table('activity_logs')->insert([
-            'user_id'     => $user->id,
-            'action'      => 'ticket_resolved',
-            'description' => "Ticket #{$ticket->ticket_number} marked as resolved",
-            'ticket_id'   => $ticket->id,
-            'created_at'  => now(),
-            'updated_at'  => now(),
+            'user_id'          => $user->id,
+            'action'           => 'ticket_resolved',
+            'description'      => "Ticket #{$ticket->ticket_number} marked as resolved",
+            'ticket_id'        => $ticket->id,
+            'module'           => $defaults['module'],
+            'severity'         => $defaults['severity'],
+            'affected_ticket' => $defaults['affected_ticket'],
+            'created_at'       => now(),
+            'updated_at'       => now(),
         ]);
 
-        // Notify the requester, unless the agent resolved their own ticket
         if ($request->boolean('notify_user', true) && $ticket->user_id !== $user->id) {
             Notification::notify(
                 user_id:      $ticket->user_id,
@@ -480,7 +714,6 @@ class TicketController extends Controller
         ]);
     }
 
-    // ── Helper: human-readable file size ─────────────────────
     private function formatBytes(int $bytes): string
     {
         if ($bytes < 1024)       return "{$bytes} B";
@@ -488,7 +721,6 @@ class TicketController extends Controller
         return round($bytes / 1048576, 1) . ' MB';
     }
 
-    // POST /api/tickets - Create a new ticket
     public function store(Request $request)
     {
         $request->validate([
@@ -498,12 +730,10 @@ class TicketController extends Controller
             'priority_id' => 'required|exists:priorities,id',
         ]);
 
-        // Generate unique ticket number
         $lastTicket = Ticket::orderBy('id', 'desc')->first();
         $nextNumber = $lastTicket ? ($lastTicket->id + 1) : 1;
         $ticketNumber = 'TKT-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-        // Get the "Open" status id
         $openStatus = \DB::table('statuses')->where('status_name', 'Open')->first();
 
         $ticket = Ticket::create([
@@ -516,13 +746,27 @@ class TicketController extends Controller
             'user_id'       => Auth::id(),
         ]);
 
+        $sla = SlaPolicy::where(
+            'priority_id',
+            $ticket->priority_id
+        )->first();
+
+        if ($sla) {
+            $ticket->response_due_at =
+                now()->addHours($sla->response_time_hours);
+
+            $ticket->resolution_due_at =
+                now()->addHours($sla->resolution_time_hours);
+
+            $ticket->save();
+        }
+
         return response()->json([
             'message' => 'Ticket created successfully',
             'ticket'  => $ticket->load(['category', 'priority', 'status'])
         ], 201);
     }
 
-    // PUT /api/tickets/{id} - Update a ticket
     public function update(Request $request, $id)
     {
         $ticket = Ticket::find($id);
@@ -549,7 +793,6 @@ class TicketController extends Controller
         ]);
     }
 
-    // DELETE /api/tickets/{id} - Delete a ticket
     public function destroy($id)
     {
         $ticket = Ticket::find($id);
@@ -588,33 +831,32 @@ class TicketController extends Controller
         'assigned_to' => $request->agent_id,
     ]);
 
-        // Insert assignment history (ticket_assignments)
         \DB::table('ticket_assignments')->insert([
             'ticket_id'    => $ticket->id,
             'assigned_by'  => Auth::id(),
             'assigned_to'  => $request->agent_id,
             'assigned_at'  => now(),
-            // migration uses `notes` column (not `note`)
             'notes'         => $request->note,
             'created_at'   => now(),
             'updated_at'   => now(),
         ]);
 
+    $defaults = $this->activityDefaults('ticket_assigned', $ticket);
 
-    // Insert activity log
     \DB::table('activity_logs')->insert([
-        'user_id'     => Auth::id(),
-        'action'      => 'ticket_assigned',
-        'description' => "Ticket #{$ticket->ticket_number} assigned to user {$request->agent_id}",
-        'ticket_id'   => $ticket->id,
-        'created_at'  => now(),
-        'updated_at'  => now(),
+        'user_id'          => Auth::id(),
+        'action'           => 'ticket_assigned',
+        'description'      => "Ticket #{$ticket->ticket_number} assigned to user {$request->agent_id}",
+        'ticket_id'        => $ticket->id,
+        'module'           => $defaults['module'],
+        'severity'         => $defaults['severity'],
+        'affected_ticket' => $defaults['affected_ticket'],
+        'created_at'       => now(),
+        'updated_at'       => now(),
     ]);
 
-    // Notify the assigned agent
     $ticketNumber = $ticket->ticket_number;
     if ($agent) {
-        // Determine if this is a reassignment (agent already had this ticket before)
         $previousAssignment = \DB::table('ticket_assignments')
             ->where('ticket_id', $ticket->id)
             ->where('assigned_to', $request->agent_id)
@@ -641,12 +883,8 @@ class TicketController extends Controller
     return response()->json(['message' => 'Ticket assigned successfully.']);
 }
 
-
-
-
     public function pendingForManager()
 {
-    // Tickets waiting to be assigned by a manager
     $tickets = Ticket::with([
         'category',
         'priority',
@@ -682,13 +920,19 @@ public function history($id)
 
 private function logActivity($ticketId, $action, $details)
 {
+    $ticket = Ticket::find($ticketId);
+    $defaults = $this->activityDefaults($action, $ticket);
+
     \DB::table('activity_logs')->insert([
-        'ticket_id' => $ticketId,
-        'user_id'   => Auth::id(),
-        'action'    => $action,
-        'details'   => $details,
-        'created_at'=> now(),
-        'updated_at'=> now(),
+        'ticket_id'        => $ticketId,
+        'user_id'          => Auth::id(),
+        'action'           => $action,
+        'description'      => $details,
+        'module'           => $defaults['module'],
+        'severity'         => $defaults['severity'],
+        'affected_ticket' => $defaults['affected_ticket'],
+        'created_at'       => now(),
+        'updated_at'       => now(),
     ]);
 }
 

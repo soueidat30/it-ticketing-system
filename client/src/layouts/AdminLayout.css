@@ -1,5 +1,25 @@
 /* ─── Admin Layout ───────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+:root,
+body[data-theme="light"] {
+  --al-bg: #f3f4f0;
+  --al-topbar-bg: #ffffff;
+  --al-surface: #ffffff;
+  --al-text: #1f2937;
+  --al-muted: #6b7280;
+  --al-border: rgba(3, 54, 61, 0.08);
+}
+
+body[data-theme="dark"] {
+  --al-bg: #0b1220;
+  --al-topbar-bg: #0f1a2f;
+  --al-surface: #0f1a2f;
+  --al-text: #e5e7eb;
+  --al-muted: rgba(229,231,235,0.7);
+  --al-border: rgba(229,231,235,0.12);
+}
+
 @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
 
 .al {
@@ -9,13 +29,13 @@
   --al-green-mid: #1f5c5c;
   --al-lime: #d4f265;
   --al-lime-dark: #b8db3f;
-  --al-bg: #f3f4f0;
   --al-white: #ffffff;
-  --al-text: #1f2937;
-  --al-muted: #6b7280;
-  --al-border: rgba(3, 54, 61, 0.08);
+
+  /* Use theme-scoped variables from body[data-theme] */
+
   --al-active-bg: rgba(212, 242, 101, 0.15);
   --al-radius: 10px;
+
 
   display: flex;
   height: 100vh;
@@ -260,7 +280,8 @@
 /* Topbar */
 .al__topbar {
   height: 64px;
-  background: var(--al-white);
+  background: var(--al-topbar-bg);
+
   border-bottom: 1px solid var(--al-border);
   display: flex;
   align-items: center;
@@ -373,8 +394,33 @@
   text-align: center;
 }
 
+/* Theme toggle */
+.al__theme-toggle {
+  width: 36px;
+  z-index: 300;
+
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--al-border);
+  background: transparent;
+  color: var(--al-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.al__theme-toggle:hover {
+  background: var(--al-bg);
+  color: var(--al-green);
+}
+
 /* Profile */
 .al__topbar-profile {
+
   display: flex;
   align-items: center;
   gap: 10px;

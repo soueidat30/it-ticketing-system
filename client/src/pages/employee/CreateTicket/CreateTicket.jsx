@@ -53,17 +53,55 @@ export default function CreateTicket() {
   const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
+
     setLoading(true);
     setApiError("");
+
     try {
       const data = await createTicket(token, {
-        title: form.title, description: form.description,
-        category_id: form.category_id, priority_id: form.priority_id,
+        title: form.title,
+        description: form.description,
+        category_id: form.category_id,
+        priority_id: form.priority_id,
       });
-      setTicketRef(data.ticket?.ticket_number || "TKT-" + Math.floor(1000 + Math.random() * 9000));
+
+      const createdTicketId = data?.ticket?.id ?? data?.id;
+      const createdTicketNumber = data?.ticket?.ticket_number;
+
+      if (attachments.length > 0) {
+        if (!createdTicketId) {
+          setApiError("Ticket was created, but attachments could not be uploaded (missing ticket id)." );
+        } else {
+          const BASE_URL = "http://127.0.0.1:8000/api";
+
+          for (const file of attachments) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const res = await fetch(`${BASE_URL}/agent/tickets/${createdTicketId}/attachments`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+              },
+              body: formData,
+            });
+
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new Error(body?.message || `Failed to upload attachment: ${file.name}`);
+            }
+          }
+
+          setAttachments([]);
+          setFileError("");
+        }
+      }
+
+      setTicketRef(createdTicketNumber || "TKT-" + Math.floor(1000 + Math.random() * 9000));
       setSubmitted(true);
     } catch (err) {
-      setApiError(err.response?.data?.message || "Failed to submit. Please try again.");
+      setApiError(err?.response?.data?.message || err.message || "Failed to submit. Please try again.");
     } finally {
       setLoading(false);
     }

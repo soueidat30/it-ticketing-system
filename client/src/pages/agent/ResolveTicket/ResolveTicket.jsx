@@ -93,24 +93,19 @@ export default function ResolveTicket() {
   const [error,      setError]      = useState("");
 
   // ── Readiness ─────────────────────────────────────────────
-  // Requirement: checklist is mandatory, but not all items.
-  // Allow resolve when at least ONE checklist item is checked.
+  // const allChecked  = checks.every(Boolean);
   const checkedCount = checks.filter(Boolean).length;
-  const hasAnyChecklist = checkedCount >= 1;
 
   const hasResType  = !!resType;
   const hasSolution = solution.trim().length >= 20;
-  const canResolve  = hasResType && hasSolution && hasAnyChecklist;
+  // Checklist is optional — agents can check as many or as few as apply.
+  const canResolve  = hasResType && hasSolution;
 
-  // How many of the 3 big requirements are done (for the progress hint)
-  const doneCount   = [hasResType, hasSolution, hasAnyChecklist].filter(Boolean).length;
+  // How many of the 2 required steps are done (for the progress hint)
+  const doneCount   = [hasResType, hasSolution].filter(Boolean).length;
 
   const toggleCheck = (i) =>
-    setChecks((prev) => {
-      const n = [...prev];
-      n[i] = !n[i];
-      return n;
-    });
+    setChecks((prev) => { const n = [...prev]; n[i] = !n[i]; return n; });
 
   // ── Fetch ─────────────────────────────────────────────────
   useEffect(() => {
@@ -147,7 +142,7 @@ export default function ResolveTicket() {
     setError("");
     setSubmitting(true);
     try {
-      const res  = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/status/resolve`, {
+      const res  = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/resolve`, {
         method:  "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
@@ -156,10 +151,12 @@ export default function ResolveTicket() {
           root_cause:      rootCause,
           time_spent:      timeSpent ? Number(timeSpent) : null,
           time_unit:       timeUnit,
+          // Backend expects internal_notes (not internal_notes vs internal_notes spelling mismatch)
           internal_notes:  notes,
           rating,
           notify_user:     true,
           notify_manager:  false,
+
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -290,8 +287,8 @@ export default function ResolveTicket() {
                 </div>
 
                 {/* Live progress pill */}
-                <div className="rt-progress-pill" data-done={doneCount === 3 ? "all" : doneCount}>
-                  {doneCount}/3 complete
+                <div className="rt-progress-pill" data-done={doneCount === 2 ? "all" : doneCount}>
+                  {doneCount}/2 complete
                 </div>
               </div>
 
@@ -415,13 +412,9 @@ export default function ResolveTicket() {
                   </div>
                 </div>
 
-                {/* Step 3 — Checklist */}
                 <div className="rt-field">
                   <label className="rt-label">
-                    <span className={`rt-step-num${hasAnyChecklist ? " done" : ""}`}>
-                      {hasAnyChecklist ? <Icon d={IC.checkSm} size={11} /> : "3"}
-                    </span>
-                    Resolution Checklist <span className="rt-label-required">*</span>
+                    Resolution Checklist <span className="rt-label-optional">(optional — check what applies)</span>
                     <span className="rt-checklist-count">{checkedCount}/{CHECKLIST_ITEMS.length}</span>
                   </label>
                   <div className="rt-checklist">
@@ -440,7 +433,6 @@ export default function ResolveTicket() {
                   </div>
                 </div>
 
-                {/* Requirements summary — shows what's still blocking */}
                 {!canResolve && (
                   <div className="rt-requirements">
                     <div className="rt-requirements-title">
@@ -454,10 +446,6 @@ export default function ResolveTicket() {
                       <div className={`rt-req-item${hasSolution ? " done" : ""}`}>
                         <span className="rt-req-dot" />
                         Write a solution (min 20 characters — {solution.length < 20 ? `${20 - solution.length} left` : "✓"})
-                      </div>
-                      <div className={`rt-req-item${hasAnyChecklist ? " done" : ""}`}>
-                        <span className="rt-req-dot" />
-                        Check at least 1 checklist item ({checkedCount}/{CHECKLIST_ITEMS.length} done)
                       </div>
                     </div>
                   </div>
@@ -496,7 +484,7 @@ export default function ResolveTicket() {
                     <>
                       <Icon d={IC.check} size={16} />
                       Mark as Resolved
-                      {!canResolve && <span className="rt-btn-hint">({doneCount}/3 steps done)</span>}
+                      {!canResolve && <span className="rt-btn-hint">({doneCount}/2 steps done)</span>}
                     </>
                   )}
                 </button>
@@ -504,7 +492,6 @@ export default function ResolveTicket() {
             </div>
           </div>
 
-          {/* ── Right sidebar ── */}
           <div className="rt-sidebar">
             <div className="rt-info-card">
               <div className="rt-info-header">Ticket Timeline</div>
@@ -547,7 +534,6 @@ export default function ResolveTicket() {
         </div>
       )}
 
-      {/* ── Success modal ── */}
       {success && ticket && (
         <div className="rt-success-overlay">
           <div className="rt-success-modal">

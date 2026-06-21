@@ -10,16 +10,48 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\EmployeeCommentsController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\DepartmentController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Api\Admin\UserManagementController;
 
 
 Route::prefix('auth')->group(function () {
+
     Route::post('login', [AuthController::class, 'login']);
 });
+
+Route::middleware(['auth:api'])->group(function () {
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);
+    Route::get('/admin/activity-logs', [ActivityLogController::class, 'index']);
+
+    Route::get('/roles', [RoleController::class, 'index']);
+    Route::get('/departments', [DepartmentController::class, 'index']);
+});
+
+
+Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function () {
+    Route::get('/users', [UserManagementController::class, 'index']);
+    Route::post('/users', [UserManagementController::class, 'store']);
+    Route::put('/users/{user}', [UserManagementController::class, 'update']);
+    Route::delete('/users/{user}', [UserManagementController::class, 'destroy']);
+
+    Route::post('/users/bulk-delete', [UserManagementController::class, 'bulkDelete']);
+    Route::post('/users/bulk-deactivate', [UserManagementController::class, 'bulkDeactivate']);
+});
+
+
+
 
 Route::middleware('auth:api')->group(function () {
 
     Route::get('auth/me', [AuthController::class, 'me']);
+    Route::put('auth/me', [AuthController::class, 'updateMe']);
+
     Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('auth/debug', [AuthController::class, 'authDebug']);
+
     Route::post('auth/refresh', [AuthController::class, 'refresh']);
     Route::post('auth/change-password', [AuthController::class, 'changePassword']);
 
@@ -51,7 +83,13 @@ Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
 
     Route::post('/tickets/{id}/assign', [TicketController::class, 'assignTicket']);
 
+    Route::post('/agent/tickets/{id}/resolve', [TicketController::class, 'resolveTicket']);
+    Route::post('/agent/tickets/{id}/attachments', [TicketController::class, 'storeAttachment']);
+    Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'downloadAttachment']);
+    Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}/preview', [TicketController::class, 'previewAttachment']);
+
     Route::get('/manager/tickets/pending', [TicketController::class, 'pendingForManager']);
+
 
     Route::get('/agent/tickets/{id}/comments', [TicketController::class, 'getComments']);
     Route::post('/agent/tickets/{id}/comments', [TicketController::class, 'storeComment']);

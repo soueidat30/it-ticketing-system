@@ -1,49 +1,233 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./UserManagement.css";
 
-const USERS = [
-  { id: 1,  name: "Sara El-Khoury",  email: "sara@ids.com",   dept: "Finance",   role: "End User",  status: "Active",   joined: "Jan 12, 2024", tickets: 8  },
-  { id: 2,  name: "Ali Hassan",      email: "ali@ids.com",    dept: "IT",        role: "Agent",     status: "Active",   joined: "Mar 5, 2023",  tickets: 42 },
-  { id: 3,  name: "Dina Farhat",     email: "dina@ids.com",   dept: "IT",        role: "Agent",     status: "Active",   joined: "Feb 18, 2023", tickets: 37 },
-  { id: 4,  name: "Karim Mansour",   email: "karim@ids.com",  dept: "Marketing", role: "End User",  status: "Active",   joined: "Jun 3, 2024",  tickets: 3  },
-  { id: 5,  name: "Lara Haddad",     email: "lara@ids.com",   dept: "HR",        role: "Manager",   status: "Active",   joined: "Sep 14, 2022", tickets: 12 },
-  { id: 6,  name: "Omar Saab",       email: "omar@ids.com",   dept: "IT",        role: "Agent",     status: "Active",   joined: "Nov 1, 2022",  tickets: 31 },
-  { id: 7,  name: "Nour Khalil",     email: "nour@ids.com",   dept: "Sales",     role: "End User",  status: "Inactive", joined: "Apr 22, 2024", tickets: 5  },
-  { id: 8,  name: "Ziad Nassar",     email: "ziad@ids.com",   dept: "Legal",     role: "End User",  status: "Active",   joined: "Aug 7, 2023",  tickets: 6  },
-  { id: 9,  name: "Maya Salameh",    email: "maya@ids.com",   dept: "Design",    role: "End User",  status: "Active",   joined: "Dec 19, 2023", tickets: 4  },
-  { id: 10, name: "Rana Moussa",     email: "rana@ids.com",   dept: "IT",        role: "Agent",     status: "Active",   joined: "Jul 30, 2022", tickets: 29 },
-  { id: 11, name: "Hassan Nasser",   email: "hassan@ids.com", dept: "Finance",   role: "Manager",   status: "Inactive", joined: "Feb 10, 2023", tickets: 15 },
-  { id: 12, name: "Rima Hayek",      email: "rima@ids.com",   dept: "HR",        role: "End User",  status: "Active",   joined: "Oct 5, 2024",  tickets: 2  },
-];
+import {
+  bulkDeactivateAdminUsers,
+  bulkDeleteAdminUsers,
+  createAdminUser,
+  getAdminUsers,
+  getDepartments,
+  getRoles,
+  updateAdminUser,
+} from "../../../services/adminUserService";
 
-const ROLES   = ["All Roles",   "Admin", "Agent", "Manager", "End User"];
-const DEPTS   = ["All Depts",   "IT", "Finance", "HR", "Sales", "Marketing", "Legal", "Design"];
-const STATUSES = ["All Status", "Active", "Inactive"];
+const STATUSES = ["All", "Active", "Inactive"];
+
+
+const EMPTY_FORM = {
+  full_name: "",
+  username: "",
+  email: "",
+  department: "",
+  status: "Active",
+  role: "",
+  password: "",
+};
 
 export default function UserManagement() {
+  const token = useMemo(() => localStorage.getItem("token"), []);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All Roles");
-  const [deptFilter, setDeptFilter] = useState("All Depts");
-  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [roleFilter, setRoleFilter] = useState("All");
+  const [deptFilter, setDeptFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+
+  const [roles, setRoles] = useState([]);
+  const [departments, setDepartments] = useState([]);
+
+  const [users, setUsers] = useState([]);
+  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
+
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const filteredUsers = USERS.filter(u => {
-    const query = searchQuery.toLowerCase();
-    return (
-      (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)) &&
-      (roleFilter === "All Roles" || u.role === roleFilter) &&
-      (deptFilter === "All Depts" || u.dept === deptFilter) &&
-      (statusFilter === "All Status" || u.status === statusFilter)
-    );
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const filteredUsers = users;
 
   const toggleSelectUser = (id) =>
-    setSelectedUsers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setSelectedUsers((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-  const allSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedUsers.includes(u.id));
-  const toggleSelectAll = () => setSelectedUsers(allSelected ? [] : filteredUsers.map(u => u.id));
+  const allSelected = filteredUsers.length > 0 && filteredUsers.every((u) => selectedUsers.includes(u.id));
+  const toggleSelectAll = () => setSelectedUsers(allSelected ? [] : filteredUsers.map((u) => u.id));
+
+  const fetchAll = async (opts = {}) => {
+    if (!token) return;
+    setIsLoading(true);
+    setErrorMsg("");
+    try {
+      const roleName = opts.role === "All" || !opts.role ? undefined : opts.role;
+      const departmentName = opts.department === "All" || !opts.department ? undefined : opts.department;
+      const statusName = opts.status === "All" || !opts.status ? undefined : opts.status;
+
+      const data = await getAdminUsers(token, {
+        search: opts.search || undefined,
+        role: roleName,
+        department: departmentName,
+        status: statusName,
+        page: 1,
+        perPage: 50,
+      });
+
+      setUsers(data?.users ?? []);
+      setPagination(
+        data?.pagination ?? {
+          current_page: 1,
+          last_page: 1,
+          total: (data?.users ?? []).length,
+        }
+      );
+    } catch (e) {
+      setErrorMsg(e?.message || "Failed to load users.");
+      setUsers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+
+    const run = async () => {
+      try {
+        const [rolesRes, deptRes] = await Promise.all([getRoles(token), getDepartments(token)]);
+        setRoles(Array.isArray(rolesRes) ? rolesRes : []);
+        setDepartments(Array.isArray(deptRes) ? deptRes.map((d) => d.name) : []);
+      } catch {
+        setRoles([]);
+        setDepartments([]);
+      }
+    };
+
+    run();
+  }, [token]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await fetchAll({
+          search: searchQuery,
+          role: roleFilter,
+          department: deptFilter,
+          status: statusFilter,
+        });
+      } catch {
+        // handled inside fetchAll
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, roleFilter, deptFilter, statusFilter, token]);
+
+
+  const openCreateModal = () => {
+    setEditingUser(null);
+    setFormData({
+      ...EMPTY_FORM,
+      role: roles[0]?.name ?? "",
+      department: departments[0] ?? "",
+      status: "Active",
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (u) => {
+    setEditingUser(u);
+    setFormData({
+      full_name: u.name ?? "",
+      username: u.email ? String(u.email).split("@")[0] : "",
+      email: u.email ?? "",
+      department: u.dept ?? "",
+      status: u.status ?? "Active",
+      role: u.role ?? "",
+      password: "",
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingUser(null);
+  };
+
+  const validateAndBuildPayload = () => {
+    const base = {
+      full_name: formData.full_name,
+      username: formData.username,
+      email: formData.email,
+      department: formData.department,
+      status: formData.status,
+      role: formData.role || undefined,
+    };
+
+    if (!editingUser) {
+      return {
+        ...base,
+        password: formData.password,
+      };
+    }
+
+    // Update: password optional
+    const payload = {
+      ...base,
+    };
+
+    if (formData.password && formData.password.length >= 8) payload.password = formData.password;
+    return payload;
+  };
+
+  const onSave = async () => {
+    if (!token) return;
+    setErrorMsg("");
+
+    try {
+      const payload = validateAndBuildPayload();
+
+      if (editingUser) {
+        await updateAdminUser(token, editingUser.id, payload);
+      } else {
+        await createAdminUser(token, payload);
+      }
+
+      closeModal();
+      // refresh list with current filters
+      await fetchAll({ search: searchQuery, role: roleFilter, department: deptFilter, status: statusFilter });
+    } catch (e) {
+      setErrorMsg(e?.message || "Failed to save user.");
+    }
+  };
+
+  const onBulkDelete = async () => {
+    if (!token || selectedUsers.length === 0) return;
+    try {
+      await bulkDeleteAdminUsers(token, selectedUsers);
+      setSelectedUsers([]);
+      await fetchAll({ search: searchQuery, role: roleFilter, department: deptFilter, status: statusFilter });
+    } catch {
+      setErrorMsg("Failed to delete selected users.");
+    }
+  };
+
+  const onBulkDeactivate = async () => {
+    if (!token || selectedUsers.length === 0) return;
+    try {
+      await bulkDeactivateAdminUsers(token, selectedUsers);
+      setSelectedUsers([]);
+      await fetchAll({ search: searchQuery, role: roleFilter, department: deptFilter, status: statusFilter });
+    } catch {
+      setErrorMsg("Failed to deactivate selected users.");
+    }
+  };
+
+
 
   return (
     <div className="user-management-container">
@@ -51,12 +235,15 @@ export default function UserManagement() {
       <div className="user-management-header">
         <div>
           <h1 className="page-title">User Management</h1>
-          <p className="page-subtitle">{USERS.length} users total · {USERS.filter(u => u.status === "Active").length} active</p>
+          <p className="page-subtitle">
+            {pagination.total} users total · {users.filter((u) => u.status === "Active").length} active
+          </p>
         </div>
-        <button className="button-primary" onClick={() => { setEditingUser(null); setShowModal(true); }}>
+        <button className="button-primary" onClick={openCreateModal}>
           <i className="ti ti-user-plus" /> Add User
         </button>
       </div>
+
 
       <div className="toolbar">
         <div className="search-wrapper">
@@ -70,26 +257,55 @@ export default function UserManagement() {
           {searchQuery && <button className="search-clear" onClick={() => setSearchQuery("")}><i className="ti ti-x" /></button>}
         </div>
         <div className="filters-group">
-          {[
-            [roleFilter, setRoleFilter, ROLES],
-            [deptFilter, setDeptFilter, DEPTS],
-            [statusFilter, setStatusFilter, STATUSES],
-          ].map(([value, setter, options], index) => (
-            <select key={index} value={value} onChange={e => setter(e.target.value)} className="filter-select">
-              {options.map(opt => <option key={opt}>{opt}</option>)}
-            </select>
-          ))}
+          {/** Role */}
+          <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="filter-select">
+            <option value="All">All Roles</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.name}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+
+          {/** Department */}
+          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="filter-select">
+            <option value="All">All Depts</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+
+          {/** Status */}
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select">
+            {STATUSES.map((s) => (
+              <option key={s} value={s === "All" ? "All" : s}>
+                {s === "All" ? "All Status" : s}
+              </option>
+            ))}
+          </select>
+
         </div>
         {selectedUsers.length > 0 && (
           <div className="bulk-actions">
             <span className="bulk-label">{selectedUsers.length} selected</span>
-            <button className="bulk-button bulk-button--danger">
+            <button
+              className="bulk-button bulk-button--danger"
+              onClick={onBulkDelete}
+              title="Delete selected users"
+            >
               <i className="ti ti-trash" /> Delete
             </button>
-            <button className="bulk-button">
+            <button
+              className="bulk-button"
+              onClick={onBulkDeactivate}
+              title="Deactivate selected users"
+            >
               <i className="ti ti-ban" /> Deactivate
             </button>
           </div>
+
         )}
       </div>
 
@@ -131,7 +347,10 @@ export default function UserManagement() {
                     </div>
                   </td>
                   <td><span className="department-name">{u.dept}</span></td>
-                  <td><span className={`role-badge role-badge--${u.role.toLowerCase().replace(" ", "-")}`}>{u.role}</span></td>
+                  <td>
+                    <span className={`role-badge role-badge--${(u.role || "").toLowerCase().replace(" ", "-")}`}>{u.role}</span>
+                  </td>
+
                   <td>
                     <span className={`status-dot status-dot--${u.status.toLowerCase()}`} />
                     <span className="status-label">{u.status}</span>
@@ -166,7 +385,8 @@ export default function UserManagement() {
         </div>
 
         <div className="pagination">
-          <span className="page-info">Showing {filteredUsers.length} of {USERS.length} users</span>
+          <span className="page-info">Showing {filteredUsers.length} of {pagination.total} users</span>
+
           <div className="page-controls">
             <button className="page-button" disabled><i className="ti ti-chevron-left" /></button>
             <button className="page-button page-button--active">1</button>
@@ -198,15 +418,36 @@ export default function UserManagement() {
               <div className="form-row">
                 <div className="form-field">
                   <label className="form-label">Department</label>
-                  <select className="form-input" defaultValue={editingUser?.dept}>
-                    {DEPTS.slice(1).map(d => <option key={d}>{d}</option>)}
+                  <select
+                    className="form-input"
+                    value={formData.department}
+                    onChange={(e) => setFormData((p) => ({ ...p, department: e.target.value }))}
+                    disabled={false}
+                  >
+                    <option value="">Select department</option>
+                    {departments.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
                   </select>
+
                 </div>
                 <div className="form-field">
                   <label className="form-label">Role</label>
-                  <select className="form-input" defaultValue={editingUser?.role}>
-                    {ROLES.slice(1).map(r => <option key={r}>{r}</option>)}
+                  <select
+                    className="form-input"
+                    value={formData.role}
+                    onChange={(e) => setFormData((p) => ({ ...p, role: e.target.value }))}
+                  >
+                    <option value="">Select role</option>
+                    {roles.map((r) => (
+                      <option key={r.id} value={r.name}>
+                        {r.name}
+                      </option>
+                    ))}
                   </select>
+
                 </div>
               </div>
               {!editingUser && (

@@ -1,0 +1,17 @@
+:root,
+body[data-theme="light"] {
+  --theme-bg: #f0f4f5;
+  --theme-surface: #ffffff;
+  --theme-text: #0f2f33;
+  --theme-muted: #607a7e;
+  --theme-border: #d6e4e6;
+}
+
+body[data-theme="dark"] {
+  --theme-bg: #061017;
+  --theme-surface: #08151f;
+  --theme-text: #d7e7ee;
+  --theme-muted: rgba(215,231,238,0.7);
+  --theme-border: rgba(215,231,238,0.14);
+}
+

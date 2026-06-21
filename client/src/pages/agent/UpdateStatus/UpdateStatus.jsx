@@ -507,25 +507,6 @@ export default function UpdateStatus() {
                 <span className="us-hint">Leave unchanged if priority hasn't shifted.</span>
               </div>
 
-              <div className="us-field">
-                <label className="us-label">Notifications</label>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <label className="us-notify-row">
-                    <input type="checkbox" checked={notifyUser}
-                      onChange={e => setNotifyUser(e.target.checked)} />
-                    <span className="us-notify-label">
-                      <strong>Notify requester</strong> — email {requesterName} about this change
-                    </span>
-                  </label>
-                  <label className="us-notify-row">
-                    <input type="checkbox" checked={notifyManager}
-                      onChange={e => setNotifyManager(e.target.checked)} />
-                    <span className="us-notify-label">
-                      <strong>Notify manager</strong> — send update to your manager
-                    </span>
-                  </label>
-                </div>
-              </div>
 
               {/* Validation hint */}
               {!canSubmit && selectedStatus && (

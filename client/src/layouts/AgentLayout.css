@@ -2,6 +2,8 @@
 
 .agent-shell {
   --agent-primary: #03363d;
+  /* theme-scoped variables come from body[data-theme] */
+
   --agent-primary-light: #054a54;
   --agent-primary-dark: #02272c;
   --agent-accent: #d4f265;
@@ -9,21 +11,25 @@
   --agent-sidebar-width: 260px;
   --agent-sidebar-collapsed: 68px;
   --agent-topbar-height: 64px;
-  --agent-bg: #f0f4f5;
-  --agent-surface: #ffffff;
-  --agent-border: #d6e4e6;
-  --agent-text: #0f2f33;
-  --agent-muted: #607a7e;
+
+  --agent-bg: var(--theme-bg);
+  --agent-surface: var(--theme-surface);
+  --agent-border: var(--theme-border);
+  --agent-text: var(--theme-text);
+  --agent-muted: var(--theme-muted);
+
   --agent-danger: #e53935;
   --agent-warning: #f59e0b;
   --agent-success: #16a34a;
   --agent-info: #0284c7;
+
   --agent-shadow: 0 2px 12px rgba(3, 54, 61, 0.08);
   --agent-shadow-md: 0 4px 24px rgba(3, 54, 61, 0.12);
   --radius: 10px;
   --radius-sm: 6px;
   --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

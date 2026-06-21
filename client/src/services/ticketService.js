@@ -7,7 +7,6 @@ const headers = (token) => ({
   Accept: "application/json",
 });
  
-// ── Categories & Priorities ───────────────────────────────────────────────────
 export const getCategories = (token) =>
   fetch(`${BASE}/categories`, { headers: headers(token) }).then((r) => r.json());
  
@@ -17,9 +16,7 @@ export const getPriorities = (token) =>
 export const getStatuses = (token) =>
   fetch(`${BASE}/statuses`, { headers: headers(token) }).then((r) => r.json());
  
-// ── Tickets ───────────────────────────────────────────────────────────────────
- 
-// Employee: create ticket
+
 export const createTicket = (token, body) =>
   fetch(`${BASE}/tickets`, {
     method: "POST",
@@ -31,11 +28,9 @@ export const createTicket = (token, body) =>
     return d;
   });
  
-// Employee: get own tickets
 export const getMyTickets = (token) =>
   fetch(`${BASE}/my-tickets`, { headers: headers(token) }).then((r) => r.json());
  
-// Employee: delete ticket
 export const deleteTicket = (token, id) =>
   fetch(`${BASE}/tickets/${id}`, {
     method: "DELETE",
@@ -46,11 +41,9 @@ export const deleteTicket = (token, id) =>
     return d;
   });
  
-// Manager/Admin: get ALL tickets
 export const getAllTickets = (token) =>
   fetch(`${BASE}/tickets`, { headers: headers(token) }).then((r) => r.json());
  
-// Any role: get single ticket by ID
 export const getTicketById = (token, id) =>
   fetch(`${BASE}/tickets/${id}`, { headers: headers(token) }).then(async (r) => {
     const d = await r.json().catch(() => ({}));
@@ -58,8 +51,19 @@ export const getTicketById = (token, id) =>
     return d;
   });
  
-// ── Ticket Status Update (Agent/Admin/Manager) ────────────────────────────────
+export const resolveTicket = (token, ticketId, payload) =>
+  fetch(`${BASE}/agent/tickets/${ticketId}/resolve`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify(payload),
+  }).then(async (r) => {
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw { response: { data: d } };
+    return d;
+  });
+
 export const updateTicketStatus = (token, ticketId, statusId, note = "") =>
+
   fetch(`${BASE}/tickets/${ticketId}/status`, {
     method: "PATCH",
     headers: headers(token),
@@ -70,7 +74,6 @@ export const updateTicketStatus = (token, ticketId, statusId, note = "") =>
     return d;
   });
  
-// ── Ticket Assignment (Admin/Manager) ─────────────────────────────────────────
 export const assignTicket = (token, ticketId, agentId, note = "") =>
   fetch(`${BASE}/tickets/${ticketId}/assign`, {
     method: "POST",
@@ -82,13 +85,11 @@ export const assignTicket = (token, ticketId, agentId, note = "") =>
     return d;
   });
 
-// Users helpers (e.g., agents dropdown)
 export const getUsersByRole = (token, role) =>
   fetch(`${BASE}/users?role=${encodeURIComponent(role)}`, { headers: headers(token) })
     .then(async (r) => {
       const data = await r.json().catch(() => null);
       if (!r.ok) {
-        // Throw a useful error so we can see why the dropdown is empty (auth/404/etc)
         throw {
           status: r.status,
           statusText: r.statusText,
@@ -98,17 +99,10 @@ export const getUsersByRole = (token, role) =>
       return data;
     });
 
-
- 
-// ── Ticket History / Timeline ─────────────────────────────────────────────────
 export const getTicketHistory = (token, ticketId) =>
   fetch(`${BASE}/tickets/${ticketId}/history`, {
     headers: headers(token),
   }).then((r) => r.json());
- 
-// ── Comments ──────────────────────────────────────────────────────────────────
- 
-// Aliases used in TeamTicketDetail (matches what your component imports)
 export const getTicketComments = (token, ticketId) =>
   fetch(`${BASE}/tickets/${ticketId}/comments`, {
     headers: headers(token),
@@ -144,17 +138,12 @@ export const deleteTicketComment = (token, ticketId, commentId) =>
     if (!r.ok) throw { response: { data: d } };
     return d;
   });
-
- 
-// Generic aliases (used in Notifications page)
 export const getComments     = getTicketComments;
 export const addComment      = addTicketComment;
  
-// ── Notifications ─────────────────────────────────────────────────────────────
 export const getNotifications = (token) =>
   fetch(`${BASE}/notifications`, { headers: headers(token) }).then((r) => r.json());
 
-// Employee public comments section
 export const getEmployeeComments = (token) =>
   fetch(`${BASE}/employee/comments`, { headers: headers(token) }).then((r) => r.json());
 
@@ -181,3 +170,64 @@ export const deleteNotification = (token, id) =>
     method: "DELETE",
     headers: headers(token),
   }).then((r) => r.json());
+
+export const getActivityLogs = async (token, filters = {}) => {
+  const params = new URLSearchParams(filters);
+
+  const fetchLogs = async (authToken) => {
+    const response = await fetch(`${BASE}/admin/activity-logs?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        ...headers(authToken),
+      },
+    });
+    return response;
+  };
+
+  let response = await fetchLogs(token);
+
+  if (response.status === 401) {
+    try {
+      const refreshRes = await fetch(`${BASE}/auth/refresh`, {
+        method: "POST",
+        headers: {
+          ...headers(token),
+        },
+      });
+
+      const refreshData = await refreshRes.json().catch(() => ({}));
+      const newToken = refreshData?.access_token;
+
+      if (refreshRes.ok && newToken) {
+        localStorage.setItem("token", newToken);
+        response = await fetchLogs(newToken);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!response.ok) {
+    try {
+      // eslint-disable-next-line no-console
+      console.error("getActivityLogs failed", {
+        status: response.status,
+        statusText: response.statusText,
+        body: await response.json(),
+      });
+      return { error: true, status: response.status };
+    } catch {
+      // eslint-disable-next-line no-console
+      console.error("getActivityLogs failed (no JSON body)", {
+        status: response.status,
+        statusText: response.statusText,
+      });
+      return { error: true, status: response.status };
+    }
+
+  }
+
+  return response.json();
+};
+
+
