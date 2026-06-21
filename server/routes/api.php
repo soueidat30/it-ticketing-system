@@ -69,7 +69,7 @@ Route::middleware('auth:api')->group(function () {
 });
 
 
-Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
+Route::middleware(['auth:api', 'role:agent,manager,admin,employee'])->group(function () {
 
     Route::get('/agent/dashboard/stats', [TicketController::class, 'dashboardStats']);
 
@@ -85,8 +85,10 @@ Route::middleware(['auth:api', 'role:agent,manager,admin'])->group(function () {
 
     Route::post('/agent/tickets/{id}/resolve', [TicketController::class, 'resolveTicket']);
     Route::post('/agent/tickets/{id}/attachments', [TicketController::class, 'storeAttachment']);
+    Route::post('/employee/tickets/{id}/attachments', [TicketController::class, 'storeAttachment']);
     Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'downloadAttachment']);
     Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}/preview', [TicketController::class, 'previewAttachment']);
+    Route::delete('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'deleteAttachment']);
 
     Route::get('/manager/tickets/pending', [TicketController::class, 'pendingForManager']);
 

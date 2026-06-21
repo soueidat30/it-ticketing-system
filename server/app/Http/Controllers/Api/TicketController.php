@@ -388,7 +388,13 @@ class TicketController extends Controller
             ? Ticket::findOrFail($id)
             : Ticket::where('ticket_number', $id)->firstOrFail();
 
+        $role = optional(Auth::user()->role)->name;
+        if ($role === 'employee' && (int) $ticket->user_id !== (int) Auth::id()) {
+            return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
+        }
+
         $file   = $request->file('file');
+
         $path   = $file->store("tickets/{$ticket->id}/attachments", 'local');
         $ext    = strtolower($file->getClientOriginalExtension());
         $type   = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'img'
@@ -404,17 +410,39 @@ class TicketController extends Controller
             'file_size'   => $file->getSize(),
         ]);
 
-        $receiverId = $ticket->user_id;
-        if ($receiverId && $receiverId !== Auth::id()) {
+        $senderId = Auth::id();
+        $receiverIds = collect();
+
+        if (!empty($ticket->user_id)) {
+            $receiverIds->push((int) $ticket->user_id);
+        }
+
+        if (!empty($ticket->assigned_to)) {
+            $receiverIds->push((int) $ticket->assigned_to);
+        }
+
+        $managerRoleId = \App\Models\Role::where('name', 'manager')->value('id');
+        if ($managerRoleId) {
+            $managerUserIds = \App\Models\User::where('role_id', $managerRoleId)->pluck('id');
+            $receiverIds = $receiverIds->merge($managerUserIds);
+        }
+
+        $receiverIds = $receiverIds
+            ->filter(fn ($id) => !empty($id) && (int) $id !== (int) $senderId)
+            ->unique()
+            ->values();
+
+        foreach ($receiverIds as $receiverId) {
             Notification::notify(
                 user_id:      (int) $receiverId,
                 ticket_id:    $ticket->id,
-                triggered_by: Auth::id(),
+                triggered_by: $senderId,
                 type:         'attachment_added',
                 title:        'New attachment added',
                 message:      "A new attachment \"{$attachment->file_name}\" was added to ticket {$ticket->ticket_number}.",
             );
         }
+
 
         return response()->json([
             'id'               => $attachment->id,
@@ -439,12 +467,21 @@ class TicketController extends Controller
             return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
         }
 
-        $fullPath = storage_path('app/' . $attachment->file_path);
-        if (!file_exists($fullPath)) {
-            return response()->json(['message' => 'Attachment file not found.'], 404);
+        if (empty($attachment->file_path) || !\Storage::disk('local')->exists($attachment->file_path)) {
+            return response()->json([
+                'message' => 'Attachment file not found.',
+                'debug' => [
+                    'attachment_id'    => $attachmentId,
+                    'ticket_id'        => $ticket->id,
+                    'stored_file_path' => $attachment->file_path,
+                    'resolved_path'    => $attachment->file_path
+                        ? \Storage::disk('local')->path($attachment->file_path)
+                        : null,
+                ],
+            ], 404);
         }
 
-        return response()->download($fullPath, $attachment->file_name);
+        return \Storage::disk('local')->download($attachment->file_path, $attachment->file_name);
     }
 
     public function previewAttachment($ticketId, $attachmentId)
@@ -459,70 +496,23 @@ class TicketController extends Controller
             return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
         }
 
-        $fullPath = null;
-        if (!empty($attachment->file_path)) {
-            $candidate = storage_path('app/' . $attachment->file_path);
-            if (file_exists($candidate)) {
-                $fullPath = $candidate;
-            }
+        if (empty($attachment->file_path) || !\Storage::disk('local')->exists($attachment->file_path)) {
+            return response()->json([
+                'message' => 'Attachment file not found.',
+                'debug' => [
+                    'attachment_id'    => $attachmentId,
+                    'ticket_id'        => $ticket->id,
+                    'stored_file_path' => $attachment->file_path,
+                    'resolved_path'    => $attachment->file_path
+                        ? \Storage::disk('local')->path($attachment->file_path)
+                        : null,
+                ],
+            ], 404);
         }
 
-        if ($fullPath === null) {
-            $ticketAttachmentsDir = storage_path('app/tickets/' . $ticket->id . '/attachments');
+        $mime = \Storage::disk('local')->mimeType($attachment->file_path) ?: 'application/octet-stream';
 
-            if (!is_dir($ticketAttachmentsDir)) {
-                return response()->json([
-                    'message' => 'Attachment file not found.',
-                    'debug' => [
-                        'attachment_id'   => $attachmentId,
-                        'ticket_id'       => $ticket->id,
-                        'expected_dir'    => $ticketAttachmentsDir,
-                        'stored_file_path'=> $attachment->file_path,
-                        'stored_file_name'=> $attachment->file_name,
-                    ],
-                ], 404);
-            }
-
-            $matches = glob($ticketAttachmentsDir . DIRECTORY_SEPARATOR . '*') ?: [];
-            $targetName = (string) ($attachment->file_name ?? '');
-
-            $exact = null;
-            foreach ($matches as $m) {
-                if (is_file($m) && basename($m) === $targetName) {
-                    $exact = $m;
-                    break;
-                }
-            }
-
-            if ($exact !== null) {
-                $fullPath = $exact;
-            } else {
-                $targetLower = strtolower($targetName);
-                foreach ($matches as $m) {
-                    $baseLower = strtolower(basename($m));
-                    if (is_file($m) && $targetLower !== '' && str_starts_with($baseLower, $targetLower)) {
-                        $fullPath = $m;
-                        break;
-                    }
-                }
-            }
-
-            if ($fullPath === null) {
-                return response()->json([
-                    'message' => 'Attachment file not found.',
-                    'debug' => [
-                        'attachment_id'   => $attachmentId,
-                        'ticket_id'       => $ticket->id,
-                        'expected_dir'    => $ticketAttachmentsDir,
-                        'stored_file_path'=> $attachment->file_path,
-                        'stored_file_name'=> $attachment->file_name,
-                    ],
-                ], 404);
-            }
-        }
-
-        $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
-        return response()->file($fullPath, [
+        return \Storage::disk('local')->response($attachment->file_path, $attachment->file_name, [
             'Content-Type' => $mime,
         ]);
     }

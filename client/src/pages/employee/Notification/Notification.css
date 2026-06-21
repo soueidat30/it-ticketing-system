@@ -229,6 +229,7 @@
   color: #4b5563;
   margin: 0;
   line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .notif-item__ticket,
@@ -263,6 +264,32 @@
 .notif-type-badge--purple { background: #faf5ff; color: #7c3aed; }
 .notif-type-badge--red    { background: #fef2f2; color: #dc2626; }
 .notif-type-badge--gray   { background: #f3f4f6; color: #6b7280; }
+
+/* attachment actions */
+.notif-item__attachment-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.notif-attach-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notif-attach-btn:hover {
+  background: #f9fafb;
+}
 
 /* delete button */
 .notif-item__delete {
@@ -331,3 +358,4 @@
   .notif-item__icon { width: 34px; height: 34px; font-size: 0.95rem; }
   .notif-item__time { display: none; }
 }
+

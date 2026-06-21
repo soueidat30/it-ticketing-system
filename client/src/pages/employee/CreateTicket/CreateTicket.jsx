@@ -78,7 +78,7 @@ export default function CreateTicket() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const res = await fetch(`${BASE_URL}/agent/tickets/${createdTicketId}/attachments`, {
+            const res = await fetch(`${BASE_URL}/employee/tickets/${createdTicketId}/attachments`, {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${token}`,

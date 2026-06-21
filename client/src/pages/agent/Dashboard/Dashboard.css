@@ -1,7 +1,3 @@
-/* =========================================================
-   Agent Dashboard.css
-   ========================================================= */
-
 .agent-dashboard { animation: fadeUp 0.4s ease both; }
 
 @keyframes fadeUp {
@@ -9,7 +5,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Stat cards ─────────────────────────────────── */
 .agent-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -83,7 +78,6 @@
 .agent-stat-trend--down { background: #fee2e2; color: #b91c1c; }
 .agent-stat-trend--neutral { background: #f1f5f9; color: #64748b; }
 
-/* ── Two-col layout ─────────────────────────────── */
 .agent-dashboard-cols {
   display: grid;
   grid-template-columns: 1fr 340px;
@@ -95,7 +89,6 @@
   .agent-dashboard-cols { grid-template-columns: 1fr; }
 }
 
-/* ── Card header ─────────────────────────────────── */
 .agent-card-header {
   display: flex;
   align-items: center;
@@ -113,7 +106,6 @@
 
 .agent-card-body { padding: 20px; }
 
-/* ── Tickets table ──────────────────────────────── */
 .agent-tickets-table {
   width: 100%;
   border-collapse: collapse;
@@ -162,7 +154,6 @@
 
 .agent-ticket-requester { color: var(--agent-muted); font-size: 12px; }
 
-/* ── Priority breakdown ─────────────────────────── */
 .agent-priority-list { display: flex; flex-direction: column; gap: 12px; }
 
 .agent-priority-row { display: flex; flex-direction: column; gap: 4px; }
@@ -195,36 +186,6 @@
 .agent-priority-bar-fill--medium   { background: #eab308; }
 .agent-priority-bar-fill--low      { background: #22c55e; }
 
-/* ── Activity feed ──────────────────────────────── */
-.agent-activity-list { display: flex; flex-direction: column; gap: 0; }
-
-.agent-activity-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f4f5;
-  font-size: 13px;
-}
-
-.agent-activity-item:last-child { border-bottom: none; }
-
-.agent-activity-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-top: 5px;
-  flex-shrink: 0;
-}
-
-.agent-activity-dot--resolved { background: var(--agent-success); }
-.agent-activity-dot--assigned { background: var(--agent-info); }
-.agent-activity-dot--updated  { background: var(--agent-warning); }
-.agent-activity-dot--comment  { background: #a855f7; }
-
-.agent-activity-text { color: var(--agent-text); line-height: 1.5; }
-.agent-activity-time { font-size: 11px; color: var(--agent-muted); margin-top: 2px; }
-
-/* ── SLA gauge ──────────────────────────────────── */
 .agent-sla-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -250,7 +211,6 @@
 
 .agent-sla-desc { font-size: 11.5px; color: var(--agent-muted); margin-top: 2px; }
 
-/* ── Bottom row ─────────────────────────────────── */
 .agent-dashboard-bottom {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -259,4 +219,128 @@
 
 @media (max-width: 900px) {
   .agent-dashboard-bottom { grid-template-columns: 1fr; }
+}
+
+.agent-chart-card-body {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.agent-donut-svg {
+  flex-shrink: 0;
+}
+
+.agent-donut-svg circle {
+  transition: stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.agent-donut-total-num {
+  font-family: 'Sora', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  fill: var(--agent-text);
+}
+
+.agent-donut-total-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--agent-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.agent-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.agent-donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.agent-donut-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.agent-donut-label {
+  color: var(--agent-text);
+  font-weight: 500;
+  flex: 1;
+}
+
+.agent-donut-value {
+  font-weight: 700;
+  color: var(--agent-muted);
+  font-size: 13px;
+}
+
+.agent-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 4px 2px 0;
+}
+
+.agent-bar-chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.agent-bar-chart-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--agent-text);
+  height: 14px;
+  line-height: 14px;
+}
+
+.agent-bar-chart-track {
+  width: 100%;
+  max-width: 30px;
+  height: 100px;
+  background: var(--agent-bg);
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.agent-bar-chart-fill {
+  width: 100%;
+  background: linear-gradient(180deg, var(--agent-accent), var(--agent-primary));
+  border-radius: 6px 6px 0 0;
+  transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.agent-bar-chart-label {
+  font-size: 10.5px;
+  color: var(--agent-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 500px) {
+  .agent-chart-card-body {
+    flex-direction: column;
+    align-items: center;
+  }
+  .agent-donut-legend {
+    width: 100%;
+  }
 }

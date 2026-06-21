@@ -103,6 +103,8 @@ export default function Notifications() {
   }, [tab, loadComments]);
 
 
+const BASE_URL = "http://127.0.0.1:8000/api";
+
   // actions
   const handleRead = async (id) => {
     await markNotificationRead(token, id);
@@ -249,14 +251,84 @@ export default function Notifications() {
                           </div>
 
                     <p className="notif-item__title">{n.title}</p>
-                    <p className="notif-item__message">{n.message}</p>
 
-                          {n.ticket && (
-                            <span className="notif-item__ticket">
-                              <i className="ti ti-ticket" />
-                              {n.ticket.ticket_number} — {n.ticket.title}
-                            </span>
-                          )}
+                    <div className="notif-item__message">{n.message}</div>
+
+                    {n.type === "attachment_added" && n.ticket?.id && (
+                      <div className="notif-item__attachment-actions" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="notif-attach-btn"
+                          title="Preview"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(
+                                `${BASE_URL}/agent/tickets/${n.ticket.id}/attachments/${n.id}/preview`,
+                                {
+                                  headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+                                }
+                              );
+
+                              if (!res.ok) {
+                                const data = await res.json().catch(() => null);
+                                throw new Error(data?.message || `Preview failed (HTTP ${res.status})`);
+                              }
+
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              window.open(url, "_blank", "noopener,noreferrer");
+                              setTimeout(() => URL.revokeObjectURL(url), 60000);
+                            } catch (e) {
+                              console.error(e);
+                              alert(e?.message || "Failed to preview attachment.");
+                            }
+                          }}
+                        >
+                          <i className="ti ti-eye" /> Preview
+                        </button>
+                        <button
+                          className="notif-attach-btn"
+                          title="Download"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(
+                                `${BASE_URL}/agent/tickets/${n.ticket.id}/attachments/${n.id}`,
+                                {
+                                  headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+                                }
+                              );
+
+                              if (!res.ok) {
+                                const data = await res.json().catch(() => null);
+                                throw new Error(data?.message || `Download failed (HTTP ${res.status})`);
+                              }
+
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = "attachment";
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              URL.revokeObjectURL(url);
+                            } catch (e) {
+                              console.error(e);
+                              alert(e?.message || "Failed to download attachment.");
+                            }
+                          }}
+                        >
+                          <i className="ti ti-download" /> Download
+                        </button>
+                      </div>
+                    )}
+
+                    {n.ticket && (
+                      <span className="notif-item__ticket">
+                        <i className="ti ti-ticket" />
+                        {n.ticket.ticket_number} — {n.ticket.title}
+                      </span>
+                    )}
+
 
                           {(n.triggered_by || n.triggeredBy) && (
                             <span className="notif-item__agent">
