@@ -8,8 +8,6 @@ import {
   getTicketComments,
   addTicketComment,
   getTicketHistory,
-  updateTicketStatus,
-  getStatuses,
   deleteTicketComment,
   assignTicket,
   getUsersByRole,
@@ -59,7 +57,6 @@ export default function TeamTicketDetail() {
   const [ticket,      setTicket]      = useState(null);
   const [comments,    setComments]    = useState([]);
   const [history,     setHistory]     = useState([]);
-  const [statuses,    setStatuses]    = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [agents,      setAgents]      = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -76,11 +73,7 @@ export default function TeamTicketDetail() {
   const [assigning,     setAssigning]      = useState(false);
   const [assignSuccess, setAssignSuccess]  = useState("");
 
-  // status update
-  const [newStatusId,    setNewStatusId]    = useState("");
-  const [statusNote,     setStatusNote]     = useState("");
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [statusSuccess,  setStatusSuccess]  = useState("");
+ 
 
   const [tab, setTab] = useState("comments");
 
@@ -95,7 +88,6 @@ export default function TeamTicketDetail() {
           getTicketById(token, id),
           getTicketComments(token, id),
           getTicketHistory(token, id),
-          getStatuses(token),
           getTicketAttachments(id, token),
         ]);
 
@@ -119,7 +111,7 @@ export default function TeamTicketDetail() {
         setTicket(t);
         setComments(Array.isArray(c) ? c : c?.data || []);
         setHistory(Array.isArray(h) ? h : []);
-        setStatuses(Array.isArray(s) ? s : s?.data || []);
+  
 
         // attachRes shape can be array, { data: [] }, or { attachments: [] }
         const attachArr = Array.isArray(attachRes)
@@ -203,26 +195,7 @@ export default function TeamTicketDetail() {
     }
   };
 
-  // ── update status ────────────────────────────────────────────────────────────
-  const handleStatusUpdate = async () => {
-    if (!newStatusId) return;
-    setUpdatingStatus(true);
-    setStatusSuccess("");
-    try {
-      const updated = await updateTicketStatus(token, id, newStatusId, statusNote);
-      setTicket(updated);
-      const h = await getTicketHistory(token, id);
-      setHistory(Array.isArray(h) ? h : []);
-      setStatusNote("");
-      setNewStatusId("");
-      setStatusSuccess("Status updated ✓");
-      setTimeout(() => setStatusSuccess(""), 3000);
-    } catch (err) {
-      console.error("Status update failed:", err);
-    } finally {
-      setUpdatingStatus(false);
-    }
-  };
+ 
 
   // ── guards ───────────────────────────────────────────────────────────────────
   if (loading) return (
@@ -573,47 +546,7 @@ export default function TeamTicketDetail() {
             </div>
           </div>
 
-          {/* Update Status */}
-          <div className="ttd-card">
-            <h3 className="ttd-card__title">Update Status</h3>
-            {statusSuccess && (
-              <div className="ttd-success">
-                <i className="ti ti-circle-check" /> {statusSuccess}
-              </div>
-            )}
-            <div className="ttd-status-form">
-              <select
-                className="ttd-select"
-                value={newStatusId}
-                onChange={(e) => setNewStatusId(e.target.value)}
-              >
-                <option value="">— Select new status —</option>
-                {statuses.map((s) => (
-                  <option key={s.id} value={s.id}>{s.status_name}</option>
-                ))}
-              </select>
-
-              <textarea
-                className="ttd-textarea ttd-textarea--sm"
-                placeholder="Optional note about this change…"
-                value={statusNote}
-                onChange={(e) => setStatusNote(e.target.value)}
-                rows={2}
-              />
-
-              <button
-                className="ttd-btn ttd-btn--primary ttd-btn--full"
-                onClick={handleStatusUpdate}
-                disabled={updatingStatus || !newStatusId}
-              >
-                {updatingStatus
-                  ? <><i className="ti ti-loader ttd-spin" /> Updating…</>
-                  : <><i className="ti ti-refresh" /> Update Status</>
-                }
-              </button>
-            </div>
-          </div>
-
+     
           {/* Ticket Info */}
           <div className="ttd-card">
             <h3 className="ttd-card__title">Ticket Info</h3>

@@ -408,11 +408,12 @@ class TicketController extends Controller
             'file_path'   => $path,
             'file_type'   => $type,
             'file_size'   => $file->getSize(),
+            'attachment_id' => $attachment->id,
         ]);
 
         $senderId = Auth::id();
         $receiverIds = collect();
-$attachment->id;
+        $attachment->id;
         if (!empty($ticket->user_id)) {
             $receiverIds->push((int) $ticket->user_id);
         }
@@ -434,12 +435,18 @@ $attachment->id;
 
         foreach ($receiverIds as $receiverId) {
             Notification::notify(
-                user_id:      (int) $receiverId,
-                ticket_id:    $ticket->id,
-                triggered_by: $senderId,
-                type:         'attachment_added',
-                title:        'New attachment added',
-                message:      "A new attachment \"{$attachment->file_name}\" was added to ticket {$ticket->ticket_number}.",
+                 user_id:      (int) $receiverId,
+        ticket_id:    $ticket->id,
+        triggered_by: $senderId,
+        type:         'attachment_added',
+        title:        'New attachment added',
+        message:      json_encode([
+            'text'          => "A new attachment \"{$attachment->file_name}\" was added to ticket {$ticket->ticket_number}.",
+            'attachment_id' => $attachment->id,
+            'file_name'     => $attachment->file_name,
+            'file_type'     => $attachment->file_type,
+            'ticket_id'     => $ticket->id,
+        ]),
             );
         }
 
@@ -614,6 +621,7 @@ $attachment->id;
                 type:         'status_changed',
                 title:        'Your ticket status was updated',
                 message:      "Ticket {$ticket->ticket_number} status changed to \"{$newStatusName}\".",
+               
             );
         }
 

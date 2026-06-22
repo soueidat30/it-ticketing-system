@@ -37,6 +37,16 @@ function formatDateTime(isoOrDateStr) {
 }
 
 export default function Notifications() {
+
+   const me = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = me.role?.name; // "agent", "employee", "manager"
+
+  const prefix =
+    role === "manager"
+      ? "manager"
+      : role === "agent"
+      ? "agent"
+      : "agent";
   const [notifications, setNotifications] = useState([]);
   const [comments, setComments] = useState([]);
 
@@ -232,6 +242,8 @@ const BASE_URL = "http://127.0.0.1:8000/api";
 
                   {items.map((n) => {
                     const meta = getMeta(n.type);
+                    console.log("Notification payload:", n);
+
                     return (
                       <div
                         key={n.id}
@@ -261,13 +273,13 @@ const BASE_URL = "http://127.0.0.1:8000/api";
                           title="Preview"
                           onClick={async () => {
                             try {
-                              const res = await fetch(
-                                `${BASE_URL}/agent/tickets/${n.ticket.id}/attachments/${n.id}/preview`,
-                                {
-                                  headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-                                }
-                              );
+                             const res = await fetch(
+  `${BASE_URL}/${prefix}/tickets/${n.ticket_id}/attachments/${n.attachment_id}/preview`,
 
+  {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  }
+);
                               if (!res.ok) {
                                 const data = await res.json().catch(() => null);
                                 throw new Error(data?.message || `Preview failed (HTTP ${res.status})`);
@@ -290,12 +302,15 @@ const BASE_URL = "http://127.0.0.1:8000/api";
                           title="Download"
                           onClick={async () => {
                             try {
-                              const res = await fetch(
-                                `${BASE_URL}/agent/tickets/${n.ticket.id}/attachments/${n.id}`,
-                                {
-                                  headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-                                }
-                              );
+                             const res = await fetch(
+`${BASE_URL}/${prefix}/tickets/${n.ticket_id}/attachments/${n.attachment_id}`,
+
+
+  {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  }
+);
+
 
                               if (!res.ok) {
                                 const data = await res.json().catch(() => null);

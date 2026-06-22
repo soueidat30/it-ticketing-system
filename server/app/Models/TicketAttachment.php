@@ -13,7 +13,7 @@ class TicketAttachment extends Model
         'ticket_id',
         'uploaded_by',
         'file_name',
-        'file_path',   // ← was missing
+        'file_path',  
         'file_type',
         'file_size',
     ];
