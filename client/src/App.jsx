@@ -30,6 +30,7 @@ import ManagerLayout  from "./layouts/ManagerLayout";
 import AgentLayout    from "./layouts/AgentLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import ManagerDashboard from "./pages/manager/Dashboard/Dashboard";
+import Analytics from "./pages/manager/Analytics/Analytics";
 
 
 import MyTickets from "./pages/employee/MyTickets/MyTickets";
@@ -83,7 +84,7 @@ function App() {
   <Route path="team-tickets" element={<TeamTicket />} />
 <Route path="team-tickets/:id" element={<TeamTicketDetail />} />
   <Route path="reports" element={<div>Reports Page</div>} />
-  <Route path="analytics" element={<div>Analytics Page</div>} />
+  <Route path="analytics" element={<Analytics />} />
   <Route path="notifications" element={<Notification />} />
 
   <Route path="profile" element={<div>Profile Page</div>} />

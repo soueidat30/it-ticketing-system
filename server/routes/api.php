@@ -90,6 +90,7 @@ Route::middleware(['auth:api', 'role:agent,manager,admin,employee'])->group(func
     Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}/preview', [TicketController::class, 'previewAttachment']);
     Route::delete('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'deleteAttachment']);
 
+Route::get('/tickets/{id}/attachments', [TicketController::class, 'getAttachments']);
     Route::get('/manager/tickets/pending', [TicketController::class, 'pendingForManager']);
 
 
