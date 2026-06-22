@@ -670,3 +670,64 @@
   color: #6b7280;
 }
 
+
+
+
+.ttd-attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 0.6rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+}
+
+.ttd-attachment-info {
+  flex: 1;
+  margin-left: 0.8rem;
+}
+
+.ttd-attachment-name {
+  font-weight: 500;
+  color: #333;
+  display: block;
+}
+
+.ttd-attachment-size {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.ttd-attachment-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ttd-btn {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ttd-btn-preview {
+  background-color: #007bff;
+  color: white;
+}
+
+.ttd-btn-preview:hover {
+  background-color: #0056b3;
+}
+
+.ttd-btn-download {
+  background-color: #28a745;
+  color: white;
+}
+
+.ttd-btn-download:hover {
+  background-color: #1e7e34;
+}

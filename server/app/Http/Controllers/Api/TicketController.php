@@ -412,7 +412,7 @@ class TicketController extends Controller
 
         $senderId = Auth::id();
         $receiverIds = collect();
-
+$attachment->id;
         if (!empty($ticket->user_id)) {
             $receiverIds->push((int) $ticket->user_id);
         }
@@ -461,7 +461,9 @@ class TicketController extends Controller
             ? Ticket::findOrFail($ticketId)
             : Ticket::where('ticket_number', $ticketId)->firstOrFail();
 
-        $attachment = TicketAttachment::findOrFail($attachmentId);
+        $attachment = TicketAttachment::where('id', $attachmentId)
+    ->where('ticket_id', $ticketId)
+    ->firstOrFail();
 
         if ((int) $attachment->ticket_id !== (int) $ticket->id) {
             return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
@@ -490,7 +492,9 @@ class TicketController extends Controller
             ? Ticket::findOrFail($ticketId)
             : Ticket::where('ticket_number', $ticketId)->firstOrFail();
 
-        $attachment = TicketAttachment::findOrFail($attachmentId);
+       $attachment = TicketAttachment::where('id', $attachmentId)
+    ->where('ticket_id', $ticketId)
+    ->firstOrFail();
 
         if ((int) $attachment->ticket_id !== (int) $ticket->id) {
             return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
@@ -523,7 +527,9 @@ class TicketController extends Controller
             ? Ticket::findOrFail($ticketId)
             : Ticket::where('ticket_number', $ticketId)->firstOrFail();
 
-        $attachment = TicketAttachment::findOrFail($attachmentId);
+       $attachment = TicketAttachment::where('id', $attachmentId)
+    ->where('ticket_id', $ticketId)
+    ->firstOrFail();
 
         if ((int) $attachment->ticket_id !== (int) $ticket->id) {
             return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
@@ -981,4 +987,12 @@ private function logActivity($ticketId, $action, $details)
     return response()->json($ticket);
 }
 
+public function getAttachments($id)
+{
+    $attachments = \DB::table('ticket_attachments')
+        ->where('ticket_id', $id)
+        ->get();
+
+    return response()->json($attachments);
+}
 }

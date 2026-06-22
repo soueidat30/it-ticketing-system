@@ -15,7 +15,7 @@ export const getPriorities = (token) =>
  
 export const getStatuses = (token) =>
   fetch(`${BASE}/statuses`, { headers: headers(token) }).then((r) => r.json());
- 
+
 
 export const createTicket = (token, body) =>
   fetch(`${BASE}/tickets`, {
@@ -170,6 +170,19 @@ export const deleteNotification = (token, id) =>
     method: "DELETE",
     headers: headers(token),
   }).then((r) => r.json());
+
+  export const getTicketAttachments = (ticketId, token) =>
+  fetch(`${`http://127.0.0.1:8000/api`}/tickets/${ticketId}/attachments`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  }).then(async (r) => {
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return { attachments: [] };
+    return d;
+  });
+ 
 
 export const getActivityLogs = async (token, filters = {}) => {
   const params = new URLSearchParams(filters);

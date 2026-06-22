@@ -89,11 +89,13 @@ Route::middleware(['auth:api', 'role:agent,manager,admin,employee'])->group(func
     Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'downloadAttachment']);
     Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}/preview', [TicketController::class, 'previewAttachment']);
     Route::delete('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'deleteAttachment']);
+     // manager attachments
+    Route::get('/manager/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'downloadAttachment']);
+    Route::get('/manager/tickets/{ticketId}/attachments/{attachmentId}/preview', [TicketController::class, 'previewAttachment']);
 
-Route::get('/tickets/{id}/attachments', [TicketController::class, 'getAttachments']);
+    Route::get('/tickets/{id}/attachments', [TicketController::class, 'getAttachments']);
     Route::get('/manager/tickets/pending', [TicketController::class, 'pendingForManager']);
-
-
+   
     Route::get('/agent/tickets/{id}/comments', [TicketController::class, 'getComments']);
     Route::post('/agent/tickets/{id}/comments', [TicketController::class, 'storeComment']);
     Route::delete('/agent/tickets/{ticketId}/comments/{commentId}', [TicketController::class, 'deleteComment']);

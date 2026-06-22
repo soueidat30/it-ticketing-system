@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { useParams } from "react-router-dom";
 import "./TeamTicketDetail.css";
 
@@ -12,6 +13,7 @@ import {
   deleteTicketComment,
   assignTicket,
   getUsersByRole,
+  getTicketAttachments,
 } from "../../../services/ticketService";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -46,80 +48,64 @@ function Badge({ text, colorKey }) {
   return <span className={`ttd-badge ttd-badge--${colorKey}`}>{text}</span>;
 }
 
+const BASE_URL = "http://127.0.0.1:8000";
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function TeamTicketDetail() {
   const { id }   = useParams();
   const token    = localStorage.getItem("token");
   const me       = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const [ticket,   setTicket]   = useState(null);
-  const [comments, setComments] = useState([]);
-  const [history,  setHistory]  = useState([]);
-  // eslint-disable-next-line no-unused-vars
-  const [statuses, setStatuses] = useState([]);
+  const [ticket,      setTicket]      = useState(null);
+  const [comments,    setComments]    = useState([]);
+  const [history,     setHistory]     = useState([]);
+  const [statuses,    setStatuses]    = useState([]);
+  const [attachments, setAttachments] = useState([]);
+  const [agents,      setAgents]      = useState([]);
+  const [loading,     setLoading]     = useState(true);
 
-  const [loading,  setLoading]  = useState(true);
+  // comment form
+  const [text,           setText]          = useState("");
+  const [recipientType,  setRecipientType] = useState("employee");
+  const [sending,        setSending]       = useState(false);
+  const [successMessage, setSuccessMessage]= useState("");
 
-  const [text,        setText]        = useState("");
-  const [recipientType, setRecipientType] = useState("employee"); 
-  const [sending,     setSending]     = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
+  // assignment
+  const [agentId,       setAgentId]       = useState("");
+  const [assignNote,    setAssignNote]     = useState("");
+  const [assigning,     setAssigning]      = useState(false);
+  const [assignSuccess, setAssignSuccess]  = useState("");
 
-
-  const [agents, setAgents] = useState([]);
-  const [agentId, setAgentId] = useState("");
-  const [assignNote, setAssignNote] = useState("");
-  const [assigning, setAssigning] = useState(false);
-  const [assignSuccess, setAssignSuccess] = useState("");
-
+  // status update
   const [newStatusId,    setNewStatusId]    = useState("");
   const [statusNote,     setStatusNote]     = useState("");
-  // eslint-disable-next-line no-unused-vars
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  // eslint-disable-next-line no-unused-vars
   const [statusSuccess,  setStatusSuccess]  = useState("");
-
-  const handleAssignTicket = async () => {
-    if (!agentId) return;
-    setAssigning(true);
-    setAssignSuccess("");
-    try {
-      await assignTicket(token, id, agentId, assignNote);
-      setAssignSuccess("Ticket assigned successfully.");
-      setTimeout(() => setAssignSuccess(""), 3000);
-      const updated = await getTicketById(token, id);
-      setTicket(updated);
-    } catch (err) {
-      console.error("Assign failed:", err);
-    } finally {
-      setAssigning(false);
-    }
-  };
 
   const [tab, setTab] = useState("comments");
 
-  // ── fetch everything ────────────────────────────────────────────────────────
+  // ── fetch everything ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!token || !id) return;
 
     const fetchAll = async () => {
       try {
-        const [t, c, h, s] = await Promise.all([
+        // fetch all in parallel — note: 5 promises, 5 variables
+        const [t, c, h, s, attachRes] = await Promise.all([
           getTicketById(token, id),
           getTicketComments(token, id),
           getTicketHistory(token, id),
           getStatuses(token),
+          getTicketAttachments(id, token),
         ]);
 
-
+        // agents dropdown
         let agentUsers = [];
         try {
           agentUsers = await getUsersByRole(token, "agent");
         } catch (e) {
-          console.error("Failed to load agents dropdown:", e);
-          agentUsers = [];
+          console.warn("Failed to load agents:", e);
         }
-
 
         const normalizedAgents = Array.isArray(agentUsers)
           ? agentUsers
@@ -127,18 +113,23 @@ export default function TeamTicketDetail() {
             ? agentUsers.data
             : [];
 
-
-
         setAgents(normalizedAgents);
-
-        const currentAssigneeId = t?.assignee?.id ?? "";
-        setAgentId(currentAssigneeId ? String(currentAssigneeId) : "");
+        setAgentId(t?.assignee?.id ? String(t.assignee.id) : "");
 
         setTicket(t);
-
-        setComments(Array.isArray(c) ? c : (Array.isArray(c?.data) ? c.data : []));
+        setComments(Array.isArray(c) ? c : c?.data || []);
         setHistory(Array.isArray(h) ? h : []);
         setStatuses(Array.isArray(s) ? s : s?.data || []);
+
+        // attachRes shape can be array, { data: [] }, or { attachments: [] }
+        const attachArr = Array.isArray(attachRes)
+          ? attachRes
+          : Array.isArray(attachRes?.data)
+            ? attachRes.data
+            : Array.isArray(attachRes?.attachments)
+              ? attachRes.attachments
+              : [];
+        setAttachments(attachArr);
 
       } catch (err) {
         console.error("Error loading ticket detail:", err);
@@ -150,41 +141,32 @@ export default function TeamTicketDetail() {
     fetchAll();
   }, [token, id]);
 
-  // ── add comment ─────────────────────────────────────────────────────────────
+  // ── add comment ──────────────────────────────────────────────────────────────
   const handleAddComment = async () => {
     if (!text.trim()) return;
 
-    const internal = recipientType === "internal";
-
-  
-    const notifyUserId = (() => {
-      if (internal) return null;
-      if (!ticket) return null;
-      if (recipientType === "employee") return ticket.user?.id ?? null;
-      if (recipientType === "agent") return ticket.assignee?.id ?? null;
-      return null;
-    })();
-
+    const isInternal = recipientType === "internal";
     setSending(true);
-    try {
-      const created = await addTicketComment(token, id, text.trim(), internal, notifyUserId);
 
-      if (created && typeof created === "object" && created.id != null) {
+    try {
+      // addTicketComment(token, ticketId, content, isInternal)
+      const created = await addTicketComment(token, id, text.trim(), isInternal);
+
+      if (created?.id != null) {
         setComments((prev) => {
-          const next = Array.isArray(prev) ? [...prev] : [];
-          if (!next.some((c) => c.id === created.id)) next.push(created);
-          return next;
+          const arr = Array.isArray(prev) ? [...prev] : [];
+          if (!arr.some((c) => c.id === created.id)) arr.push(created);
+          return arr;
         });
       } else {
         const updated = await getTicketComments(token, id);
         setComments(Array.isArray(updated) ? updated : []);
       }
 
-      // Success UX
       setText("");
       setRecipientType("employee");
-      setSuccessMessage("Comment sent");
-      setTimeout(() => setSuccessMessage(""), 2000);
+      setSuccessMessage("Comment sent ✓");
+      setTimeout(() => setSuccessMessage(""), 2500);
     } catch (err) {
       console.error("Comment failed:", err);
     } finally {
@@ -192,11 +174,37 @@ export default function TeamTicketDetail() {
     }
   };
 
+  // ── delete comment ───────────────────────────────────────────────────────────
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm("Delete this comment?")) return;
+    try {
+      await deleteTicketComment(token, id, commentId);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+    } catch (e) {
+      console.error("Delete failed:", e);
+    }
+  };
 
-  // ── update status ───────────────────────────────────────────────────────────
-  // eslint-disable-next-line no-unused-vars
+  // ── assign ticket ────────────────────────────────────────────────────────────
+  const handleAssignTicket = async () => {
+    if (!agentId) return;
+    setAssigning(true);
+    setAssignSuccess("");
+    try {
+      await assignTicket(token, id, agentId, assignNote);
+      const updated = await getTicketById(token, id);
+      setTicket(updated);
+      setAssignSuccess("Ticket assigned successfully ✓");
+      setTimeout(() => setAssignSuccess(""), 3000);
+    } catch (err) {
+      console.error("Assign failed:", err);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  // ── update status ────────────────────────────────────────────────────────────
   const handleStatusUpdate = async () => {
-
     if (!newStatusId) return;
     setUpdatingStatus(true);
     setStatusSuccess("");
@@ -207,7 +215,7 @@ export default function TeamTicketDetail() {
       setHistory(Array.isArray(h) ? h : []);
       setStatusNote("");
       setNewStatusId("");
-      setStatusSuccess("Status updated successfully!");
+      setStatusSuccess("Status updated ✓");
       setTimeout(() => setStatusSuccess(""), 3000);
     } catch (err) {
       console.error("Status update failed:", err);
@@ -216,24 +224,20 @@ export default function TeamTicketDetail() {
     }
   };
 
-  // ── render guards ───────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="ttd-loading">
-        <i className="ti ti-loader ttd-spin" />
-        <span>Loading ticket…</span>
-      </div>
-    );
-  }
+  // ── guards ───────────────────────────────────────────────────────────────────
+  if (loading) return (
+    <div className="ttd-loading">
+      <i className="ti ti-loader ttd-spin" />
+      <span>Loading ticket…</span>
+    </div>
+  );
 
-  if (!ticket) {
-    return (
-      <div className="ttd-empty">
-        <i className="ti ti-ticket-off" />
-        <p>Ticket not found.</p>
-      </div>
-    );
-  }
+  if (!ticket) return (
+    <div className="ttd-empty">
+      <i className="ti ti-ticket-off" />
+      <p>Ticket not found.</p>
+    </div>
+  );
 
   const sName = ticket.status?.status_name || "Unknown";
   const pName = ticket.priority?.priority_name || "Unknown";
@@ -242,7 +246,7 @@ export default function TeamTicketDetail() {
   return (
     <div className="ttd-page">
 
-      {/* ── TOP HEADER ── */}
+      {/* ── HEADER ── */}
       <div className="ttd-header">
         <div className="ttd-header__left">
           <span className="ttd-ticket-number">{ticket.ticket_number}</span>
@@ -254,13 +258,13 @@ export default function TeamTicketDetail() {
         </div>
       </div>
 
-      {/* ── BODY: main + sidebar ── */}
+      {/* ── BODY ── */}
       <div className="ttd-body">
 
-        {/* ── LEFT: details + tabs ── */}
+        {/* ── LEFT ── */}
         <div className="ttd-main">
 
-          {/* Description card */}
+          {/* Description */}
           <div className="ttd-card">
             <h3 className="ttd-card__title">Description</h3>
             <p className="ttd-description">
@@ -268,7 +272,90 @@ export default function TeamTicketDetail() {
             </p>
           </div>
 
-          {/* Tabs: Comments | History */}
+          {/* ── ATTACHMENTS ── */}
+          {attachments.length > 0 && (
+            <div className="ttd-card">
+              <h3 className="ttd-card__title">
+                <i className="ti ti-paperclip" style={{ marginRight: 6 }} />
+                Attachments ({attachments.length})
+              </h3>
+              <div className="ttd-attachments">
+                {attachments.map((file) => {
+                  const isImage = file.file_type?.includes("image");
+                  const fileUrl = `${BASE_URL}/storage/${file.file_path}`;
+                  return (
+                   <div key={file.id} className="ttd-attachment-item">
+  {isImage ? (
+    <a href={fileUrl} target="_blank" rel="noreferrer">
+      <img
+        src={fileUrl}
+        alt={file.file_name}
+        className="ttd-attachment-thumb"
+      />
+    </a>
+  ) : (
+    <div className="ttd-attachment-file">
+      <i className="ti ti-file-description" />
+    </div>
+  )}
+
+  <div className="ttd-attachment-info">
+    <span className="ttd-attachment-name">{file.file_name}</span>
+    <span className="ttd-attachment-size">
+      {file.file_size
+        ? `${(file.file_size / 1024).toFixed(0)} KB`
+        : file.file_type}
+    </span>
+  </div>
+
+  <div className="ttd-attachment-actions">
+   <button
+  className="ttd-btn ttd-btn-preview"
+  onClick={() =>
+    axios.get(`${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}/preview`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    .then(res => {
+      // handle preview response
+      window.open(`${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}/preview?token=${token}`, "_blank");
+    })
+    .catch(err => console.error("Preview failed:", err))
+  }
+>
+  Preview
+</button>
+<button
+  className="ttd-btn ttd-btn-download"
+  onClick={() =>
+    axios.get(`${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: "blob" // important for file downloads
+    })
+    .then((res) => {
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", file.file_name); // use original filename
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    })
+    .catch((err) => console.error("Download failed:", err))
+  }
+>
+  Download
+</button>
+
+  </div>
+</div>
+
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── TABS ── */}
           <div className="ttd-card ttd-card--tabs">
             <div className="ttd-tabs">
               <button
@@ -293,7 +380,7 @@ export default function TeamTicketDetail() {
               </button>
             </div>
 
-            {/* ── COMMENTS TAB ── */}
+            {/* COMMENTS TAB */}
             {tab === "comments" && (
               <div className="ttd-tab-content">
                 {comments.length === 0 ? (
@@ -316,32 +403,25 @@ export default function TeamTicketDetail() {
                           <div className="ttd-comment__body">
                             <div className="ttd-comment__meta">
                               <span className="ttd-comment__author">
-                                {c.user?.full_name || c.author || "Unknown"}
+                                {c.user?.full_name || "Unknown"}
                               </span>
                               {c.internal && (
                                 <span className="ttd-internal-badge">
                                   <i className="ti ti-lock" /> Internal note
                                 </span>
                               )}
-                            <span className="ttd-comment__time">
-                                {c.time || timeAgo(c.created_at)}
-                            </span>
-                            <button
-                              type="button"
-                              className="ttd-btn ttd-btn--ghost"
-                              style={{ marginLeft: 8, fontSize: 12, padding: "4px 10px" }}
-                              onClick={() => {
-                                const ok = window.confirm("Are you sure you want to delete this comment?");
-                                if (!ok) return;
-
-                                deleteTicketComment(token, id, c.id).then(() => getTicketComments(token, id)).then((updated) => setComments(Array.isArray(updated) ? updated : [])).catch((e) => console.error("Delete failed:", e));
-                              }}
-                            >
-                              Delete
-                            </button>
+                              <span className="ttd-comment__time">
+                                {timeAgo(c.created_at)}
+                              </span>
+                              <button
+                                className="ttd-btn ttd-btn--ghost ttd-btn--sm"
+                                onClick={() => handleDeleteComment(c.id)}
+                              >
+                                <i className="ti ti-trash" />
+                              </button>
                             </div>
                             <p className="ttd-comment__text">
-                              {(c.text ?? c.content ?? "—")}
+                              {c.content || c.text || "—"}
                             </p>
                           </div>
                         </div>
@@ -350,34 +430,30 @@ export default function TeamTicketDetail() {
                   </div>
                 )}
 
-                {/* ── Comment Input ── */}
+                {/* Comment input */}
                 <div className="ttd-comment-input">
                   <div className="ttd-comment-input__toolbar">
-                    <label className="ttd-internal-toggle">
-                      <span style={{ marginRight: 10, fontSize: 13, fontWeight: 600 }}>Send to:</span>
-                      <select
-                        value={recipientType}
-                        onChange={(e) => setRecipientType(e.target.value)}
-                        className="ttd-select"
-                        style={{ padding: '8px 10px' }}
-                      >
-                        <option value="employee">Employee (public reply)</option>
-                        <option value="agent">Agent (agent-only public reply)</option>
-                        <option value="internal">Manager-only internal note</option>
-
-
-                      </select>
-
-                    </label>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#334155", marginRight: 8 }}>
+                      Send to:
+                    </span>
+                    <select
+                      className="ttd-select"
+                      value={recipientType}
+                      onChange={(e) => setRecipientType(e.target.value)}
+                      style={{ padding: "6px 10px" }}
+                    >
+                      <option value="employee">Employee (public reply)</option>
+                      <option value="agent">Agent only</option>
+                      <option value="internal">Internal note (manager only)</option>
+                    </select>
                   </div>
-
 
                   <textarea
                     className={`ttd-textarea ${recipientType === "internal" ? "ttd-textarea--internal" : ""}`}
                     placeholder={
                       recipientType === "internal"
-                        ? "Write an internal note (only visible to agents & managers)…"
-                        : "Write a comment visible to the employee…"
+                        ? "Write an internal note (only visible to managers)…"
+                        : "Write a reply visible to the employee…"
                     }
                     value={text}
                     onChange={(e) => setText(e.target.value)}
@@ -387,42 +463,29 @@ export default function TeamTicketDetail() {
                     }}
                   />
 
-              <div className="ttd-comment-input__footer">
-                    <span className="ttd-hint">Ctrl+Enter to send</span>
-                  </div>
-
-                  {successMessage && (
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "#16a34a",
-                        marginTop: 8,
-                        textAlign: "left",
-                      }}
-                    >
-                      {successMessage}
-                    </div>
-                  )}
-
                   <div className="ttd-comment-input__footer">
+                    <span className="ttd-hint">Ctrl+Enter to send</span>
+                    {successMessage && (
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>
+                        {successMessage}
+                      </span>
+                    )}
                     <button
                       className="ttd-btn ttd-btn--primary"
                       onClick={handleAddComment}
                       disabled={sending || !text.trim()}
                     >
-                      {sending ? (
-                        <><i className="ti ti-loader ttd-spin" /> Sending…</>
-                      ) : (
-                        <><i className="ti ti-send" /> Send</>
-                      )}
+                      {sending
+                        ? <><i className="ti ti-loader ttd-spin" /> Sending…</>
+                        : <><i className="ti ti-send" /> Send</>
+                      }
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ── HISTORY TAB ── */}
+            {/* HISTORY TAB */}
             {tab === "history" && (
               <div className="ttd-tab-content">
                 {history.length === 0 ? (
@@ -438,27 +501,16 @@ export default function TeamTicketDetail() {
                         <div className={`ttd-timeline__dot ttd-timeline__dot--${statusColor(h.new_status)}`} />
                         <div className="ttd-timeline__content">
                           <div className="ttd-timeline__row">
-                            <Badge
-                              text={h.new_status}
-                              colorKey={statusColor(h.new_status)}
-                            />
-                            <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
+                            <Badge text={h.new_status} colorKey={statusColor(h.new_status)} />
+                            <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>
                               Status set to <b>{h.new_status}</b>
                             </span>
                           </div>
                           <div className="ttd-timeline__meta">
-                            <span>
-                              <i className="ti ti-user" />
-                              {h.changed_by_name || "System"}
-                            </span>
-                            <span>
-                              <i className="ti ti-clock" />
-                              {timeAgo(h.created_at)}
-                            </span>
+                            <span><i className="ti ti-user" /> {h.changed_by_name || "System"}</span>
+                            <span><i className="ti ti-clock" /> {timeAgo(h.created_at)}</span>
                           </div>
-                          {h.note && (
-                            <p className="ttd-timeline__note">"{h.note}"</p>
-                          )}
+                          {h.note && <p className="ttd-timeline__note">"{h.note}"</p>}
                         </div>
                       </div>
                     ))}
@@ -472,103 +524,121 @@ export default function TeamTicketDetail() {
         {/* ── RIGHT SIDEBAR ── */}
         <div className="ttd-sidebar">
 
-          {/* Assignment */}
+          {/* Assign */}
           <div className="ttd-card">
             <h3 className="ttd-card__title">Assign Ticket</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 6 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Agent</span>
-                <select
-                  className="ttd-select"
-                  value={agentId}
-                  onChange={(e) => setAgentId(e.target.value)}
-                  disabled={!agents || agents.length === 0}
-                >
-                  <option value="">{agents?.length ? "Select an agent" : "No agents found"}</option>
-                  {Array.isArray(agents) && agents.map((a) => (
-                    <option key={a.id} value={String(a.id)}>
-                      {a.full_name || a.username || `Agent #${a.id}`}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div className="ttd-status-form">
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Agent</label>
+              <select
+                className="ttd-select"
+                value={agentId}
+                onChange={(e) => setAgentId(e.target.value)}
+                disabled={!agents.length}
+              >
+                <option value="">
+                  {agents.length ? "Select an agent" : "No agents found"}
+                </option>
+                {agents.map((a) => (
+                  <option key={a.id} value={String(a.id)}>
+                    {a.full_name || a.username || `Agent #${a.id}`}
+                  </option>
+                ))}
+              </select>
 
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Note (optional)</span>
-                <input
-                  className="ttd-input"
-                  value={assignNote}
-                  onChange={(e) => setAssignNote(e.target.value)}
-                  placeholder="Add note for this assignment"
-                />
-              </label>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Note (optional)</label>
+              <input
+                className="ttd-select"
+                value={assignNote}
+                onChange={(e) => setAssignNote(e.target.value)}
+                placeholder="Add note for this assignment"
+                style={{ fontFamily: "inherit" }}
+              />
 
               {assignSuccess && (
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>{assignSuccess}</div>
+                <div className="ttd-success">
+                  <i className="ti ti-circle-check" /> {assignSuccess}
+                </div>
               )}
 
               <button
-                className="ttd-btn ttd-btn--primary"
+                className="ttd-btn ttd-btn--primary ttd-btn--full"
                 onClick={handleAssignTicket}
                 disabled={assigning || !agentId}
               >
-                {assigning ? (
-                  <><i className="ti ti-loader ttd-spin" /> Assigning…</>
-                ) : (
-                  <><i className="ti ti-user-check" /> Assign</>
-                )}
+                {assigning
+                  ? <><i className="ti ti-loader ttd-spin" /> Assigning…</>
+                  : <><i className="ti ti-user-check" /> Assign</>
+                }
+              </button>
+            </div>
+          </div>
+
+          {/* Update Status */}
+          <div className="ttd-card">
+            <h3 className="ttd-card__title">Update Status</h3>
+            {statusSuccess && (
+              <div className="ttd-success">
+                <i className="ti ti-circle-check" /> {statusSuccess}
+              </div>
+            )}
+            <div className="ttd-status-form">
+              <select
+                className="ttd-select"
+                value={newStatusId}
+                onChange={(e) => setNewStatusId(e.target.value)}
+              >
+                <option value="">— Select new status —</option>
+                {statuses.map((s) => (
+                  <option key={s.id} value={s.id}>{s.status_name}</option>
+                ))}
+              </select>
+
+              <textarea
+                className="ttd-textarea ttd-textarea--sm"
+                placeholder="Optional note about this change…"
+                value={statusNote}
+                onChange={(e) => setStatusNote(e.target.value)}
+                rows={2}
+              />
+
+              <button
+                className="ttd-btn ttd-btn--primary ttd-btn--full"
+                onClick={handleStatusUpdate}
+                disabled={updatingStatus || !newStatusId}
+              >
+                {updatingStatus
+                  ? <><i className="ti ti-loader ttd-spin" /> Updating…</>
+                  : <><i className="ti ti-refresh" /> Update Status</>
+                }
               </button>
             </div>
           </div>
 
           {/* Ticket Info */}
-
-
-          {/* Ticket Info */}
           <div className="ttd-card">
             <h3 className="ttd-card__title">Ticket Info</h3>
             <dl className="ttd-info-list">
-              <div className="ttd-info-row">
-                <dt>Employee</dt>
-                <dd>{ticket.user?.full_name || "—"}</dd>
-              </div>
-              <div className="ttd-info-row">
-                <dt>Department</dt>
-                <dd>{ticket.user?.department || "—"}</dd>
-              </div>
-              <div className="ttd-info-row">
-                <dt>Category</dt>
-                <dd>{cName}</dd>
-              </div>
+              <div className="ttd-info-row"><dt>Employee</dt><dd>{ticket.user?.full_name || "—"}</dd></div>
+              <div className="ttd-info-row"><dt>Department</dt><dd>{ticket.user?.department || "—"}</dd></div>
+              <div className="ttd-info-row"><dt>Category</dt><dd>{cName}</dd></div>
               <div className="ttd-info-row">
                 <dt>Priority</dt>
-                <dd>
-                  <Badge text={pName} colorKey={priorityColor(pName)} />
-                </dd>
+                <dd><Badge text={pName} colorKey={priorityColor(pName)} /></dd>
               </div>
               <div className="ttd-info-row">
                 <dt>Status</dt>
-                <dd>
-                  <Badge text={sName} colorKey={statusColor(sName)} />
-                </dd>
+                <dd><Badge text={sName} colorKey={statusColor(sName)} /></dd>
               </div>
               <div className="ttd-info-row">
                 <dt>Assignee</dt>
                 <dd>{ticket.assignee?.full_name || <em className="ttd-muted">Unassigned</em>}</dd>
               </div>
-              <div className="ttd-info-row">
-                <dt>Created</dt>
-                <dd>{timeAgo(ticket.created_at)}</dd>
-              </div>
+              <div className="ttd-info-row"><dt>Created</dt><dd>{timeAgo(ticket.created_at)}</dd></div>
               {ticket.resolved_at && (
-                <div className="ttd-info-row">
-                  <dt>Resolved</dt>
-                  <dd>{timeAgo(ticket.resolved_at)}</dd>
-                </div>
+                <div className="ttd-info-row"><dt>Resolved</dt><dd>{timeAgo(ticket.resolved_at)}</dd></div>
               )}
             </dl>
           </div>
-
 
         </div>
       </div>
