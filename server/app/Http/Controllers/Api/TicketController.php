@@ -48,18 +48,207 @@ class TicketController extends Controller
     }
 
 
-    public function index()
+    public function index(Request $request)
     {
-        $tickets = Ticket::with([
+        $query = Ticket::query()->with([
             'category',
             'priority',
             'status',
             'user',
             'assignee',
-        ])->get();
+        ]);
 
-        return response()->json($tickets);
+        // Filters
+        $status = $request->query('status'); // status_name
+        if (!empty($status)) {
+            $query->whereHas('status', function ($q) use ($status) {
+                $q->where('status_name', $status);
+            });
+        }
+
+        $priority = $request->query('priority'); // priority_name
+        if (!empty($priority)) {
+            $query->whereHas('priority', function ($q) use ($priority) {
+                $q->where('priority_name', $priority);
+            });
+        }
+
+        $category = $request->query('category'); // category_id
+        if (!empty($category)) {
+            $query->where('category_id', $category);
+        }
+
+        $search = $request->query('search');
+        if (!empty($search)) {
+            $search = trim($search);
+            $query->where(function ($q) use ($search) {
+                $q->where('ticket_number', 'like', '%' . $search . '%')
+                    ->orWhere('title', 'like', '%' . $search . '%');
+
+                // requester name
+                $q->orWhereHas('user', function ($uq) use ($search) {
+                    $uq->where('full_name', 'like', '%' . $search . '%')
+                       ->orWhere('username', 'like', '%' . $search . '%');
+                });
+            });
+        }
+
+        // Sorting
+        $sort = $request->query('sort', 'newest');
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+        } elseif ($sort === 'priority') {
+            // Map common UI order: critical, high, medium, low
+            $priorityOrder = [
+                'critical' => 1,
+                'high'     => 2,
+                'medium'   => 3,
+                'low'      => 4,
+            ];
+
+            // Join priorities to sort by priority_name bucket
+            $query->leftJoin('priorities', 'tickets.priority_id', '=', 'priorities.id')
+                ->orderByRaw('CASE priorities.priority_name ' .
+                    'WHEN "critical" THEN 1 ' .
+                    'WHEN "high" THEN 2 ' .
+                    'WHEN "medium" THEN 3 ' .
+                    'WHEN "low" THEN 4 ' .
+                    'ELSE 9 END asc')
+                ->select('tickets.*');
+        } else {
+            // newest
+            $query->orderBy('created_at', 'desc');
+        }
+
+        // Pagination
+        // Reports require complete dataset; allow pageSize=all to disable pagination.
+        $pageSizeRaw = $request->query('pageSize', 10);
+        $pageSizeStr = strtolower(trim((string) $pageSizeRaw));
+
+        $pageSizeAll = $pageSizeStr === 'all' || $pageSizeStr === '-1';
+
+        if ($pageSizeAll) {
+            $tickets = $query->get();
+            $now = now();
+
+            $tickets->transform(function (Ticket $ticket) use ($now) {
+                $responseDueAt   = $ticket->response_due_at;
+                $resolutionDueAt = $ticket->resolution_due_at;
+
+                $slaBreached = (bool) ($ticket->response_breached || $ticket->resolution_breached);
+
+                $isResolvedLike = in_array(strtolower($ticket->status?->status_name ?? ''), ['resolved', 'closed'], true);
+
+                $progressDueAt = null;
+                if (!empty($resolutionDueAt) && !$isResolvedLike) {
+                    $progressDueAt = $resolutionDueAt;
+                } else {
+                    $progressDueAt = $responseDueAt;
+                }
+
+                $slaPercent = 0;
+                if (!empty($progressDueAt) && !empty($ticket->created_at)) {
+                    $createdAt = $ticket->created_at;
+
+                    $totalSeconds = max(1, $progressDueAt->getTimestamp() - $createdAt->getTimestamp());
+                    $elapsedSeconds = $now->getTimestamp() - $createdAt->getTimestamp();
+
+                    $ratio = 1 - ($elapsedSeconds / $totalSeconds);
+                    $slaPercent = (int) round(max(0, min(1, $ratio)) * 100);
+                }
+
+                $dueAt = !empty($resolutionDueAt) ? $resolutionDueAt : $responseDueAt;
+
+                $timeOpen = '—';
+                if (!empty($ticket->created_at)) {
+                    $end = $isResolvedLike && !empty($ticket->resolved_at) ? $ticket->resolved_at : $now;
+                    $timeOpen = $ticket->created_at->diffForHumans($end, true);
+                }
+
+                $ticket->sla_breached = $slaBreached;
+                $ticket->sla_percent  = $slaPercent;
+                $ticket->due_at       = $dueAt;
+                $ticket->time_open    = $timeOpen;
+
+                return $ticket;
+            });
+
+            return response()->json([
+                'data' => $tickets->values(),
+                'meta' => [
+                    'total' => $tickets->count(),
+                    'page' => 1,
+                    'pageSize' => $tickets->count(),
+                    'totalPages' => 1,
+                ],
+            ]);
+        }
+
+        $pageSize = (int) $pageSizeRaw;
+        $pageSize = max(1, min(100, $pageSize));
+        $page = (int) $request->query('page', 1);
+        $page = max(1, $page);
+
+        $paginator = $query->paginate($pageSize, ['*'], 'page', $page);
+
+        // SLA fields for index view (same approach as show())
+        $tickets = $paginator->getCollection();
+
+        $now = now();
+
+        $tickets->transform(function (Ticket $ticket) use ($now) {
+            $responseDueAt   = $ticket->response_due_at;
+            $resolutionDueAt = $ticket->resolution_due_at;
+
+            $slaBreached = (bool) ($ticket->response_breached || $ticket->resolution_breached);
+
+            $isResolvedLike = in_array(strtolower($ticket->status?->status_name ?? ''), ['resolved', 'closed'], true);
+
+            $progressDueAt = null;
+            if (!empty($resolutionDueAt) && !$isResolvedLike) {
+                $progressDueAt = $resolutionDueAt;
+            } else {
+                $progressDueAt = $responseDueAt;
+            }
+
+            $slaPercent = 0;
+            if (!empty($progressDueAt) && !empty($ticket->created_at)) {
+                $createdAt = $ticket->created_at;
+
+                $totalSeconds = max(1, $progressDueAt->getTimestamp() - $createdAt->getTimestamp());
+                $elapsedSeconds = $now->getTimestamp() - $createdAt->getTimestamp();
+
+                $ratio = 1 - ($elapsedSeconds / $totalSeconds);
+                $slaPercent = (int) round(max(0, min(1, $ratio)) * 100);
+            }
+
+            $dueAt = !empty($resolutionDueAt) ? $resolutionDueAt : $responseDueAt;
+
+            $timeOpen = '—';
+            if (!empty($ticket->created_at)) {
+                $end = $isResolvedLike && !empty($ticket->resolved_at) ? $ticket->resolved_at : $now;
+                $timeOpen = $ticket->created_at->diffForHumans($end, true);
+            }
+
+            $ticket->sla_breached = $slaBreached;
+            $ticket->sla_percent  = $slaPercent;
+            $ticket->due_at       = $dueAt;
+            $ticket->time_open    = $timeOpen;
+
+            return $ticket;
+        });
+
+        return response()->json([
+            'data' => $tickets->values(),
+            'meta' => [
+                'total' => $paginator->total(),
+                'page' => $paginator->currentPage(),
+                'pageSize' => $paginator->perPage(),
+                'totalPages' => $paginator->lastPage(),
+            ],
+        ]);
     }
+
 
 
     public function show($id)
@@ -621,7 +810,7 @@ class TicketController extends Controller
                 type:         'status_changed',
                 title:        'Your ticket status was updated',
                 message:      "Ticket {$ticket->ticket_number} status changed to \"{$newStatusName}\".",
-               
+
             );
         }
 
@@ -995,7 +1184,7 @@ private function logActivity($ticketId, $action, $details)
     return response()->json($ticket);
 }
 
-public function getAttachments($id)
+    public function getAttachments($id)
 {
     $attachments = \DB::table('ticket_attachments')
         ->where('ticket_id', $id)
@@ -1003,4 +1192,101 @@ public function getAttachments($id)
 
     return response()->json($attachments);
 }
+
+    // ---------------------------
+    // Enterprise ticket-scoped data (All Tickets modal)
+    // ---------------------------
+    public function assignmentHistory($id)
+    {
+        $ticket = is_numeric($id) ? Ticket::find($id) : Ticket::where('ticket_number', $id)->first();
+        if (!$ticket) {
+            return response()->json(['message' => 'Ticket not found'], 404);
+        }
+
+        $rows = \DB::table('ticket_assignments')
+            ->join('users as assigned_user', 'ticket_assignments.assigned_to', '=', 'assigned_user.id')
+            ->join('users as assigned_by_user', 'ticket_assignments.assigned_by', '=', 'assigned_by_user.id')
+            ->where('ticket_assignments.ticket_id', $ticket->id)
+            ->orderByDesc('ticket_assignments.assigned_at')
+            ->select([
+                'ticket_assignments.id',
+                'ticket_assignments.assigned_at',
+                'ticket_assignments.unassigned_at',
+                'ticket_assignments.notes',
+                'ticket_assignments.assigned_to',
+                'ticket_assignments.assigned_by',
+                'assigned_user.full_name as assigned_to_name',
+                'assigned_user.username as assigned_to_username',
+                'assigned_by_user.full_name as assigned_by_name',
+                'assigned_by_user.username as assigned_by_username',
+            ])
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'id' => $r->id,
+                    'assigned_at' => $r->assigned_at,
+                    'assigned_to' => $r->assigned_to,
+                    'assigned_to_name' => $r->assigned_to_name ?? $r->assigned_to_username,
+                    'assigned_by' => $r->assigned_by,
+                    'assigned_by_name' => $r->assigned_by_name ?? $r->assigned_by_username,
+                    'unassigned_at' => $r->unassigned_at,
+                    'notes' => $r->notes,
+                    'time' => optional($r->assigned_at)->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['data' => $rows]);
+    }
+
+    public function ticketNotifications($id)
+    {
+        $ticket = is_numeric($id) ? Ticket::find($id) : Ticket::where('ticket_number', $id)->first();
+        if (!$ticket) {
+            return response()->json(['message' => 'Ticket not found'], 404);
+        }
+
+        $notifications = Notification::query()
+            ->where('ticket_id', $ticket->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'data' => $notifications->map(fn($n) => [
+                'id' => $n->id,
+                'title' => $n->title,
+                'message' => $n->message,
+                'type' => $n->type,
+                'is_read' => (bool) $n->is_read,
+                'created_at' => $n->created_at,
+                'time' => optional($n->created_at)->diffForHumans(),
+            ]),
+        ]);
+    }
+
+    public function ticketActivityLogs($id)
+    {
+        $ticket = is_numeric($id) ? Ticket::find($id) : Ticket::where('ticket_number', $id)->first();
+        if (!$ticket) {
+            return response()->json(['message' => 'Ticket not found'], 404);
+        }
+
+        $logs = \DB::table('activity_logs')
+            ->where('ticket_id', $ticket->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'data' => $logs->map(fn($l) => [
+                'id' => $l->id,
+                'action' => $l->action,
+                'module' => $l->module,
+                'severity' => $l->severity,
+                'affected_ticket' => $l->affected_ticket,
+                'description' => $l->description,
+                'created_at' => $l->created_at,
+                'time' => optional($l->created_at)->diffForHumans(),
+            ]),
+        ]);
+    }
 }
+

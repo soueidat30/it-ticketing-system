@@ -4,13 +4,6 @@ import "./Dashboard.css";
 import { getAdminDashboardStats } from "../../../services/adminDashboardService";
 
 
-
-
-
-
-
-
-
 export default function Dashboard() {
   const [range, setRange] = useState("7d");
   const [stats, setStats] = useState([
@@ -104,20 +97,7 @@ export default function Dashboard() {
           <h1 className="dashboard-title">Dashboard</h1>
           <p className="dashboard-subtitle">Welcome back — here's what's happening today.</p>
         </div>
-        <div className="dashboard-header-actions">
-          <div className="date-range-tabs">
-            {["24h","7d","30d"].map(r => (
-              <button
-                key={r}
-                className={`date-range-tab ${range === r ? "date-range-tab--active" : ""}`}
-                onClick={() => setRange(r)}
-              >{r}</button>
-            ))}
-          </div>
-          <button className="new-ticket-button">
-            <i className="ti ti-plus" /> New Ticket
-          </button>
-        </div>
+        
       </div>
 
       <div className="stats-grid">

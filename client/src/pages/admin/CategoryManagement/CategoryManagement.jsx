@@ -1,46 +1,80 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./CategoryManagement.css";
+import { authFetch } from "../../../services/authFetch";
 
-const INITIAL_CATEGORIES = [
-    { id: 1, name: "Hardware", icon: "ti-cpu", color: "#3b82f6", description: "Physical devices, peripherals, and equipment issues", tickets: 34, active: true },
-    { id: 2, name: "Software", icon: "ti-apps", color: "#8b5cf6", description: "Application bugs, crashes, and installation problems", tickets: 51, active: true },
-    { id: 3, name: "Network & VPN", icon: "ti-network", color: "#06b6d4", description: "Connectivity, VPN access, and network infrastructure", tickets: 28, active: true },
-    { id: 4, name: "Account & Access", icon: "ti-shield-lock", color: "#10b981", description: "Logins, passwords, permissions, and account management", tickets: 19, active: true },
-    { id: 5, name: "Email & Calendar", icon: "ti-mail", color: "#f59e0b", description: "Outlook, email sync, calendar, and Teams issues", tickets: 22, active: true },
-    { id: 6, name: "Printing", icon: "ti-printer", color: "#f97316", description: "Printer setup, drivers, and print queue problems", tickets: 11, active: true },
-    { id: 7, name: "Onboarding", icon: "ti-user-check", color: "#d4f265", description: "New employee setup, equipment provisioning, accounts", tickets: 8, active: true },
-    { id: 8, name: "Security", icon: "ti-lock", color: "#ef4444", description: "Antivirus, security incidents, and compliance requests", tickets: 6, active: true },
-    { id: 9, name: "General / Other", icon: "ti-dots-circle-horizontal", color: "#6b7280", description: "Miscellaneous requests that don't fit other categories", tickets: 14, active: true },
-    { id: 10, name: "Legacy Systems", icon: "ti-server", color: "#94a3b8", description: "Old systems maintained for compatibility — being phased out", tickets: 3, active: false },
-];
-
-const ICON_OPTIONS = [
-    "ti-cpu", "ti-apps", "ti-network", "ti-shield-lock", "ti-mail", "ti-printer",
-    "ti-user-check", "ti-lock", "ti-dots-circle-horizontal", "ti-server",
-    "ti-database", "ti-cloud", "ti-headset", "ti-device-laptop", "ti-settings",
-    "ti-tag", "ti-building", "ti-chart-bar", "ti-file", "ti-tools",
-];
-
-const COLOR_OPTIONS = [
-    "#3b82f6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b",
-    "#f97316", "#ef4444", "#d4f265", "#6b7280", "#94a3b8",
-    "#03363d", "#ec4899", "#14b8a6", "#a78bfa", "#fb923c",
-];
+const BASE = "http://127.0.0.1:8000/api";
 
 const EMPTY_FORM = { name: "", icon: "ti-tag", color: "#3b82f6", description: "" };
 
 export default function CategoryManagement() {
-    const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+    const [categories, setCategories] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
     const [formData, setFormData] = useState(EMPTY_FORM);
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+    const [categoriesDesignOptions, setCategoriesDesignOptions] = useState({
+        icons: [],
+        colors: [],
+    });
 
-    const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCategories = useMemo(() => {
+
+        const q = searchQuery.toLowerCase();
+        return categories.filter(
+            (category) =>
+                category.name.toLowerCase().includes(q) ||
+                category.description.toLowerCase().includes(q)
+        );
+    }, [categories, searchQuery]);
+
+    const iconOptions = useMemo(() => {
+        return categoriesDesignOptions.icons;
+    }, [categoriesDesignOptions.icons]);
+
+    const colorOptions = useMemo(() => {
+        return categoriesDesignOptions.colors;
+    }, [categoriesDesignOptions.colors]);
+
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const load = async () => {
+            const [categoriesRes, designRes] = await Promise.all([
+                authFetch(`${BASE}/admin/categories`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                }),
+                authFetch(`${BASE}/admin/category-design-options`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                }),
+            ]);
+
+            const categoriesData = await categoriesRes.json().catch(() => []);
+            const designData = await designRes.json().catch(() => ({ icons: [], colors: [] }));
+
+            if (!isMounted) return;
+
+            if (categoriesRes.ok) {
+                setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+            }
+
+            if (designRes.ok) {
+                setCategoriesDesignOptions({
+                    icons: Array.isArray(designData.icons) ? designData.icons : [],
+                    colors: Array.isArray(designData.colors) ? designData.colors : [],
+                });
+            }
+        };
+
+        load();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const openCreateModal = () => {
     setEditingCategory(null);
@@ -59,44 +93,62 @@ export default function CategoryManagement() {
     setShowModal(true);
     };
 
-    const saveCategory = () => {
-    if (!formData.name.trim()) return;
+    const reloadCategories = async () => {
+        const res = await authFetch(`${BASE}/admin/categories`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+        const data = await res.json().catch(() => []);
+        setCategories(Array.isArray(data) ? data : []);
+    };
 
-    if (editingCategory) {
-        setCategories(prevCategories =>
-        prevCategories.map(category =>
-            category.id === editingCategory.id
-            ? { ...category, ...formData }
-            : category
-        )
-        );
-    } else {
-        setCategories(prevCategories => [
-        ...prevCategories,
-        {
-            id: Date.now(),
-            ...formData,
-            tickets: 0,
-            active: true,
+    const saveCategory = async () => {
+        if (!formData.name.trim()) return;
+
+        if (!formData.icon || !formData.color) return;
+
+        if (editingCategory) {
+            await authFetch(`${BASE}/admin/categories/${editingCategory.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    category_name: formData.name,
+                    description: formData.description,
+                    icon: formData.icon,
+                    color: formData.color,
+                }),
+            });
+        } else {
+            await authFetch(`${BASE}/admin/categories`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    category_name: formData.name,
+                    description: formData.description,
+                    icon: formData.icon,
+                    color: formData.color,
+                }),
+            });
         }
-        ]);
-    }
-    setShowModal(false);
+
+        setShowModal(false);
+        await reloadCategories();
     };
 
-    const toggleCategoryStatus = (id) => {
-    setCategories(prevCategories =>
-        prevCategories.map(category =>
-        category.id === id
-            ? { ...category, active: !category.active }
-            : category
-        )
-    );
+    const toggleCategoryStatus = async (id) => {
+        await authFetch(`${BASE}/admin/categories/${id}/toggle-status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+        });
+        await reloadCategories();
     };
 
-    const deleteCategory = (id) => {
-    setCategories(prevCategories => prevCategories.filter(category => category.id !== id));
-    setDeleteConfirmation(null);
+    const deleteCategory = async (id) => {
+        await authFetch(`${BASE}/admin/categories/${id}`, {
+            method: "DELETE",
+        });
+        setDeleteConfirmation(null);
+        await reloadCategories();
     };
 
     const totalCategories = categories.length;
@@ -269,34 +321,50 @@ export default function CategoryManagement() {
                 <div className="form-field">
                 <label className="form-label">Icon</label>
                 <div className="icon-grid">
-                    {ICON_OPTIONS.map(icon => (
-                    <button
-                        key={icon}
-                        className={`icon-button ${formData.icon === icon ? "icon-button-active" : ""}`}
-                        onClick={() => setFormData(prev => ({ ...prev, icon: icon }))}
-                        style={formData.icon === icon ? { background: formData.color + "22", color: formData.color, borderColor: formData.color } : {}}
-                        title={icon.replace("ti-", "")}
-                    >
-                        <i className={`ti ${icon}`} />
-                    </button>
-                    ))}
+                    {iconOptions.length === 0 ? (
+                        <div className="empty-icon-options">No icons yet. Create the first category to generate options.</div>
+                    ) : (
+                        iconOptions.map((icon) => (
+                            <button
+                                key={icon}
+                                className={`icon-button ${formData.icon === icon ? "icon-button-active" : ""}`}
+                                onClick={() => setFormData((prev) => ({ ...prev, icon }))}
+                                style={
+                                    formData.icon === icon
+                                        ? {
+                                            background: (formData.color || "#3b82f6") + "22",
+                                            color: formData.color || "#3b82f6",
+                                            borderColor: formData.color || "#3b82f6",
+                                        }
+                                        : {}
+                                }
+                                title={icon.replace("ti-", "")}
+                            >
+                                <i className={`ti ${icon}`} />
+                            </button>
+                        ))
+                    )}
                 </div>
                 </div>
 
                 <div className="form-field">
                 <label className="form-label">Color</label>
                 <div className="color-grid">
-                    {COLOR_OPTIONS.map(color => (
-                    <button
-                        key={color}
-                        className={`color-swatch ${formData.color === color ? "color-swatch-active" : ""}`}
-                        style={{ background: color }}
-                        onClick={() => setFormData(prev => ({ ...prev, color: color }))}
-                        title={color}
-                    >
-                        {formData.color === color && <i className="ti ti-check" />}
-                    </button>
-                    ))}
+                    {colorOptions.length === 0 ? (
+                        <div className="empty-color-options">No colors yet. Create the first category to generate options.</div>
+                    ) : (
+                        colorOptions.map((color) => (
+                            <button
+                                key={color}
+                                className={`color-swatch ${formData.color === color ? "color-swatch-active" : ""}`}
+                                style={{ background: color }}
+                                onClick={() => setFormData((prev) => ({ ...prev, color }))}
+                                title={color}
+                            >
+                                {formData.color === color && <i className="ti ti-check" />}
+                            </button>
+                        ))
+                    )}
                 </div>
                 </div>
             </div>
@@ -306,7 +374,7 @@ export default function CategoryManagement() {
                 <button
                 className="button-primary"
                 onClick={saveCategory}
-                disabled={!formData.name.trim()}
+                disabled={!formData.name.trim() || !formData.icon || !formData.color}
                 >
                 {editingCategory ? "Save Changes" : "Create Category"}
                 </button>

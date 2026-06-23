@@ -17,12 +17,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
 {
-    // Seed roles first
     $this->call(RoleSeeder::class);
 
-    // Admin
+    $this->call(CategoryDesignOptionsSeeder::class);
+
     $adminRole = Role::firstWhere('name', 'admin');
     User::firstOrCreate(
+
         ['username' => 'admin'],
         [
             'full_name' => 'Administrator',
@@ -32,7 +33,6 @@ class DatabaseSeeder extends Seeder
         ]
     );
 
-    // Agent
     $agentRole = Role::firstWhere('name', 'agent');
     User::firstOrCreate(
         ['username' => 'agent'],
@@ -44,7 +44,6 @@ class DatabaseSeeder extends Seeder
         ]
     );
 
-    // Employee
     $employeeRole = Role::firstWhere('name', 'employee');
     User::firstOrCreate(
         ['username' => 'employee'],

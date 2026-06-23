@@ -1,11 +1,14 @@
+import { authFetch } from "./authFetch";
+
 const BASE = "http://127.0.0.1:8000/api";
 
-const headers = (token) => ({
-  Authorization: `Bearer ${token}`,
-  "Content-Type": "application/json",
-  Accept: "application/json",
-});
+export const getAdminDashboardStats = async () => {
+  return authFetch(`${BASE}/admin/dashboard`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  }).then((r) => r.json());
+};
 
-export const getAdminDashboardStats = (token) =>
-  fetch(`${BASE}/admin/dashboard`, { headers: headers(token) }).then((r) => r.json());
+
 

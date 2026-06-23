@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Api\Admin\UserManagementController;
+use App\Http\Controllers\Admin\CategoryManagementController;
+
 
 
 Route::prefix('auth')->group(function () {
@@ -32,6 +34,7 @@ Route::middleware(['auth:api'])->group(function () {
 
 
 Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function () {
+    // Users
     Route::get('/users', [UserManagementController::class, 'index']);
     Route::post('/users', [UserManagementController::class, 'store']);
     Route::put('/users/{user}', [UserManagementController::class, 'update']);
@@ -39,10 +42,17 @@ Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function (
 
     Route::post('/users/bulk-delete', [UserManagementController::class, 'bulkDelete']);
     Route::post('/users/bulk-deactivate', [UserManagementController::class, 'bulkDeactivate']);
+
+    // Categories (Admin)
+    Route::get('/categories', [CategoryManagementController::class, 'index']);
+    Route::post('/categories', [CategoryManagementController::class, 'store']);
+    Route::put('/categories/{category}', [CategoryManagementController::class, 'update']);
+    Route::delete('/categories/{category}', [CategoryManagementController::class, 'destroy']);
+
+    Route::patch('/categories/{category}/toggle-status', [CategoryManagementController::class, 'toggleStatus']);
+
+    Route::get('/category-design-options', [\App\Http\Controllers\Admin\CategoryDesignOptionsController::class, 'index']);
 });
-
-
-
 
 Route::middleware('auth:api')->group(function () {
 
@@ -89,13 +99,12 @@ Route::middleware(['auth:api', 'role:agent,manager,admin,employee'])->group(func
     Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'downloadAttachment']);
     Route::get('/agent/tickets/{ticketId}/attachments/{attachmentId}/preview', [TicketController::class, 'previewAttachment']);
     Route::delete('/agent/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'deleteAttachment']);
-     // manager attachments
     Route::get('/manager/tickets/{ticketId}/attachments/{attachmentId}', [TicketController::class, 'downloadAttachment']);
     Route::get('/manager/tickets/{ticketId}/attachments/{attachmentId}/preview', [TicketController::class, 'previewAttachment']);
 
     Route::get('/tickets/{id}/attachments', [TicketController::class, 'getAttachments']);
     Route::get('/manager/tickets/pending', [TicketController::class, 'pendingForManager']);
-   
+
     Route::get('/agent/tickets/{id}/comments', [TicketController::class, 'getComments']);
     Route::post('/agent/tickets/{id}/comments', [TicketController::class, 'storeComment']);
     Route::delete('/agent/tickets/{ticketId}/comments/{commentId}', [TicketController::class, 'deleteComment']);
@@ -103,6 +112,10 @@ Route::middleware(['auth:api', 'role:agent,manager,admin,employee'])->group(func
     Route::get('/tickets/{id}/comments', [TicketController::class, 'getComments']);
     Route::post('/tickets/{id}/comments', [TicketController::class, 'storeComment']);
     Route::delete('/tickets/{ticketId}/comments/{commentId}', [TicketController::class, 'deleteComment']);
+
+    Route::get('/tickets/{id}/assignment-history', [TicketController::class, 'assignmentHistory']);
+    Route::get('/tickets/{id}/notifications', [TicketController::class, 'ticketNotifications']);
+    Route::get('/tickets/{id}/activity-logs', [TicketController::class, 'ticketActivityLogs']);
 });
 
 Route::get('/users', [UserController::class, 'index']);

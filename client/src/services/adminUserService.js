@@ -1,16 +1,22 @@
+import { authFetch } from "./authFetch";
+
 const BASE = "http://127.0.0.1:8000/api";
 
-const headers = (token) => ({
-  Authorization: `Bearer ${token}`,
-  "Content-Type": "application/json",
-  Accept: "application/json",
-});
+export const getRoles = async () => {
+  const res = await authFetch(`${BASE}/roles`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return res.json();
+};
 
-export const getRoles = async (token) =>
-  fetch(`${BASE}/roles`, { headers: headers(token) }).then((r) => r.json());
-
-export const getDepartments = async (token) =>
-  fetch(`${BASE}/departments`, { headers: headers(token) }).then((r) => r.json());
+export const getDepartments = async () => {
+  const res = await authFetch(`${BASE}/departments`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return res.json();
+};
 
 export const getAdminUsers = async (token, filters = {}) => {
   const params = new URLSearchParams();
@@ -21,9 +27,9 @@ export const getAdminUsers = async (token, filters = {}) => {
   if (filters.perPage) params.set("per_page", String(filters.perPage));
   if (filters.page) params.set("page", String(filters.page));
 
-  const res = await fetch(`${BASE}/admin/users?${params.toString()}`, {
+  const res = await authFetch(`${BASE}/admin/users?${params.toString()}`, {
     method: "GET",
-    headers: headers(token),
+    headers: { "Content-Type": "application/json" },
   });
 
   const data = await res.json().catch(() => ({}));
@@ -32,9 +38,9 @@ export const getAdminUsers = async (token, filters = {}) => {
 };
 
 export const createAdminUser = async (token, payload) => {
-  const res = await fetch(`${BASE}/admin/users`, {
+  const res = await authFetch(`${BASE}/admin/users`, {
     method: "POST",
-    headers: headers(token),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const data = await res.json().catch(() => ({}));
@@ -43,9 +49,9 @@ export const createAdminUser = async (token, payload) => {
 };
 
 export const updateAdminUser = async (token, userId, payload) => {
-  const res = await fetch(`${BASE}/admin/users/${userId}`, {
+  const res = await authFetch(`${BASE}/admin/users/${userId}`, {
     method: "PUT",
-    headers: headers(token),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const data = await res.json().catch(() => ({}));
@@ -53,10 +59,10 @@ export const updateAdminUser = async (token, userId, payload) => {
   return data;
 };
 
+
 export const deleteAdminUser = async (token, userId) => {
-  const res = await fetch(`${BASE}/admin/users/${userId}`, {
+  const res = await authFetch(`${BASE}/admin/users/${userId}`, {
     method: "DELETE",
-    headers: headers(token),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw data;
@@ -64,9 +70,9 @@ export const deleteAdminUser = async (token, userId) => {
 };
 
 export const bulkDeleteAdminUsers = async (token, userIds) => {
-  const res = await fetch(`${BASE}/admin/users/bulk-delete`, {
+  const res = await authFetch(`${BASE}/admin/users/bulk-delete`, {
     method: "POST",
-    headers: headers(token),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_ids: userIds }),
   });
   const data = await res.json().catch(() => ({}));
@@ -75,13 +81,15 @@ export const bulkDeleteAdminUsers = async (token, userIds) => {
 };
 
 export const bulkDeactivateAdminUsers = async (token, userIds) => {
-  const res = await fetch(`${BASE}/admin/users/bulk-deactivate`, {
+  const res = await authFetch(`${BASE}/admin/users/bulk-deactivate`, {
     method: "POST",
-    headers: headers(token),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_ids: userIds }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw data;
   return data;
 };
+
+
 

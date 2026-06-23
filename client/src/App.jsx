@@ -7,10 +7,10 @@ import UserManagement from "./pages/admin/UserManagement/UserManagement";
 import DepartmentManagement from "./pages/admin/DepartmentManagement/DepartmentManagement";
 import CategoryManagement from "./pages/admin/CategoryManagement/CategoryManagement";
 import PriorityManagement from "./pages/admin/PriorityManagement/PriorityManagement";
-import RoleManagement from "./pages/admin/RoleManagement/RoleManagement";
+
 import StatusManagement from "./pages/admin/StatusManagement/StatusManagement";
 import Reports from "./pages/admin/Reports/Reports";
-import SystemSettings from "./pages/admin/SystemSettings/SystemSettings";
+
 import ActivityLogs from "./pages/admin/ActivityLogs/ActivityLogs";
 
 import Tickets from "./pages/admin/Tickets/Tickets";
@@ -55,7 +55,7 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
-          <Route path="roles" element={<RoleManagement />} />
+
           <Route path="departments" element={<DepartmentManagement />} />
           <Route path="categories" element={<CategoryManagement />} />
           <Route path="priorities" element={<PriorityManagement />} />
@@ -64,7 +64,7 @@ function App() {
           <Route path="activity-logs" element={<ActivityLogs />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="tickets" element={<Tickets />} />
-          <Route path="settings" element={<SystemSettings />} />
+
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
         <Route

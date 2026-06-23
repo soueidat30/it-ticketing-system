@@ -46,7 +46,9 @@ export default function UserManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const filteredUsers = users;
+  const safeUsers = Array.isArray(users) ? users : [];
+  const filteredUsers = safeUsers;
+
 
   const toggleSelectUser = (id) =>
     setSelectedUsers((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -64,7 +66,9 @@ export default function UserManagement() {
       const statusName = opts.status === "All" || !opts.status ? undefined : opts.status;
 
       const data = await getAdminUsers(token, {
+
         search: opts.search || undefined,
+
         role: roleName,
         department: departmentName,
         status: statusName,
@@ -72,7 +76,11 @@ export default function UserManagement() {
         perPage: 50,
       });
 
-      setUsers(data?.users ?? []);
+      const apiUsers = data?.users ?? data?.data ?? data;
+      setUsers(Array.isArray(apiUsers) ? apiUsers : []);
+
+
+
       setPagination(
         data?.pagination ?? {
           current_page: 1,
@@ -174,8 +182,6 @@ export default function UserManagement() {
         password: formData.password,
       };
     }
-
-    // Update: password optional
     const payload = {
       ...base,
     };
@@ -198,7 +204,6 @@ export default function UserManagement() {
       }
 
       closeModal();
-      // refresh list with current filters
       await fetchAll({ search: searchQuery, role: roleFilter, department: deptFilter, status: statusFilter });
     } catch (e) {
       setErrorMsg(e?.message || "Failed to save user.");
@@ -236,7 +241,8 @@ export default function UserManagement() {
         <div>
           <h1 className="page-title">User Management</h1>
           <p className="page-subtitle">
-            {pagination.total} users total · {users.filter((u) => u.status === "Active").length} active
+            {pagination.total} users total · {filteredUsers.filter((u) => u.status === "Active").length} active
+
           </p>
         </div>
         <button className="button-primary" onClick={openCreateModal}>
@@ -257,7 +263,6 @@ export default function UserManagement() {
           {searchQuery && <button className="search-clear" onClick={() => setSearchQuery("")}><i className="ti ti-x" /></button>}
         </div>
         <div className="filters-group">
-          {/** Role */}
           <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="filter-select">
             <option value="All">All Roles</option>
             {roles.map((r) => (
@@ -266,8 +271,6 @@ export default function UserManagement() {
               </option>
             ))}
           </select>
-
-          {/** Department */}
           <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="filter-select">
             <option value="All">All Depts</option>
             {departments.map((d) => (
@@ -277,7 +280,6 @@ export default function UserManagement() {
             ))}
           </select>
 
-          {/** Status */}
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select">
             {STATUSES.map((s) => (
               <option key={s} value={s === "All" ? "All" : s}>

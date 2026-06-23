@@ -23,7 +23,6 @@ const NAV_ITEMS = [
     group: "User Admin",
     items: [
       { to: "/admin/users", icon: "ti-users", label: "User Management" },
-      { to: "/admin/roles", icon: "ti-shield-lock", label: "Role Management" },
       { to: "/admin/departments", icon: "ti-building", label: "Departments" },
     ],
   },
@@ -43,7 +42,6 @@ const NAV_ITEMS = [
     group: "System",
     items: [
       { to: "/admin/notifications", icon: "ti-bell", label: "Notifications" },
-      { to: "/admin/settings", icon: "ti-settings", label: "System Settings" },
     ],
   },
 ];
@@ -88,7 +86,7 @@ const AdminLayout = () => {
           </div>
           {sidebarOpen && (
             <div className="al__logo-text">
-              <span className="al__logo-name">IDS</span>
+              <span className="al__logo-name">Tickora</span>
               <span className="al__logo-sub">Admin Panel</span>
             </div>
           )}
