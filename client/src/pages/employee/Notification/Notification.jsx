@@ -269,17 +269,20 @@ const BASE_URL = "http://127.0.0.1:8000/api";
                     {n.type === "attachment_added" && n.ticket?.id && (
                       <div className="notif-item__attachment-actions" onClick={(e) => e.stopPropagation()}>
                         <button
-                          className="notif-attach-btn"
+                          className="notif-icon-btn"
                           title="Preview"
                           onClick={async () => {
                             try {
-                             const res = await fetch(
-  `${BASE_URL}/${prefix}/tickets/${n.ticket_id}/attachments/${n.attachment_id}/preview`,
-
-  {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  }
-);
+                              if (n.attachment_id == null) {
+                                alert("Attachment id is missing in this notification payload.");
+                                return;
+                              }
+                              const res = await fetch(
+                                `${BASE_URL}/${prefix}/tickets/${n.ticket_id}/attachments/${n.attachment_id}/preview`,
+                                {
+                                  headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+                                }
+                              );
                               if (!res.ok) {
                                 const data = await res.json().catch(() => null);
                                 throw new Error(data?.message || `Preview failed (HTTP ${res.status})`);
@@ -295,22 +298,24 @@ const BASE_URL = "http://127.0.0.1:8000/api";
                             }
                           }}
                         >
-                          <i className="ti ti-eye" /> Preview
+                          <i className="ti ti-eye" />
                         </button>
+
                         <button
-                          className="notif-attach-btn"
+                          className="notif-icon-btn"
                           title="Download"
                           onClick={async () => {
                             try {
-                             const res = await fetch(
-`${BASE_URL}/${prefix}/tickets/${n.ticket_id}/attachments/${n.attachment_id}`,
-
-
-  {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  }
-);
-
+                              if (n.attachment_id == null) {
+                                alert("Attachment id is missing in this notification payload.");
+                                return;
+                              }
+                              const res = await fetch(
+                                `${BASE_URL}/${prefix}/tickets/${n.ticket_id}/attachments/${n.attachment_id}`,
+                                {
+                                  headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+                                }
+                              );
 
                               if (!res.ok) {
                                 const data = await res.json().catch(() => null);
@@ -332,7 +337,7 @@ const BASE_URL = "http://127.0.0.1:8000/api";
                             }
                           }}
                         >
-                          <i className="ti ti-download" /> Download
+                          <i className="ti ti-download" />
                         </button>
                       </div>
                     )}

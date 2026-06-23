@@ -16,7 +16,15 @@ class Ticket extends Model
         'priority_id',
         'status_id',
         'resolved_at',
+
+        // SLA timer fields
+        'response_due_at',
+        'resolution_due_at',
+        'first_response_at',
+        'response_breached',
+        'resolution_breached',
     ];
+
 
     public function category()
     {

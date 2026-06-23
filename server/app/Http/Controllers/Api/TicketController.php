@@ -939,20 +939,18 @@ class TicketController extends Controller
             'user_id'       => Auth::id(),
         ]);
 
-        $sla = SlaPolicy::where(
-            'priority_id',
-            $ticket->priority_id
-        )->first();
+        // SLA driven by Priority (minutes)
+        // tickets.sla_* should be computed from priorities.sla_*_minutes
+        $priority = $ticket->priority()->first();
 
-        if ($sla) {
-            $ticket->response_due_at =
-                now()->addHours($sla->response_time_hours);
+        if ($priority) {
+            $ticket->response_due_at = now()->addMinutes((int) $priority->sla_response_minutes);
+            $ticket->resolution_due_at = now()->addMinutes((int) $priority->sla_resolve_minutes);
 
-            $ticket->resolution_due_at =
-                now()->addHours($sla->resolution_time_hours);
-
+            // optional: set first_response_at baseline if you want; otherwise leave null
             $ticket->save();
         }
+
 
         return response()->json([
             'message' => 'Ticket created successfully',

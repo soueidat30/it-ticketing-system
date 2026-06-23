@@ -16,6 +16,8 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Api\Admin\UserManagementController;
 use App\Http\Controllers\Admin\CategoryManagementController;
+use App\Http\Controllers\Admin\PriorityManagementController;
+
 
 
 
@@ -52,7 +54,23 @@ Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function (
     Route::patch('/categories/{category}/toggle-status', [CategoryManagementController::class, 'toggleStatus']);
 
     Route::get('/category-design-options', [\App\Http\Controllers\Admin\CategoryDesignOptionsController::class, 'index']);
+
+    // Priorities (Admin)
+    Route::prefix('admin')->group(function () {
+        Route::get('/priorities', [PriorityManagementController::class, 'index']);
+
+        Route::post('/priorities', [PriorityManagementController::class, 'store']);
+
+        Route::put('/priorities/{priority}', [PriorityManagementController::class, 'update']);
+
+        Route::delete('/priorities/{priority}', [PriorityManagementController::class, 'destroy']);
+
+        Route::patch('/priorities/{priority}/toggle-status', [PriorityManagementController::class, 'toggleStatus']);
+
+        Route::post('/priorities/reorder', [PriorityManagementController::class, 'reorder']);
+    });
 });
+
 
 Route::middleware('auth:api')->group(function () {
 
@@ -67,7 +85,14 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/priorities', [PriorityController::class, 'index']);
+    Route::post('/priorities', [PriorityController::class, 'store']);
+    Route::put('/priorities/{priority}', [PriorityController::class, 'update']);
+    Route::patch('/priorities/{priority}/toggle-status', [PriorityController::class, 'toggleStatus']);
+    Route::post('/priorities/reorder', [PriorityController::class, 'reorder']);
+    Route::delete('/priorities/{priority}', [PriorityController::class, 'destroy']);
     Route::get('/statuses', [StatusController::class, 'index']);
+
+
     Route::get('/my-tickets', [TicketController::class, 'myTickets']);
     Route::post('/tickets', [TicketController::class, 'store']);
     Route::get('/tickets/{id}', [TicketController::class, 'show']);
