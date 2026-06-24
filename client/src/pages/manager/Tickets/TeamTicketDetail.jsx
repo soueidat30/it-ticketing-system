@@ -46,15 +46,13 @@ function Badge({ text, colorKey }) {
   return <span className={`ttd-badge ttd-badge--${colorKey}`}>{text}</span>;
 }
 
-  const BASE_URL = "http://127.0.0.1:8000";
-
-
+const BASE_URL = "http://127.0.0.1:8000";
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function TeamTicketDetail() {
-  const { id }   = useParams();
-  const token    = localStorage.getItem("token");
-  const me       = JSON.parse(localStorage.getItem("user") || "{}");
+  const { id }  = useParams();
+  const token   = localStorage.getItem("token");
+  const me      = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [ticket,      setTicket]      = useState(null);
   const [comments,    setComments]    = useState([]);
@@ -70,23 +68,20 @@ export default function TeamTicketDetail() {
   const [successMessage, setSuccessMessage]= useState("");
 
   // assignment
-  const [agentId,       setAgentId]       = useState("");
-  const [assignNote,    setAssignNote]     = useState("");
-  const [assigning,     setAssigning]      = useState(false);
-  const [assignSuccess, setAssignSuccess]  = useState("");
-
- 
+  const [agentId,       setAgentId]      = useState("");
+  const [assignNote,    setAssignNote]    = useState("");
+  const [assigning,     setAssigning]     = useState(false);
+  const [assignSuccess, setAssignSuccess] = useState("");
 
   const [tab, setTab] = useState("comments");
 
-  // ── fetch everything ─────────────────────────────────────────────────────────
+  // ── fetch everything ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!token || !id) return;
 
     const fetchAll = async () => {
       try {
-        // fetch all in parallel — note: 5 promises, 5 variables
-        const [t, c, h, s, attachRes] = await Promise.all([
+        const [t, c, h, attachRes] = await Promise.all([
           getTicketById(token, id),
           getTicketComments(token, id),
           getTicketHistory(token, id),
@@ -109,13 +104,11 @@ export default function TeamTicketDetail() {
 
         setAgents(normalizedAgents);
         setAgentId(t?.assignee?.id ? String(t.assignee.id) : "");
-
         setTicket(t);
         setComments(Array.isArray(c) ? c : c?.data || []);
         setHistory(Array.isArray(h) ? h : []);
-  
 
-        // attachRes shape can be array, { data: [] }, or { attachments: [] }
+        // normalize attachments response shape
         const attachArr = Array.isArray(attachRes)
           ? attachRes
           : Array.isArray(attachRes?.data)
@@ -135,17 +128,13 @@ export default function TeamTicketDetail() {
     fetchAll();
   }, [token, id]);
 
-  // ── add comment ──────────────────────────────────────────────────────────────
+  // ── add comment ───────────────────────────────────────────────────────────
   const handleAddComment = async () => {
     if (!text.trim()) return;
-
     const isInternal = recipientType === "internal";
     setSending(true);
-
     try {
-      // addTicketComment(token, ticketId, content, isInternal)
       const created = await addTicketComment(token, id, text.trim(), isInternal);
-
       if (created?.id != null) {
         setComments((prev) => {
           const arr = Array.isArray(prev) ? [...prev] : [];
@@ -156,7 +145,6 @@ export default function TeamTicketDetail() {
         const updated = await getTicketComments(token, id);
         setComments(Array.isArray(updated) ? updated : []);
       }
-
       setText("");
       setRecipientType("employee");
       setSuccessMessage("Comment sent ✓");
@@ -168,7 +156,7 @@ export default function TeamTicketDetail() {
     }
   };
 
-  // ── delete comment ───────────────────────────────────────────────────────────
+  // ── delete comment ────────────────────────────────────────────────────────
   const handleDeleteComment = async (commentId) => {
     if (!window.confirm("Delete this comment?")) return;
     try {
@@ -179,7 +167,7 @@ export default function TeamTicketDetail() {
     }
   };
 
-  // ── assign ticket ────────────────────────────────────────────────────────────
+  // ── assign ticket ─────────────────────────────────────────────────────────
   const handleAssignTicket = async () => {
     if (!agentId) return;
     setAssigning(true);
@@ -197,9 +185,50 @@ export default function TeamTicketDetail() {
     }
   };
 
- 
+  // ── attachment preview ────────────────────────────────────────────────────
+  const handlePreview = async (file) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}/preview`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: res.headers["content-type"] }));
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      console.error("Preview failed:", err);
+      alert("Could not preview this file.");
+    }
+  };
 
-  // ── guards ───────────────────────────────────────────────────────────────────
+  // ── attachment download ───────────────────────────────────────────────────
+  const handleDownload = async (file) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", file.file_name || "attachment");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+      alert("Could not download this file.");
+    }
+  };
+
+  // ── guards ────────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="ttd-loading">
       <i className="ti ti-loader ttd-spin" />
@@ -214,7 +243,7 @@ export default function TeamTicketDetail() {
     </div>
   );
 
-  const sName = ticket.status?.status_name || "Unknown";
+  const sName = ticket.status?.status_name   || "Unknown";
   const pName = ticket.priority?.priority_name || "Unknown";
   const cName = ticket.category?.category_name || "—";
 
@@ -248,135 +277,78 @@ export default function TeamTicketDetail() {
           </div>
 
           {/* ── ATTACHMENTS ── */}
-          {attachments.length > 0 && (
-            <div className="ttd-card">
-              <h3 className="ttd-card__title">
-                <i className="ti ti-paperclip" style={{ marginRight: 6 }} />
-                Attachments ({attachments.length})
-              </h3>
+          <div className="ttd-card">
+            <h3 className="ttd-card__title">
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <i className="ti ti-paperclip" />
+                Attachments {attachments.length > 0 && `(${attachments.length})`}
+              </span>
+            </h3>
+            {attachments.length === 0 ? (
+              <div className="ttd-no-content">
+                <i className="ti ti-file-off" />
+                <p>No attachments uploaded for this ticket.</p>
+              </div>
+            ) : (
               <div className="ttd-attachments">
                 {attachments.map((file) => {
                   const isImage = String(file.file_type ?? "").includes("image");
                   const fileUrl = `${BASE_URL}/storage/${file.file_path}`;
-
-                  const preview = async () => {
-                    const previewRes = await fetch(
-                      `${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}/preview`,
-                      {
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                          Accept: "*/*",
-                        },
-                      }
-                    );
-                    if (!previewRes.ok) {
-                      const msg = await previewRes.text().catch(() => "Preview failed");
-                      throw new Error(msg);
-                    }
-                    const blob = await previewRes.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    window.open(url, "_blank", "noopener,noreferrer");
-                    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-                  };
-
-                  const download = async () => {
-                    const dlRes = await fetch(
-                      `${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}`,
-                      {
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                          Accept: "*/*",
-                        },
-                      }
-                    );
-                    if (!dlRes.ok) {
-                      const msg = await dlRes.text().catch(() => "Download failed");
-                      throw new Error(msg);
-                    }
-                    const blob = await dlRes.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = file.file_name || "attachment";
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    URL.revokeObjectURL(url);
-                  };
-
                   return (
-                   <div key={file.id} className="ttd-attachment-item">
-  {isImage ? (
-    <a href={fileUrl} target="_blank" rel="noreferrer">
-      <img
-        src={fileUrl}
-        alt={file.file_name}
-        className="ttd-attachment-thumb"
-      />
-    </a>
-  ) : (
-    <div className="ttd-attachment-file">
-      <i className="ti ti-file-description" />
-    </div>
-  )}
+                    <div key={file.id} className="ttd-attachment-item">
+                      {/* Thumbnail or file icon */}
+                      {isImage ? (
+                        <div className="ttd-attachment-thumb-wrap">
+                          <img
+                            src={fileUrl}
+                            alt={file.file_name}
+                            className="ttd-attachment-thumb"
+                            onError={(e) => { e.target.style.display = "none"; }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="ttd-attachment-file">
+                          <i className={`ti ${
+                            String(file.file_type).includes("pdf")
+                              ? "ti-file-type-pdf"
+                              : "ti-file-description"
+                          }`} />
+                        </div>
+                      )}
 
-  <div className="ttd-attachment-info">
-    <span className="ttd-attachment-name">{file.file_name}</span>
-    <span className="ttd-attachment-size">
-      {file.file_size
-        ? `${(file.file_size / 1024).toFixed(0)} KB`
-        : file.file_type}
-    </span>
-  </div>
+                      {/* File info */}
+                      <div className="ttd-attachment-info">
+                        <span className="ttd-attachment-name">{file.file_name}</span>
+                        <span className="ttd-attachment-size">
+                          {file.file_size
+                            ? `${(file.file_size / 1024).toFixed(0)} KB`
+                            : file.file_type || "—"}
+                        </span>
+                      </div>
 
-  <div className="ttd-attachment-actions">
-   <button
-  className="ttd-btn ttd-btn-preview"
-  onClick={() =>
-    axios.get(`${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}/preview`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    .then(res => {
-      // handle preview response
-      window.open(`${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}/preview?token=${token}`, "_blank");
-    })
-    .catch(err => console.error("Preview failed:", err))
-  }
->
-  Preview
-</button>
-<button
-  className="ttd-btn ttd-btn-download"
-  onClick={() =>
-    axios.get(`${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: "blob" // important for file downloads
-    })
-    .then((res) => {
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", file.file_name); // use original filename
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    })
-    .catch((err) => console.error("Download failed:", err))
-  }
->
-  Download
-</button>
-
-  </div>
-</div>
-
+                      {/* Actions */}
+                      <div className="ttd-attachment-actions">
+                        <button
+                          className="ttd-btn ttd-btn-preview"
+                          onClick={() => handlePreview(file)}
+                        >
+                          <i className="ti ti-eye" /> Preview
+                        </button>
+                        <button
+                          className="ttd-btn ttd-btn-download"
+                          onClick={() => handleDownload(file)}
+                        >
+                          <i className="ti ti-download" /> Download
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* ── TABS ── */}
+          {/* ── TABS: Comments | History ── */}
           <div className="ttd-card ttd-card--tabs">
             <div className="ttd-tabs">
               <button
@@ -545,7 +517,7 @@ export default function TeamTicketDetail() {
         {/* ── RIGHT SIDEBAR ── */}
         <div className="ttd-sidebar">
 
-          {/* Assign */}
+          {/* Assign Ticket */}
           <div className="ttd-card">
             <h3 className="ttd-card__title">Assign Ticket</h3>
             <div className="ttd-status-form">
@@ -594,7 +566,6 @@ export default function TeamTicketDetail() {
             </div>
           </div>
 
-     
           {/* Ticket Info */}
           <div className="ttd-card">
             <h3 className="ttd-card__title">Ticket Info</h3>
@@ -614,9 +585,15 @@ export default function TeamTicketDetail() {
                 <dt>Assignee</dt>
                 <dd>{ticket.assignee?.full_name || <em className="ttd-muted">Unassigned</em>}</dd>
               </div>
-              <div className="ttd-info-row"><dt>Created</dt><dd>{timeAgo(ticket.created_at)}</dd></div>
+              <div className="ttd-info-row">
+                <dt>Created</dt>
+                <dd>{timeAgo(ticket.created_at)}</dd>
+              </div>
               {ticket.resolved_at && (
-                <div className="ttd-info-row"><dt>Resolved</dt><dd>{timeAgo(ticket.resolved_at)}</dd></div>
+                <div className="ttd-info-row">
+                  <dt>Resolved</dt>
+                  <dd>{timeAgo(ticket.resolved_at)}</dd>
+                </div>
               )}
             </dl>
           </div>

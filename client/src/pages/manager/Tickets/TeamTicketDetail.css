@@ -731,3 +731,41 @@
 .ttd-btn-download:hover {
   background-color: #1e7e34;
 }
+
+
+* ── attachment thumbnail wrap ── */
+.ttd-attachment-thumb-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+}
+ 
+.ttd-attachment-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+ 
+.ttd-btn--ghost {
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+}
+ 
+.ttd-btn--ghost:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fecaca;
+}
+ 
+.ttd-btn--sm {
+  padding: 3px 8px;
+  font-size: 0.75rem;
+}
+ 
