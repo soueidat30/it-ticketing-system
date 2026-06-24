@@ -17,7 +17,9 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Api\Admin\UserManagementController;
 use App\Http\Controllers\Admin\CategoryManagementController;
 use App\Http\Controllers\Admin\PriorityManagementController;
-
+use App\Http\Controllers\Api\KnowledgeBaseController;
+use App\Http\Controllers\Api\ReportsController;
+use App\Http\Controllers\Api\AiTicketAssistController;
 
 
 
@@ -101,6 +103,7 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('/tickets/{id}', [TicketController::class, 'destroy']);
 
     Route::post('/tickets/{id}/comments', [TicketController::class, 'storeComment']);
+    Route::post('/ai/suggest-ticket-fields', [AiTicketAssistController::class, 'suggestFields']);
 });
 
 
@@ -164,3 +167,31 @@ Route::middleware(['auth:api'])->group(function () {
 
     Route::get('/tickets/{id}', [TicketController::class, 'showSingle']);
 });
+
+
+// ── Knowledge Base — all authenticated users can READ ────────────────────────
+Route::middleware('auth:api')->prefix('kb')->group(function () {
+    Route::get('/categories',          [KnowledgeBaseController::class, 'categories']);
+    Route::get('/articles',            [KnowledgeBaseController::class, 'index']);
+    Route::get('/articles/{id}',       [KnowledgeBaseController::class, 'show']);
+    Route::post('/articles/{id}/helpful', [KnowledgeBaseController::class, 'helpful']);
+});
+ 
+// ── Knowledge Base — agents/managers/admins can CREATE ──────────────────────
+Route::middleware(['auth:api', 'role:agent,manager,admin'])->prefix('kb')->group(function () {
+    Route::post('/articles',               [KnowledgeBaseController::class, 'store']);
+});
+ 
+// ── Knowledge Base — admin only can APPROVE ──────────────────────────────────
+Route::middleware(['auth:api', 'role:admin'])->prefix('kb')->group(function () {
+    Route::patch('/articles/{id}/approve', [KnowledgeBaseController::class, 'approve']);
+});
+Route::middleware(['auth:api', 'role:manager,admin'])->prefix('report')->group(function () {
+    // Summary stats for the reports page
+    Route::get('/summary',    [ReportsController::class, 'summary']);
+    // Monthly trend data
+    Route::get('/monthly',    [ReportsController::class, 'monthly']);
+    // Export as CSV (alternative server-side export)
+    Route::get('/export/csv', [ReportsController::class, 'exportCsv']);
+});
+ 

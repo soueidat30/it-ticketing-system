@@ -24,7 +24,7 @@ const DonutChart = ({ data, size = 150, strokeWidth = 20 }) => {
       <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
         {total === 0 ? (
           <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={strokeWidth} />
-        ) : data.map((d) => {
+        ) : data.map((d, index) => {
           const fraction = d.value / total;
           const dash = fraction * circumference;
           const gap = circumference - dash;
@@ -32,7 +32,7 @@ const DonutChart = ({ data, size = 150, strokeWidth = 20 }) => {
           cumulative += fraction;
           return (
             <circle
-              key={d.key}
+              key={`${d.key}-${index}`}
               cx={size/2} cy={size/2} r={radius}
               fill="none" stroke={d.color} strokeWidth={strokeWidth}
               strokeDasharray={`${dash} ${gap}`}
@@ -155,6 +155,7 @@ const LineChart = ({ tickets }) => {
 
         {/* Dots + hover zones */}
         {days.map((d, i) => (
+          
           <g key={i}>
             {/* invisible hover column */}
             <rect
@@ -175,7 +176,7 @@ const LineChart = ({ tickets }) => {
         {showLabels.map((d, i) => {
           const origIdx = days.indexOf(d);
           return (
-            <text key={i} x={xOf(origIdx)} y={H - 4} textAnchor="middle" className="emp-linechart-xtick">
+            <text key={`xtick-${i}`} x={xOf(origIdx)} y={H - 4} textAnchor="middle" className="emp-linechart-xtick">
               {d.shortLabel}
             </text>
           );

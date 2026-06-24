@@ -424,3 +424,129 @@
 @media (max-width: 900px) {
   .ct-grid { grid-template-columns: 1fr; }
 }
+
+ct-ai-box {
+  border: 1px dashed #c7d2fe;
+  background: #f5f6ff;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 4px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+ 
+.ct-ai-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+ 
+.ct-ai-box__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4338ca;
+}
+ 
+.ct-ai-box__title i {
+  font-size: 1rem;
+}
+ 
+.ct-ai-box__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+ 
+.ct-ai-box__btn:hover:not(:disabled) {
+  background: #4f46e5;
+}
+ 
+.ct-ai-box__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+ 
+.ct-ai-box__hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin: 0;
+}
+ 
+.ct-ai-box__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #b91c1c;
+}
+ 
+.ct-ai-box__result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+ 
+.ct-ai-box__pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+ 
+.ct-ai-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+ 
+.ct-ai-box__reasoning {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin: 0;
+  font-style: italic;
+}
+ 
+.ct-ai-box__apply {
+  align-self: flex-start;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid #6366f1;
+  background: #fff;
+  color: #4f46e5;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+ 
+.ct-ai-box__apply:hover:not(:disabled) {
+  background: #eef2ff;
+}
+ 
+.ct-ai-box__apply--done {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: #f0fdf4;
+  cursor: default;
+}

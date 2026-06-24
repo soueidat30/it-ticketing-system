@@ -30,6 +30,7 @@ export const createTicket = (token, body) =>
  
 export const getMyTickets = (token) =>
   fetch(`${BASE}/my-tickets`, { headers: headers(token) }).then((r) => r.json());
+
  
 export const deleteTicket = (token, id) =>
   fetch(`${BASE}/tickets/${id}`, {
@@ -171,8 +172,8 @@ export const deleteNotification = (token, id) =>
     headers: headers(token),
   }).then((r) => r.json());
 
-  export const getTicketAttachments = (ticketId, token) =>
-  fetch(`${`http://127.0.0.1:8000/api`}/tickets/${ticketId}/attachments`, {
+export const getTicketAttachments = (ticketId, token) =>
+  fetch(`${BASE}/tickets/${ticketId}/attachments`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",

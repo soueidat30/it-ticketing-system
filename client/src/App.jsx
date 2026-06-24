@@ -31,13 +31,15 @@ import AgentLayout    from "./layouts/AgentLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import ManagerDashboard from "./pages/manager/Dashboard/Dashboard";
 import Analytics from "./pages/manager/Analytics/Analytics";
-
+import Report from "./pages/manager/Report/Report";
+import ManagerProfile from "./pages/manager/ManagerProfile/ManagerProfile";
 
 import MyTickets from "./pages/employee/MyTickets/MyTickets";
 import CreateTicket from "./pages/employee/CreateTicket/CreateTicket";
 import TeamTicket from "./pages/manager/Tickets/TeamTicket";
 import TeamTicketDetail from "./pages/manager/Tickets/TeamTicketDetail";
 import Notification from "./pages/employee/Notification/Notification";
+import KnowledgeBase from "./pages/employee/KnowledgeBase/KnowledgeBase";
 
 function App() {
   return (
@@ -60,7 +62,7 @@ function App() {
           <Route path="categories" element={<CategoryManagement />} />
           <Route path="priorities" element={<PriorityManagement />} />
           <Route path="statuses" element={<StatusManagement />} />
-          <Route path="reports" element={<Reports />} />
+          <Route path="reports" element={<Reports/>} />
           <Route path="activity-logs" element={<ActivityLogs />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="tickets" element={<Tickets />} />
@@ -68,31 +70,26 @@ function App() {
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
         <Route
-          path="/manager"
-           element={
+  path="/manager"
+  element={
     <ProtectedRoute allowedRoles={["manager"]}>
       <ManagerLayout />
     </ProtectedRoute>
   }
 >
-  <Route index element={<Navigate to="dashboard" replace />} />
+  <Route index element={<Navigate to="/manager/dashboard" replace />} />
 
-  {/* DASHBOARD */}
   <Route path="dashboard" element={<ManagerDashboard />} />
-
-  {/* FUTURE PAGES (you already prepared sidebar for these) */}
   <Route path="team-tickets" element={<TeamTicket />} />
-<Route path="team-tickets/:id" element={<TeamTicketDetail />} />
-  <Route path="reports" element={<div>Reports Page</div>} />
+  <Route path="team-tickets/:id" element={<TeamTicketDetail />} />
+  <Route path="report" element={<Report />} />
   <Route path="analytics" element={<Analytics />} />
   <Route path="notifications" element={<Notification />} />
-
-  <Route path="profile" element={<div>Profile Page</div>} />
+  <Route path="/manager/profile" element={<ManagerProfile />} />
   <Route path="settings" element={<div>Settings Page</div>} />
 
-  {/* fallback */}
-  <Route path="*" element={<Navigate to="dashboard" replace />} />
-  </Route>
+  <Route path="*" element={<Navigate to="/manager/dashboard" replace />} />
+</Route>
         <Route
           path="/agent"
           element={
@@ -126,6 +123,7 @@ function App() {
           <Route path="create-ticket" element={<CreateTicket />} />
           <Route path="my-tickets" element={<MyTickets />} />
           <Route path="notification" element={<Notification />} />
+          <Route path="knowledge-base" element={<KnowledgeBase />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
         

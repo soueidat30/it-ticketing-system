@@ -8,7 +8,7 @@ const NAV_ITEMS = [
     items: [
       { to: "/manager/dashboard", icon: "ti-layout-dashboard", label: "Dashboard" },
       { to: "/manager/team-tickets", icon: "ti-ticket", label: "Team Tickets" },
-      { to: "/manager/reports", icon: "ti-chart-bar", label: "Reports" },
+      { to: "/manager/report", icon: "ti-chart-bar", label: "Reports" },
       { to: "/manager/analytics", icon: "ti-chart-pie", label: "Analytics" },
     ]
   },
@@ -121,6 +121,7 @@ export default function ManagerLayout() {
           </button>
 
           <div className="el__breadcrumb">
+           
             <span>Manager</span>
             <i className="ti ti-chevron-right" />
             <span>{pageTitle}</span>

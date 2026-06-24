@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
     $this->call(RoleSeeder::class);
 
     $this->call(CategoryDesignOptionsSeeder::class);
+    $this->call(KnowledgeBaseSeeder::class);
+
 
     $adminRole = Role::firstWhere('name', 'admin');
     User::firstOrCreate(

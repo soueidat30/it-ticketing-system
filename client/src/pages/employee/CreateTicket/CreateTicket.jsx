@@ -7,6 +7,7 @@ const MAX_FILES = 3;
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "application/pdf"];
+const BASE_URL = "http://127.0.0.1:8000/api";
 
 export default function CreateTicket() {
   const navigate = useNavigate();
@@ -21,6 +22,12 @@ export default function CreateTicket() {
   const [attachments, setAttachments] = useState([]);
   const [fileError, setFileError]   = useState("");
   const token = localStorage.getItem("token");
+
+  // ── AI suggestion state ──────────────────────────────────────────────────
+  const [aiLoading, setAiLoading]     = useState(false);
+  const [aiError, setAiError]         = useState("");
+  const [aiSuggestion, setAiSuggestion] = useState(null); // { category, priority, reasoning }
+  const [aiApplied, setAiApplied]     = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,6 +57,60 @@ export default function CreateTicket() {
     return e;
   };
 
+  // ── AI: suggest category + priority from title/description ─────────────
+  const canSuggest = form.title.trim().length > 0 && form.description.trim().length >= 10;
+
+  const requestAiSuggestion = async () => {
+    if (!canSuggest || aiLoading) return;
+    setAiLoading(true);
+    setAiError("");
+    setAiSuggestion(null);
+    setAiApplied(false);
+
+    try {
+      const res = await fetch(`${BASE_URL}/ai/suggest-ticket-fields`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Could not get a suggestion.");
+
+      setAiSuggestion(data);
+    } catch (err) {
+      setAiError(err.message || "AI suggestion failed. Please choose manually.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applyAiSuggestion = () => {
+    if (!aiSuggestion) return;
+
+    const matchedCategory = categories.find(
+      c => c.name.toLowerCase() === aiSuggestion.category.toLowerCase()
+    );
+    const matchedPriority = priorities.find(
+      p => p.name.toLowerCase() === aiSuggestion.priority.toLowerCase()
+    );
+
+    setForm(f => ({
+      ...f,
+      category_id: matchedCategory ? String(matchedCategory.id) : f.category_id,
+      priority_id: matchedPriority ? String(matchedPriority.id) : f.priority_id,
+    }));
+    setErrors(er => ({ ...er, category_id: "", priority_id: "" }));
+    setAiApplied(true);
+  };
+
   const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
@@ -72,8 +133,6 @@ export default function CreateTicket() {
         if (!createdTicketId) {
           setApiError("Ticket was created, but attachments could not be uploaded (missing ticket id)." );
         } else {
-          const BASE_URL = "http://127.0.0.1:8000/api";
-
           for (const file of attachments) {
             const formData = new FormData();
             formData.append("file", file);
@@ -110,6 +169,7 @@ export default function CreateTicket() {
   const handleReset = () => {
     setForm({ title: "", category_id: "", priority_id: "", description: "" });
     setErrors({}); setSubmitted(false); setApiError(""); setAttachments([]); setFileError("");
+    setAiSuggestion(null); setAiError(""); setAiApplied(false);
   };
 
   // ── File validation ──
@@ -117,7 +177,6 @@ export default function CreateTicket() {
     const incoming = Array.from(e.target.files);
     setFileError("");
 
-    // Check max file count BEFORE adding
     const availableSlots = MAX_FILES - attachments.length;
     if (availableSlots <= 0) {
       setFileError(`You can only attach up to ${MAX_FILES} files.`);
@@ -140,7 +199,6 @@ export default function CreateTicket() {
       accepted.push(file);
     });
 
-    // Trim accepted to remaining slots
     const toAdd = accepted.slice(0, availableSlots);
     if (accepted.length > availableSlots) {
       rejected.push(`Only ${availableSlots} more file(s) could be added (max ${MAX_FILES} total)`);
@@ -154,7 +212,7 @@ export default function CreateTicket() {
       setAttachments(prev => [...prev, ...toAdd]);
     }
 
-    e.target.value = ""; // allow re-selecting same file later
+    e.target.value = "";
   };
 
   const removeFile = (i) => {
@@ -228,6 +286,85 @@ export default function CreateTicket() {
               {errors.title && <span className="ct-error-msg"><i className="ti ti-alert-circle" />{errors.title}</span>}
             </div>
 
+            {/* Description */}
+            <div className={`ct-field ${errors.description ? "ct-field--error" : ""}`}>
+              <label className="ct-label">Description <span className="ct-required">*</span></label>
+              <textarea
+                className="ct-textarea"
+                rows={5}
+                placeholder="Describe your issue in detail. Include error messages, steps to reproduce, and what you've tried..."
+                value={form.description}
+                onChange={update("description")}
+              />
+              <div className="ct-desc-footer">
+                {errors.description
+                  ? <span className="ct-error-msg"><i className="ti ti-alert-circle" />{errors.description}</span>
+                  : <span />
+                }
+                <span className="ct-char-count">{form.description.length} chars</span>
+              </div>
+            </div>
+
+            {/* ── AI suggestion panel ── */}
+            <div className="ct-ai-box">
+              <div className="ct-ai-box__header">
+                <span className="ct-ai-box__title">
+                  <i className="ti ti-sparkles" /> AI category &amp; priority suggestion
+                </span>
+                <button
+                  type="button"
+                  className="ct-ai-box__btn"
+                  onClick={requestAiSuggestion}
+                  disabled={!canSuggest || aiLoading}
+                  title={!canSuggest ? "Add a title and at least 10 characters of description first" : ""}
+                >
+                  {aiLoading
+                    ? <><span className="ct-spinner" /> Thinking…</>
+                    : <><i className="ti ti-wand" /> Suggest</>
+                  }
+                </button>
+              </div>
+
+              {aiError && (
+                <div className="ct-ai-box__error">
+                  <i className="ti ti-alert-circle" /> {aiError}
+                </div>
+              )}
+
+              {aiSuggestion && (
+                <div className="ct-ai-box__result">
+                  <div className="ct-ai-box__pills">
+                    <span className="ct-ai-pill">
+                      <i className="ti ti-folder" /> {aiSuggestion.category}
+                    </span>
+                    <span className="ct-ai-pill">
+                      <i className="ti ti-flag" /> {aiSuggestion.priority}
+                    </span>
+                  </div>
+                  {aiSuggestion.reasoning && (
+                    <p className="ct-ai-box__reasoning">{aiSuggestion.reasoning}</p>
+                  )}
+                  <button
+                    type="button"
+                    className={`ct-ai-box__apply ${aiApplied ? "ct-ai-box__apply--done" : ""}`}
+                    onClick={applyAiSuggestion}
+                    disabled={aiApplied}
+                  >
+                    {aiApplied
+                      ? <><i className="ti ti-check" /> Applied</>
+                      : "Use this suggestion"
+                    }
+                  </button>
+                </div>
+              )}
+
+              {!aiSuggestion && !aiError && !aiLoading && (
+                <p className="ct-ai-box__hint">
+                  Fill in the title and description, then let AI suggest a category and priority for you.
+                </p>
+              )}
+            </div>
+
             {/* Category + Priority */}
             <div className="ct-row">
               <div className={`ct-field ${errors.category_id ? "ct-field--error" : ""}`}>
@@ -264,25 +401,6 @@ export default function CreateTicket() {
                 </span>
               </div>
             )}
-
-            {/* Description */}
-            <div className={`ct-field ${errors.description ? "ct-field--error" : ""}`}>
-              <label className="ct-label">Description <span className="ct-required">*</span></label>
-              <textarea
-                className="ct-textarea"
-                rows={5}
-                placeholder="Describe your issue in detail. Include error messages, steps to reproduce, and what you've tried..."
-                value={form.description}
-                onChange={update("description")}
-              />
-              <div className="ct-desc-footer">
-                {errors.description
-                  ? <span className="ct-error-msg"><i className="ti ti-alert-circle" />{errors.description}</span>
-                  : <span />
-                }
-                <span className="ct-char-count">{form.description.length} chars</span>
-              </div>
-            </div>
 
           </div>
         </div>
