@@ -46,7 +46,9 @@ function Badge({ text, colorKey }) {
   return <span className={`ttd-badge ttd-badge--${colorKey}`}>{text}</span>;
 }
 
-const BASE_URL = "http://127.0.0.1:8000";
+  const BASE_URL = "http://127.0.0.1:8000";
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function TeamTicketDetail() {
@@ -254,8 +256,54 @@ export default function TeamTicketDetail() {
               </h3>
               <div className="ttd-attachments">
                 {attachments.map((file) => {
-                  const isImage = file.file_type?.includes("image");
+                  const isImage = String(file.file_type ?? "").includes("image");
                   const fileUrl = `${BASE_URL}/storage/${file.file_path}`;
+
+                  const preview = async () => {
+                    const previewRes = await fetch(
+                      `${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}/preview`,
+                      {
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                          Accept: "*/*",
+                        },
+                      }
+                    );
+                    if (!previewRes.ok) {
+                      const msg = await previewRes.text().catch(() => "Preview failed");
+                      throw new Error(msg);
+                    }
+                    const blob = await previewRes.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+                  };
+
+                  const download = async () => {
+                    const dlRes = await fetch(
+                      `${BASE_URL}/api/manager/tickets/${id}/attachments/${file.id}`,
+                      {
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                          Accept: "*/*",
+                        },
+                      }
+                    );
+                    if (!dlRes.ok) {
+                      const msg = await dlRes.text().catch(() => "Download failed");
+                      throw new Error(msg);
+                    }
+                    const blob = await dlRes.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = file.file_name || "attachment";
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    URL.revokeObjectURL(url);
+                  };
+
                   return (
                    <div key={file.id} className="ttd-attachment-item">
   {isImage ? (

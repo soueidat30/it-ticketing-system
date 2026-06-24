@@ -3,17 +3,15 @@ import { useNavigate } from "react-router-dom";
 import "./TeamTicket.css";
 import {
   getAllTickets,
+  getStatuses,
   assignTicket,
   updateTicketStatus,
-  getComments,
-  addComment,
-  getStatuses,
 } from "../../../services/ticketService";
 
 export default function TeamTickets() {
   const [tickets, setTickets] = useState([]);
   const [statuses, setStatuses] = useState([]);
-  const [agents, setAgents] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
@@ -31,8 +29,15 @@ export default function TeamTickets() {
         const statusData = await getStatuses(token);
 
         if (!ignore) {
-          setTickets(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
+          setTickets(list);
           setStatuses(Array.isArray(statusData) ? statusData : []);
+
+
         }
       } catch (err) {
         console.error(err);

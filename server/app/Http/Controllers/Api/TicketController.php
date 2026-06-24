@@ -58,6 +58,10 @@ class TicketController extends Controller
             'assignee',
         ]);
 
+
+
+
+
         // Filters
         $status = $request->query('status'); // status_name
         if (!empty($status)) {
@@ -200,7 +204,7 @@ class TicketController extends Controller
             $responseDueAt   = $ticket->response_due_at;
             $resolutionDueAt = $ticket->resolution_due_at;
 
-            $slaBreached = (bool) ($ticket->response_breached || $ticket->resolution_breached);
+            $slaBreached = (bool) ($ticket->response_breached ?? false || $ticket->resolution_breached ?? false);
 
             $isResolvedLike = in_array(strtolower($ticket->status?->status_name ?? ''), ['resolved', 'closed'], true);
 
@@ -212,9 +216,9 @@ class TicketController extends Controller
             }
 
             $slaPercent = 0;
-            if (!empty($progressDueAt) && !empty($ticket->created_at)) {
-                $createdAt = $ticket->created_at;
 
+            if ($progressDueAt instanceof \Carbon\Carbon && $ticket->created_at instanceof \Carbon\Carbon) {
+                $createdAt = $ticket->created_at;
                 $totalSeconds = max(1, $progressDueAt->getTimestamp() - $createdAt->getTimestamp());
                 $elapsedSeconds = $now->getTimestamp() - $createdAt->getTimestamp();
 
@@ -225,8 +229,10 @@ class TicketController extends Controller
             $dueAt = !empty($resolutionDueAt) ? $resolutionDueAt : $responseDueAt;
 
             $timeOpen = '—';
-            if (!empty($ticket->created_at)) {
-                $end = $isResolvedLike && !empty($ticket->resolved_at) ? $ticket->resolved_at : $now;
+            if ($ticket->created_at instanceof \Carbon\Carbon) {
+                $end = ($isResolvedLike && !empty($ticket->resolved_at) && $ticket->resolved_at instanceof \Carbon\Carbon)
+                    ? $ticket->resolved_at
+                    : $now;
                 $timeOpen = $ticket->created_at->diffForHumans($end, true);
             }
 
@@ -597,12 +603,11 @@ class TicketController extends Controller
             'file_path'   => $path,
             'file_type'   => $type,
             'file_size'   => $file->getSize(),
-            'attachment_id' => $attachment->id,
         ]);
 
         $senderId = Auth::id();
         $receiverIds = collect();
-        $attachment->id;
+
         if (!empty($ticket->user_id)) {
             $receiverIds->push((int) $ticket->user_id);
         }
@@ -624,21 +629,14 @@ class TicketController extends Controller
 
         foreach ($receiverIds as $receiverId) {
             Notification::notify(
-                 user_id:      (int) $receiverId,
-        ticket_id:    $ticket->id,
-        triggered_by: $senderId,
-        type:         'attachment_added',
-        title:        'New attachment added',
-        message:      json_encode([
-            'text'          => "A new attachment \"{$attachment->file_name}\" was added to ticket {$ticket->ticket_number}.",
-            'attachment_id' => $attachment->id,
-            'file_name'     => $attachment->file_name,
-            'file_type'     => $attachment->file_type,
-            'ticket_id'     => $ticket->id,
-        ]),
+                user_id:      (int) $receiverId,
+                ticket_id:    $ticket->id,
+                triggered_by: $senderId,
+                type:         'attachment_added',
+                title:        'New attachment added',
+                message:      "A new attachment \"{$attachment->file_name}\" was added to ticket {$ticket->ticket_number}.",
             );
         }
-
 
         return response()->json([
             'id'               => $attachment->id,
@@ -649,6 +647,7 @@ class TicketController extends Controller
             'uploaded_by'      => $attachment->uploaded_by,
             'uploaded_by_name' => Auth::user()->full_name ?? Auth::user()->username ?? null,
         ], 201);
+
     }
 
     public function downloadAttachment($ticketId, $attachmentId)
@@ -658,8 +657,8 @@ class TicketController extends Controller
             : Ticket::where('ticket_number', $ticketId)->firstOrFail();
 
         $attachment = TicketAttachment::where('id', $attachmentId)
-    ->where('ticket_id', $ticketId)
-    ->firstOrFail();
+            ->where('ticket_id', $ticket->id)
+            ->firstOrFail();
 
         if ((int) $attachment->ticket_id !== (int) $ticket->id) {
             return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
@@ -688,9 +687,9 @@ class TicketController extends Controller
             ? Ticket::findOrFail($ticketId)
             : Ticket::where('ticket_number', $ticketId)->firstOrFail();
 
-       $attachment = TicketAttachment::where('id', $attachmentId)
-    ->where('ticket_id', $ticketId)
-    ->firstOrFail();
+        $attachment = TicketAttachment::where('id', $attachmentId)
+            ->where('ticket_id', $ticket->id)
+            ->firstOrFail();
 
         if ((int) $attachment->ticket_id !== (int) $ticket->id) {
             return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);
@@ -712,8 +711,20 @@ class TicketController extends Controller
 
         $mime = \Storage::disk('local')->mimeType($attachment->file_path) ?: 'application/octet-stream';
 
-        return \Storage::disk('local')->response($attachment->file_path, $attachment->file_name, [
+        $fullPath = \Storage::disk('local')->path($attachment->file_path);
+
+        if (!file_exists($fullPath)) {
+            return response()->json([
+                'message' => 'Attachment file not found on disk.',
+                'debug' => [
+                    'resolved_path' => $fullPath,
+                ],
+            ], 404);
+        }
+
+        return response()->file($fullPath, [
             'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . $attachment->file_name . '"',
         ]);
     }
 
@@ -723,9 +734,9 @@ class TicketController extends Controller
             ? Ticket::findOrFail($ticketId)
             : Ticket::where('ticket_number', $ticketId)->firstOrFail();
 
-       $attachment = TicketAttachment::where('id', $attachmentId)
-    ->where('ticket_id', $ticketId)
-    ->firstOrFail();
+        $attachment = TicketAttachment::where('id', $attachmentId)
+            ->where('ticket_id', $ticket->id)
+            ->firstOrFail();
 
         if ((int) $attachment->ticket_id !== (int) $ticket->id) {
             return response()->json(['message' => 'Attachment does not belong to this ticket.'], 404);

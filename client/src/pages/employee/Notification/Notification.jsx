@@ -240,16 +240,18 @@ const BASE_URL = "http://127.0.0.1:8000/api";
                 <div key={dateLabel} className="notif-group">
                   <div className="notif-group__label">{dateLabel}</div>
 
-                  {items.map((n) => {
+                  {items.map((n, idx) => {
                     const meta = getMeta(n.type);
-                    console.log("Notification payload:", n);
+                    // Ensure React keys are always unique.
+                    const key = `${n.id ?? 'unknown'}-${n.type ?? 'unknown'}-${idx}`;
 
                     return (
                       <div
-                        key={n.id}
+                        key={key}
                         className={`notif-item ${!n.is_read ? "notif-item--unread" : ""}`}
                         onClick={() => !n.is_read && handleRead(n.id)}
                       >
+
                         {!n.is_read && <span className="notif-item__dot" />}
 
                         <div className={`notif-item__icon notif-item__icon--${meta.color}`}>
@@ -267,20 +269,72 @@ const BASE_URL = "http://127.0.0.1:8000/api";
                     <div className="notif-item__message">{n.message}</div>
 
                     {n.type === "attachment_added" && n.ticket?.id && (
+
                       <div className="notif-item__attachment-actions" onClick={(e) => e.stopPropagation()}>
                         <button
                           className="notif-icon-btn"
                           title="Preview"
                           onClick={async () => {
                             try {
-                              if (n.attachment_id == null) {
-                                alert("Attachment id is missing in this notification payload.");
+                              const ticketId = n.ticket_id ?? n.ticket?.id;
+                              const attachmentId =
+                                n.attachment_id ??
+                                n.attachmentId ??
+                                n.attachment?.id ??
+                                n.ticket_attachment_id;
+
+
+                              // if attachment id is missing, fallback to ticket + first attachment
+                              if (ticketId == null) {
+                                alert("Ticket id is missing in this notification payload.");
                                 return;
                               }
+
+                              if (attachmentId == null) {
+                                const resList = await fetch(
+                                  `${BASE_URL}/tickets/${ticketId}/attachments`,
+                                  {
+                                    headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
+                                  }
+                                );
+                                const dataList = await resList
+                                  .json()
+                                  .catch(() => null);
+
+                                const list = Array.isArray(dataList)
+                                  ? dataList
+                                  : Array.isArray(dataList?.data)
+                                    ? dataList.data
+                                    : Array.isArray(dataList?.attachments)
+                                      ? dataList.attachments
+                                      : [];
+
+                                const first = list?.[0];
+                                if (!first?.id) {
+                                  alert("Attachment id is missing in this notification payload.");
+                                  return;
+                                }
+
+                                const previewUrl = `${BASE_URL}/${prefix}/tickets/${ticketId}/attachments/${first.id}/preview`;
+                                const res = await fetch(previewUrl, {
+                                  headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
+                                });
+                                if (!res.ok) {
+                                  const data = await res.json().catch(() => null);
+                                  throw new Error(data?.message || `Preview failed (HTTP ${res.status})`);
+                                }
+
+                                const blob = await res.blob();
+                                const url = URL.createObjectURL(blob);
+                                window.open(url, "_blank", "noopener,noreferrer");
+                                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                                return;
+                              }
+
                               const res = await fetch(
-                                `${BASE_URL}/${prefix}/tickets/${n.ticket_id}/attachments/${n.attachment_id}/preview`,
+                                `${BASE_URL}/${prefix}/tickets/${ticketId}/attachments/${attachmentId}/preview`,
                                 {
-                                  headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+                                  headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
                                 }
                               );
                               if (!res.ok) {
@@ -306,14 +360,47 @@ const BASE_URL = "http://127.0.0.1:8000/api";
                           title="Download"
                           onClick={async () => {
                             try {
-                              if (n.attachment_id == null) {
-                                alert("Attachment id is missing in this notification payload.");
+                              const attachmentId = n.attachment_id ?? n.attachmentId ?? n.attachment?.id;
+                              const ticketId = n.ticket_id ?? n.ticket?.id;
+
+                              if (ticketId == null) {
+                                alert("Ticket id is missing in this notification payload.");
                                 return;
                               }
+
+                              // If attachmentId missing, fallback to first attachment
+                              let resolvedAttachmentId = attachmentId;
+                              if (resolvedAttachmentId == null) {
+                                const resList = await fetch(
+                                  `${BASE_URL}/tickets/${ticketId}/attachments`,
+                                  {
+                                    headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
+                                  }
+                                );
+                                const dataList = await resList
+                                  .json()
+                                  .catch(() => null);
+
+                                const list = Array.isArray(dataList)
+                                  ? dataList
+                                  : Array.isArray(dataList?.data)
+                                    ? dataList.data
+                                    : Array.isArray(dataList?.attachments)
+                                      ? dataList.attachments
+                                      : [];
+
+                                const first = list?.[0];
+                                if (!first?.id) {
+                                  alert("Attachment id is missing in this notification payload.");
+                                  return;
+                                }
+                                resolvedAttachmentId = first.id;
+                              }
+
                               const res = await fetch(
-                                `${BASE_URL}/${prefix}/tickets/${n.ticket_id}/attachments/${n.attachment_id}`,
+                                `${BASE_URL}/${prefix}/tickets/${ticketId}/attachments/${resolvedAttachmentId}`,
                                 {
-                                  headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+                                  headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
                                 }
                               );
 
