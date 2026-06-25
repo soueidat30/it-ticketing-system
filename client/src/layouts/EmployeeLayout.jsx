@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import "./EmployeeLayout.css";
 
@@ -15,16 +14,16 @@ const NAV_ITEMS = [
   {
     group: "Resources",
     items: [
-      { to: "/employee/knowledge-base", icon: "ti-book",       label: "Knowledge Base" },
+      { to: "/employee/knowledge-base", icon: "ti-book",        label: "Knowledge Base" },
       { to: "/employee/announcements",  icon: "ti-speakerphone", label: "Announcements" },
     ]
   },
   {
     group: "Account",
     items: [
-      { to: "/employee/profile",       icon: "ti-user",        label: "Profile"       },
-      { to: "/employee/notification", icon: "ti-bell",        label: "Notification" },
-      { to: "/employee/settings",      icon: "ti-settings",    label: "Settings"      },
+      { to: "/employee/profile",       icon: "ti-user",     label: "Profile"      },
+      { to: "/employee/notification",  icon: "ti-bell",     label: "Notification" },
+      { to: "/employee/settings",      icon: "ti-settings", label: "Settings"     },
     ]
   }
 ];
@@ -33,7 +32,18 @@ const EmployeeLayout = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [notifCount] = useState(2);
+  const [notifCount]  = useState(2);
+
+  // ── Dark mode ─────────────────────────────────────────────────────────────
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("emp-dark") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("emp-dark", darkMode);
+  }, [darkMode]);
+
+  const toggleDark = () => setDarkMode(v => !v);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -48,7 +58,7 @@ const EmployeeLayout = () => {
   const pageTitle = currentItem?.label ?? "Employee";
 
   return (
-    <div className={`el ${sidebarOpen ? "el--open" : "el--collapsed"}`}>
+    <div className={`el ${sidebarOpen ? "el--open" : "el--collapsed"} ${darkMode ? "el--dark" : ""}`}>
 
       {/* ── Sidebar ── */}
       <aside className="el__sidebar">
@@ -120,13 +130,8 @@ const EmployeeLayout = () => {
             </div>
           )}
           {sidebarOpen && (
-            <button
-              className="el__logout-btn"
-              onClick={handleLogout}
-              title="Logout"
-              aria-label="Logout"
-            >
-              <i className="ti ti-logout" aria-hidden="true" />
+            <button className="el__logout-btn" onClick={handleLogout} title="Logout">
+              <i className="ti ti-logout" />
             </button>
           )}
         </div>
@@ -163,6 +168,16 @@ const EmployeeLayout = () => {
               />
             </div>
 
+            {/* ── Dark mode toggle ── */}
+            <button
+              className="el__dark-toggle"
+              onClick={toggleDark}
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle dark mode"
+            >
+              <i className={`ti ${darkMode ? "ti-sun" : "ti-moon"}`} />
+            </button>
+
             <NavLink to="/employee/notification" className="el__topbar-icon" aria-label="Notification">
               <i className="ti ti-bell" />
               {notifCount > 0 && <span className="el__topbar-badge">{notifCount}</span>}
@@ -188,4 +203,5 @@ const EmployeeLayout = () => {
     </div>
   );
 };
+
 export default EmployeeLayout;

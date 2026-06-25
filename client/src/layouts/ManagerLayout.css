@@ -5,3 +5,260 @@
 .el__user-role {
   color: #d4f265;
 }
+
+.el__dm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;       /* push to the right side of topbar */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background 0.14s;
+}
+ 
+.el__dm-btn:hover { background: rgba(0,0,0,.05); }
+ 
+.el__dm-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 46px;
+  height: 24px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  padding: 2px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+ 
+.el__dm-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  color: #f59e0b;
+  box-shadow: 0 1px 3px rgba(0,0,0,.18);
+  transition: transform 0.2s cubic-bezier(.4,0,.2,1), color 0.2s;
+  flex-shrink: 0;
+}
+ 
+.el__dm-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+ 
+/* active (dark) state of the toggle */
+.el--dark .el__dm-track {
+  background: #4f46e5;
+}
+ 
+.el--dark .el__dm-thumb {
+  transform: translateX(22px);
+  color: #818cf8;
+}
+ 
+.el--dark .el__dm-label {
+  color: #94a3b8;
+}
+ 
+/* ══════════════════════════════════════════════════════════════════════════════
+   DARK MODE  —  el--dark class on the root .el wrapper
+   All overrides live here so nothing leaks outside the manager layout
+══════════════════════════════════════════════════════════════════════════════ */
+ 
+/* ── Main area background ── */
+.el--dark .el__main        { background: #0f172a; }
+.el--dark .el__content     { background: #0f172a; }
+ 
+/* ── Topbar ── */
+.el--dark .el__topbar {
+  background: #1e293b;
+  border-bottom-color: #334155;
+}
+ 
+.el--dark .el__toggle-btn {
+  color: #94a3b8;
+}
+.el--dark .el__toggle-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+ 
+.el--dark .el__breadcrumb      { color: #94a3b8; }
+.el--dark .el__breadcrumb span:last-child { color: #e2e8f0; font-weight: 600; }
+.el--dark .el__breadcrumb i    { color: #475569; }
+ 
+.el--dark .el__dm-btn:hover { background: rgba(255,255,255,.06); }
+ 
+/* ── Sidebar ── */
+/* Sidebar is already dark (#0f172a or similar) — just deepen it slightly */
+.el--dark .el__sidebar {
+  background: #020617;
+  border-right-color: #1e293b;
+}
+ 
+.el--dark .el__logo-name { color: #f1f5f9; }
+/* keep the lime green sub-label — it reads well on dark */
+.el--dark .el__logo-sub  { color: #d4f265; }
+ 
+.el--dark .el__nav-group-label { color: #475569; }
+ 
+.el--dark .el__nav-link {
+  color: #94a3b8;
+}
+.el--dark .el__nav-link:hover {
+  background: rgba(255,255,255,.06);
+  color: #e2e8f0;
+}
+.el--dark .el__nav-link--active {
+  background: rgba(99,102,241,.2);
+  color: #a5b4fc;
+}
+.el--dark .el__nav-link--active i { color: #818cf8; }
+ 
+.el--dark .el__user-card  { border-top-color: #1e293b; }
+.el--dark .el__user-avatar {
+  background: #4f46e5;
+  color: #fff;
+}
+.el--dark .el__user-name  { color: #e2e8f0; }
+.el--dark .el__user-role  { color: #d4f265; }   /* keep lime green */
+.el--dark .el__logout-btn {
+  color: #64748b;
+}
+.el--dark .el__logout-btn:hover {
+  background: rgba(255,255,255,.07);
+  color: #f87171;
+}
+ 
+/* ── Dashboard cards ── */
+.el--dark .mgr-stat-card,
+.el--dark .mgr-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: none;
+}
+ 
+.el--dark .mgr-stat-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+ 
+.el--dark .mgr-dashboard__title { color: #f1f5f9; }
+.el--dark .mgr-dashboard__subtitle { color: #64748b; }
+ 
+.el--dark .mgr-stat-value { color: #f1f5f9; }
+.el--dark .mgr-stat-label { color: #94a3b8; }
+.el--dark .mgr-stat-sub   { color: #475569; }
+ 
+/* icon backgrounds stay the same — they're already colored */
+ 
+/* ── Table ── */
+.el--dark .mgr-table thead tr { background: #0f172a; }
+.el--dark .mgr-table th {
+  color: #475569;
+  border-bottom-color: #334155;
+}
+.el--dark .mgr-table td {
+  color: #cbd5e1;
+  border-bottom-color: #1e293b;
+}
+.el--dark .mgr-table__row:hover td { background: #1e293b; }
+.el--dark .mgr-table__id    { color: #818cf8 !important; }
+.el--dark .mgr-table__date  { color: #475569 !important; }
+.el--dark .mgr-table__subject { color: #e2e8f0; }
+ 
+/* ── Card headers & footers ── */
+.el--dark .mgr-card__header  { border-bottom-color: #334155; }
+.el--dark .mgr-card__footer  { border-top-color: #334155; color: #475569; }
+.el--dark .mgr-card__title   { color: #e2e8f0; }
+ 
+/* ── Search & select ── */
+.el--dark .mgr-search__input {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+.el--dark .mgr-search__input:focus { border-color: #6366f1; }
+.el--dark .mgr-search__input::placeholder { color: #475569; }
+.el--dark .mgr-search__icon  { color: #475569; }
+ 
+.el--dark .mgr-select {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+ 
+/* ── Mini bar chart ── */
+.el--dark .mgr-minibar__label { color: #94a3b8; }
+.el--dark .mgr-minibar__track { background: #334155; }
+.el--dark .mgr-minibar__count { color: #64748b; }
+ 
+/* ── Activity feed ── */
+.el--dark .mgr-activity__subject { color: #e2e8f0; }
+.el--dark .mgr-activity__meta    { color: #475569; }
+ 
+/* ── Live badge ── */
+.el--dark .mgr-live-badge {
+  background: rgba(22,163,74,.15);
+  color: #4ade80;
+}
+.el--dark .mgr-live-dot { background: #4ade80; }
+ 
+/* ── Badges ── */
+.el--dark .mgr-badge--blue   { background: rgba(37,99,235,.18); color: #93c5fd; }
+.el--dark .mgr-badge--orange { background: rgba(234,88,12,.18);  color: #fdba74; }
+.el--dark .mgr-badge--green  { background: rgba(22,163,74,.18);  color: #86efac; }
+.el--dark .mgr-badge--red    { background: rgba(220,38,38,.18);  color: #fca5a5; }
+.el--dark .mgr-badge--purple { background: rgba(124,58,237,.18); color: #c4b5fd; }
+.el--dark .mgr-badge--gray   { background: rgba(107,114,128,.18);color: #9ca3af; }
+ 
+/* ── Empty / loading states ── */
+.el--dark .mgr-loading  { color: #475569; }
+.el--dark .mgr-empty    { color: #475569; }
+.el--dark .mgr-empty-text { color: #475569; }
+ 
+/* ── Reports page ── */
+.el--dark .rpt-stat,
+.el--dark .rpt-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+.el--dark .rpt-header__title  { color: #f1f5f9; }
+.el--dark .rpt-header__sub    { color: #64748b; }
+.el--dark .rpt-card__title    { color: #e2e8f0; }
+.el--dark .rpt-card__sub      { color: #475569; }
+.el--dark .rpt-stat__value    { color: #f1f5f9; }
+.el--dark .rpt-stat__label    { color: #94a3b8; }
+.el--dark .rpt-stat__sub      { color: #475569; }
+.el--dark .rpt-range-tabs     { background: #0f172a; }
+.el--dark .rpt-range-tab      { color: #64748b; }
+.el--dark .rpt-range-tab--active {
+  background: #1e293b;
+  color: #a5b4fc;
+  box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.el--dark .rpt-resolution          { background: #1e293b; border-color: #334155; }
+.el--dark .rpt-resolution__label   { color: #64748b; }
+.el--dark .rpt-resolution__value   { color: #818cf8; }
+.el--dark .rpt-resolution__track   { background: #334155; }
+.el--dark .rpt-resolution__sub     { color: #475569; }
+.el--dark .rpt-top-name            { color: #cbd5e1; }
+.el--dark .rpt-top-bar-wrap        { background: #334155; }
+.el--dark .rpt-top-count           { color: #94a3b8; }
+.el--dark .rpt-top-rank            { color: #475569; }
+.el--dark .rpt-top-avatar          { background: rgba(99,102,241,.25); color: #818cf8; }
+.el--dark .rpt-ai {
+  background: linear-gradient(135deg, #1e293b 0%, #1a2236 100%);
+  border-color: #3730a3;
+}
+.el--dark .rpt-ai__insight         { background: #0f172a; border-color: #334155; }
+.el--dark .rpt-ai__insight-text    { color: #94a3b8; }
+.el--dark .rpt-empty-text          { color: #475569; }
+ 
