@@ -17,7 +17,9 @@ class Comment extends Model
         'notify_user_id',
         'content',
         'internal',
+        'visibility',
     ];
+
 
     protected $casts = [
         'internal' => 'boolean',
@@ -33,6 +35,14 @@ class Comment extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function receiver()
+    {
+        return $this->belongsTo(User::class, 'receiver_id');
+    }
 }
+
+
+
 
 

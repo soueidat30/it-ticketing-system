@@ -46,7 +46,7 @@ export const getAllTickets = (token) =>
   fetch(`${BASE}/tickets`, { headers: headers(token) }).then((r) => r.json());
  
 export const getTicketById = (token, id) =>
-  fetch(`${BASE}/tickets/${id}`, { headers: headers(token) }).then(async (r) => {
+  fetchWithAutoRefresh(`${BASE}/tickets/${id}`, { headers: headers(token) }).then(async (r) => {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw { response: { data: d } };
     return d;
@@ -100,12 +100,54 @@ export const getUsersByRole = (token, role) =>
       return data;
     });
 
+const fetchWithAutoRefresh = async (url, options = {}, { retry = true } = {}) => {
+  const res = await fetch(url, options);
+
+  if (res.status === 401 && retry) {
+    try {
+      const currentToken = localStorage.getItem("token");
+
+      if (!currentToken) return res;
+
+      const refreshRes = await fetch(`${BASE}/auth/refresh`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          Accept: "application/json",
+        },
+      });
+
+      const refreshData = await refreshRes.json().catch(() => ({}));
+      const newToken = refreshData?.access_token;
+
+      if (refreshRes.ok && newToken) {
+        localStorage.setItem("token", newToken);
+
+        const retryOptions = {
+          ...options,
+          headers: {
+            ...(options.headers || {}),
+            Authorization: `Bearer ${newToken}`,
+          },
+        };
+
+        return fetch(url, retryOptions);
+      }
+    } catch {
+      // ignore refresh failure
+    }
+  }
+
+  return res;
+};
+
 export const getTicketHistory = (token, ticketId) =>
-  fetch(`${BASE}/tickets/${ticketId}/history`, {
+  fetchWithAutoRefresh(`${BASE}/tickets/${ticketId}/history`, {
     headers: headers(token),
   }).then((r) => r.json());
+
 export const getTicketComments = (token, ticketId) =>
-  fetch(`${BASE}/tickets/${ticketId}/comments`, {
+  fetchWithAutoRefresh(`${BASE}/tickets/${ticketId}/comments`, {
     headers: headers(token),
   }).then((r) => r.json());
  
@@ -114,15 +156,21 @@ export const addTicketComment = (
   ticketId,
   content,
   isInternal = false,
-  notifyUserId = null
+  notifyUserId = null,
+  options = {}
 ) =>
   fetch(`${BASE}/tickets/${ticketId}/comments`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({
       content,
-      internal: isInternal,
+      // backend uses `internal` boolean to validate/route modes.
+      internal: Boolean(isInternal),
       ...(notifyUserId != null ? { notify_user_id: notifyUserId } : {}),
+
+      // TicketController@storeComment expects `visibility` in: employee,agent,all,internal.
+      ...(options?.visibility ? { visibility: options.visibility } : {}),
+
     }),
   }).then(async (r) => {
     const d = await r.json().catch(() => ({}));
@@ -173,7 +221,7 @@ export const deleteNotification = (token, id) =>
   }).then((r) => r.json());
 
 export const getTicketAttachments = (ticketId, token) =>
-  fetch(`${BASE}/tickets/${ticketId}/attachments`, {
+  fetchWithAutoRefresh(`${BASE}/tickets/${ticketId}/attachments`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",

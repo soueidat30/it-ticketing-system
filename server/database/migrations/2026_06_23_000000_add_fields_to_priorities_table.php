@@ -12,35 +12,54 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('priorities', function (Blueprint $table) {
-            $table->integer('level')->default(1);
+            if (!Schema::hasColumn('priorities', 'level')) {
+                $table->integer('level')->default(1);
+            }
 
-            $table->string('color')
-                ->default('#3b82f6');
+            if (!Schema::hasColumn('priorities', 'color')) {
+                $table->string('color')
+                    ->default('#3b82f6');
+            }
 
-            $table->string('bg_color')
-                ->default('#eff6ff');
+            if (!Schema::hasColumn('priorities', 'bg_color')) {
+                $table->string('bg_color')
+                    ->default('#eff6ff');
+            }
 
-            $table->string('icon')
-                ->default('ti-info-circle');
+            if (!Schema::hasColumn('priorities', 'icon')) {
+                $table->string('icon')
+                    ->default('ti-info-circle');
+            }
 
-            $table->text('description')
-                ->nullable();
+            if (!Schema::hasColumn('priorities', 'description')) {
+                $table->text('description')
+                    ->nullable();
+            }
 
-            $table->integer('sla_response_minutes')
-                ->default(240);
+            if (!Schema::hasColumn('priorities', 'sla_response_minutes')) {
+                $table->integer('sla_response_minutes')
+                    ->default(240);
+            }
 
-            $table->integer('sla_resolve_minutes')
-                ->default(1440);
+            if (!Schema::hasColumn('priorities', 'sla_resolve_minutes')) {
+                $table->integer('sla_resolve_minutes')
+                    ->default(1440);
+            }
 
-            $table->boolean('auto_escalate')
-                ->default(false);
+            if (!Schema::hasColumn('priorities', 'auto_escalate')) {
+                $table->boolean('auto_escalate')
+                    ->default(false);
+            }
 
-            $table->boolean('notify_manager')
-                ->default(false);
+            if (!Schema::hasColumn('priorities', 'notify_manager')) {
+                $table->boolean('notify_manager')
+                    ->default(false);
+            }
 
-            $table->boolean('is_active')
-                ->default(true);
-
+            if (!Schema::hasColumn('priorities', 'is_active')) {
+                $table->boolean('is_active')
+                    ->default(true);
+            }
         });
     }
 
@@ -50,7 +69,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('priorities', function (Blueprint $table) {
-            $table->dropColumn([
+            $columns = [
                 'level',
                 'color',
                 'bg_color',
@@ -61,8 +80,18 @@ return new class extends Migration
                 'auto_escalate',
                 'notify_manager',
                 'is_active',
-            ]);
+            ];
+
+            // Only drop columns that exist to avoid rollback failures.
+            $columnsToDrop = array_values(array_filter($columns, function ($col) {
+                return Schema::hasColumn('priorities', $col);
+            }));
+
+            if (!empty($columnsToDrop)) {
+                $table->dropColumn($columnsToDrop);
+            }
         });
     }
 };
+
 

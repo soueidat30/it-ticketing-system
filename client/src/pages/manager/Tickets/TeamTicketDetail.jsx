@@ -33,12 +33,23 @@ const priorityColor = (p = "") => PRIORITY_COLORS[p.toLowerCase()] || "gray";
 
 function timeAgo(dateStr) {
   if (!dateStr) return "—";
-  const diff = (Date.now() - new Date(dateStr)) / 1000;
-  if (diff < 60)    return "just now";
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
+
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  const diffSeconds = Math.floor((Date.now() - d.getTime()) / 1000);
+
+  // If the date is in the future (clock skew / bad timezone), avoid negative outputs.
+  if (diffSeconds < 0) return "just now";
+
+  if (diffSeconds < 60) return "just now";
+  if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m ago`;
+  if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)}h ago`;
+
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 }
 
@@ -64,6 +75,7 @@ export default function TeamTicketDetail() {
   // comment form
   const [text,           setText]          = useState("");
   const [recipientType,  setRecipientType] = useState("employee");
+
   const [sending,        setSending]       = useState(false);
   const [successMessage, setSuccessMessage]= useState("");
 
@@ -132,9 +144,21 @@ export default function TeamTicketDetail() {
   const handleAddComment = async () => {
     if (!text.trim()) return;
     const isInternal = recipientType === "internal";
+
     setSending(true);
+
     try {
-      const created = await addTicketComment(token, id, text.trim(), isInternal);
+      const created = await addTicketComment(
+        token,
+        id,
+        text.trim(),
+        isInternal,
+        null,
+        {
+          visibility: recipientType, // employee | agent | all | internal
+        }
+      );
+
       if (created?.id != null) {
         setComments((prev) => {
           const arr = Array.isArray(prev) ? [...prev] : [];
@@ -396,7 +420,7 @@ export default function TeamTicketDetail() {
                           <div className="ttd-comment__body">
                             <div className="ttd-comment__meta">
                               <span className="ttd-comment__author">
-                                {c.user?.full_name || "Unknown"}
+                              {c.user?.full_name || c.author || c.user?.username || "Unknown"}
                               </span>
                               {c.internal && (
                                 <span className="ttd-internal-badge">
@@ -435,9 +459,9 @@ export default function TeamTicketDetail() {
                       onChange={(e) => setRecipientType(e.target.value)}
                       style={{ padding: "6px 10px" }}
                     >
-                      <option value="employee">Employee (public reply)</option>
+                      <option value="employee">Employee</option>
                       <option value="agent">Agent only</option>
-                      <option value="internal">Internal note (manager only)</option>
+                      <option value="all">All (employee + agent)</option>
                     </select>
                   </div>
 
@@ -446,7 +470,7 @@ export default function TeamTicketDetail() {
                     placeholder={
                       recipientType === "internal"
                         ? "Write an internal note (only visible to managers)…"
-                        : "Write a reply visible to the employee…"
+                    : "Write a reply visible to the employee…"
                     }
                     value={text}
                     onChange={(e) => setText(e.target.value)}

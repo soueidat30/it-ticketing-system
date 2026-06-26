@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ticket extends Model
 {
+    protected $casts = [
+        'resolved_at' => 'datetime',
+        'response_due_at' => 'datetime',
+        'resolution_due_at' => 'datetime',
+        'first_response_at' => 'datetime',
+    ];
+
     protected $fillable = [
         'ticket_number',
         'title',

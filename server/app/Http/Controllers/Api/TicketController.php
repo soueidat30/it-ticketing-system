@@ -154,8 +154,9 @@ class TicketController extends Controller
                 if (!empty($progressDueAt) && !empty($ticket->created_at)) {
                     $createdAt = $ticket->created_at;
 
-                    $totalSeconds = max(1, $progressDueAt->getTimestamp() - $createdAt->getTimestamp());
-                    $elapsedSeconds = $now->getTimestamp() - $createdAt->getTimestamp();
+                    $totalSeconds = max(1, (int) $progressDueAt->getTimestamp() - (int) $createdAt->getTimestamp());
+                    $elapsedSeconds = (int) $now->getTimestamp() - (int) $createdAt->getTimestamp();
+
 
                     $ratio = 1 - ($elapsedSeconds / $totalSeconds);
                     $slaPercent = (int) round(max(0, min(1, $ratio)) * 100);
@@ -346,15 +347,16 @@ class TicketController extends Controller
             $progressDueAt = $responseDueAt;
         }
         $slaPercent = 0;
-        if (!empty($progressDueAt) && !empty($ticket->created_at)) {
+        if ($progressDueAt instanceof \Carbon\Carbon && $ticket->created_at instanceof \Carbon\Carbon) {
             $createdAt = $ticket->created_at;
 
-            $totalSeconds = max(1, $progressDueAt->getTimestamp() - $createdAt->getTimestamp());
-            $elapsedSeconds = $progressNow->getTimestamp() - $createdAt->getTimestamp();
+            $totalSeconds = max(1, (int) $progressDueAt->getTimestamp() - (int) $createdAt->getTimestamp());
+            $elapsedSeconds = (int) $progressNow->getTimestamp() - (int) $createdAt->getTimestamp();
 
             $ratio = 1 - ($elapsedSeconds / $totalSeconds);
             $slaPercent = (int) round(max(0, min(1, $ratio)) * 100);
         }
+
 
         $dueAt = !empty($resolutionDueAt) ? $resolutionDueAt : $responseDueAt;
 
@@ -486,80 +488,139 @@ class TicketController extends Controller
 
     public function storeComment(Request $request, $id)
     {
-
         $request->validate([
-            'content'          => 'required|string|max:5000',
-            'internal'         => 'boolean',
-            'notify_user_id'   => 'nullable|exists:users,id',
+            'content'  => 'required|string|max:5000',
+            'internal' => 'boolean',
+
+            // frontend sends `visibility` but this endpoint historically uses `mode`
+            'visibility' => 'nullable|string|in:employee,agent,all,internal',
+            'mode'       => 'nullable|string|in:employee,agent,all,internal',
+
+            'notify_user_id' => 'nullable|integer|exists:users,id',
         ]);
 
-        \Log::info('storeComment incoming', [
-            'ticket_param' => $id,
-            'auth_user_id' => Auth::id(),
-            'payload' => $request->only(['content', 'internal', 'notify_user_id']),
-        ]);
+        // Accept both `mode` and `visibility` from the client.
+        $mode = $request->input('mode') ?: $request->input('visibility', 'employee');
 
+        // Internal notes must be stored as internal=true.
+        if ($mode === 'internal') {
+            $request->merge(['internal' => true]);
+        }
 
-        $ticket = (is_numeric($id)
+        $ticket = is_numeric($id)
             ? Ticket::findOrFail($id)
-            : Ticket::where('ticket_number', $id)->firstOrFail());
+            : Ticket::where('ticket_number', $id)->firstOrFail();
+
+        $senderId   = Auth::id();
+        $isInternal = $request->boolean('internal', false);
+
+        // Store visibility explicitly so comment filtering works.
+        $visibility = $isInternal ? 'internal' : $mode;
+
+
+        // Resolve receiver_id for the comment record
+        $receiverId = null;
+        if (!$isInternal) {
+            if ($mode === 'employee') {
+                $receiverId = (int) $ticket->user_id;
+            } elseif ($mode === 'agent') {
+                $receiverId = (int) $ticket->assigned_to;
+            } elseif ($mode === 'all') {
+                $receiverId = (int) $ticket->user_id;
+            }
+        }
 
         try {
-
-            $senderId = Auth::id();
-            $receiverId = null;
-            $isInternal = $request->boolean('internal', false);
-
-            if (!$isInternal) {
-                $receiverId = $request->input('notify_user_id') ?? $ticket->user_id;
-            }
-
             $comment = Comment::create([
-                'ticket_id' => $ticket->id,
-                'user_id'   => $senderId,
-                'sender_id' => $senderId,
-                'receiver_id' => $receiverId,
-                'content'   => $request->content,
-                'internal'  => $isInternal,
-                'notify_user_id' => $receiverId,
+                'ticket_id'      => $ticket->id,
+                'user_id'        => $senderId,
+                'sender_id'      => $senderId,
+                'receiver_id'    => $receiverId,
+                'content'        => $request->content,
+                'visibility' => $visibility,
+                'internal'       => $isInternal,
+
+                'notify_user_id' => $isInternal ? $senderId : null,
             ]);
         } catch (\Throwable $e) {
-
             \Log::error('storeComment failed', [
-                'ticket_param' => $id,
-                'auth_user_id' => Auth::id(),
-                'error_message' => $e->getMessage(),
+                'ticket_param'    => $id,
+                'auth_user_id'    => Auth::id(),
+                'error_message'   => $e->getMessage(),
                 'exception_class' => get_class($e),
             ]);
 
-            $msg = $e->getMessage();
+            $msg      = $e->getMessage();
             $friendly = str_contains($msg, 'Base table or view not found') && str_contains($msg, 'comments')
-                ? 'Database table `comments` is missing in the current DB. Run migrations / verify DB connection.'
+                ? 'Database table `comments` is missing. Run migrations / verify DB connection.'
                 : 'Failed to create comment: ' . $msg;
 
-            return response()->json([
-                'message' => $friendly,
-                'debug' => [
-                    'error' => class_basename($e),
-                ],
-            ], 500);
+            return response()->json(['message' => $friendly], 500);
         }
-
 
         $this->logActivity($ticket->id, 'comment', "Added comment: {$request->content}");
-        if (!$request->boolean('internal', false)) {
 
-            $notifyUserId = $comment->receiver_id ?? $ticket->user_id;
+        // ── Notifications ─────────────────────────────────────────────────────
+        if (!$isInternal) {
+            \Log::info('storeComment notifications', [
+                'ticket_param' => $id,
+                'auth_user_id' => $senderId,
+                'mode' => $mode,
+                'internal' => $isInternal,
+                'ticket_user_id' => $ticket->user_id,
+                'ticket_assigned_to' => $ticket->assigned_to,
+                'computed_receiver_id' => $receiverId,
+            ]);
 
-            Notification::notify(
-                user_id:      (int) $notifyUserId,
-                ticket_id:    $ticket->id,
-                triggered_by: $senderId,
-                type:         'comment_added',
-                title:        'New reply on your ticket',
-                message:      "A new reply was added to ticket {$ticket->ticket_number}.",
-            );
+            $recipientIds = collect();
+
+            if ($mode === 'employee') {
+                // Employee ONLY → ticket creator, nobody else
+                $recipientIds->push((int) $ticket->user_id);
+
+            } elseif ($mode === 'agent') {
+                // Agent ONLY → assigned agent, nobody else
+                if (!empty($ticket->assigned_to)) {
+                    $recipientIds->push((int) $ticket->assigned_to);
+                }
+
+            } elseif ($mode === 'all') {
+                // Both
+                if (!empty($ticket->user_id)) {
+                    $recipientIds->push((int) $ticket->user_id);
+                }
+                if (!empty($ticket->assigned_to)) {
+                    $recipientIds->push((int) $ticket->assigned_to);
+                }
+            }
+
+            // Remove the sender from recipients
+            $recipientIds = $recipientIds
+                ->filter(fn($rid) => !empty($rid) && (int) $rid !== (int) $senderId)
+                ->unique()
+                ->values();
+
+            \Log::info('storeComment recipients', [
+                'ticket_param' => $id,
+                'mode' => $mode,
+                'sender_id' => $senderId,
+                'recipient_ids' => $recipientIds->all(),
+            ]);
+
+            foreach ($recipientIds as $notifyUserId) {
+                // Do not use notify_user_id from request for scoping.
+                // We compute recipients based strictly on ticket + mode above.
+                Notification::notify(
+                    user_id:      (int) $notifyUserId,
+                    ticket_id:    $ticket->id,
+                    triggered_by: $senderId,
+                    type:         'comment_added',
+                    title:        'New reply on your ticket',
+                    message:      "A new reply was added to ticket {$ticket->ticket_number}.",
+                );
+            }
         }
+
         $comment->load('user.role');
 
         return response()->json([
@@ -932,11 +993,14 @@ class TicketController extends Controller
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'priority_id' => 'required|exists:priorities,id',
+            'content' => 'required|string|max:2000',
+            'visibility' => 'required|in:employee,agent,all,internal',
         ]);
 
         $lastTicket = Ticket::orderBy('id', 'desc')->first();
         $nextNumber = $lastTicket ? ($lastTicket->id + 1) : 1;
         $ticketNumber = 'TKT-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        $visibility = $request->visibility;
 
         $openStatus = \DB::table('statuses')->where('status_name', 'Open')->first();
 
@@ -1150,20 +1214,65 @@ private function logActivity($ticketId, $action, $details)
 
         $commentsQuery = $ticket->comments;
 
-        if ($role !== 'agent') {
+        // Visibility scoping by intended receiver_id (receiver_id is stored on comment)
+        // - Internal notes: only managers/admins (and not employees)
+        // - External comments: visible only to receiver_id (unless receiver_id is null => everyone)
+        $isManagerOrAdmin = in_array($role, ['manager', 'admin'], true);
+
+        if (!$isManagerOrAdmin) {
+            // Employees/Agents should never see internal notes
             $commentsQuery = $commentsQuery->where('internal', false);
+
+            // If receiver_id is null => everyone sees it; otherwise receiver_id must match auth user
+            $authUserId = Auth::id();
+            $commentsQuery = $commentsQuery->where(function ($q) use ($authUserId) {
+                $q->whereNull('receiver_id')
+                  ->orWhere('receiver_id', $authUserId);
+            });
+        } else {
+            // Manager/admin can see internal + external, but still respect receiver_id when receiver_id is not null.
+            $authUserId = Auth::id();
+            $commentsQuery = $commentsQuery->where(function ($q) use ($authUserId) {
+                $q->whereNull('receiver_id')
+                  ->orWhere('receiver_id', $authUserId);
+            })->orWhere('internal', true);
         }
+
+
 
         $comments = $commentsQuery->map(fn($c) => [
             'id'       => $c->id,
-            'author'   => $c->user->full_name ?? $c->user->username ?? 'Unknown',
-            'role'     => $c->user->role->name ?? 'employee',
+
+            // Ensure frontend always has user.full_name.
+            // Some comment rows may not have `user` relation hydrated.
+            // Fallback to receiver/user_id fields if possible.
+            'user'     => [
+                'id' => $c->user?->id,
+                'full_name' => $c->user?->full_name
+                    ?? $c->user?->username
+                    ?? 'Unknown',
+                'username'  => $c->user?->username,
+                'role'       => $c->user?->role?->name,
+            ],
+
+            // backward compatibility
+            'author'   => $c->user?->full_name
+                ?? $c->user?->username
+                ?? 'Unknown',
+            'role'     => $c->user?->role?->name ?? 'employee',
             'text'     => $c->content,
-            'internal' => $c->internal,
-            'time'     => $c->created_at->diffForHumans(),
+'internal' => $c->internal,
+            // Guard against null/non-Carbon created_at to avoid 500s
+            'time'     => ($c->created_at && $c->created_at instanceof \Carbon\Carbon)
+                ? $c->created_at->diffForHumans()
+                : '—',
+            'content'  => $c->content,
+            'created_at'=> $c->created_at,
         ]);
 
+
         return response()->json($comments);
+
     }
 
     public function deleteComment(Request $request, $ticketId, $commentId)
