@@ -431,8 +431,8 @@ export default function EmployeeDashboard() {
                       <td><span className="emp-ticket-id">{t.ticket_number}</span></td>
                       <td><span className="emp-ticket-subject">{t.title}</span></td>
                       <td><span className="emp-ticket-category">{t.category?.category_name || "—"}</span></td>
-                      <td><span className={`priority-badge priority-badge--${(t.priority?.priority_name || "").toLowerCase()}`}>{t.priority?.priority_name || "—"}</span></td>
-                      <td><span className={`status-badge status-badge--${(statusOf(t)).toLowerCase().replace(" ", "-")}`}>{statusOf(t)}</span></td>
+                      <td><span className={`emp-priority-badge emp-priority-badge--${(t.priority?.priority_name || "").toLowerCase()}`}>{t.priority?.priority_name || "—"}</span></td>
+                      <td><span className={`emp-status-badge emp-status-badge--${(statusOf(t)).toLowerCase().replace(/\s+/g, "-")}`}>{statusOf(t)}</span></td>
                       <td><span className="emp-time">{t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}</span></td>
                     </tr>
                   ))}

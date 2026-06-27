@@ -1,0 +1,337 @@
+/* ─────────────────────────────────────────────
+   Employee Profile — EmployeeProfile.css
+   Matches the Employee Portal theme (Sora/DM Sans,
+   #03363d green + #d4f265 lime) used throughout
+   EmployeeLayout.css, Dashboard.css, MyTickets.css.
+   Namespaced with eprf- so it can never collide
+   with ManagerProfile's prf- classes or any other
+   page's badge/card classes.
+───────────────────────────────────────────── */
+
+/* === page === */
+.eprf-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* === header === */
+.eprf-header__title {
+  font-family: "Sora", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #03363d;
+  margin: 0 0 2px;
+}
+
+.eprf-header__sub {
+  font-size: 13.5px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* === layout grid === */
+.eprf-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .eprf-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === shared card === */
+.eprf-card {
+  background: #ffffff;
+  border: 1px solid rgba(3, 54, 61, 0.09);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.eprf-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(3, 54, 61, 0.09);
+}
+
+.eprf-card__title {
+  font-family: "Sora", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.eprf-card__sub {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.eprf-card__body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.eprf-card__footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(3, 54, 61, 0.09);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* === identity card === */
+.eprf-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px 26px;
+  gap: 6px;
+}
+
+.eprf-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: #03363d;
+  color: #d4f265;
+  font-family: "Sora", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 14px rgba(3, 54, 61, 0.22);
+}
+
+.eprf-identity__name {
+  font-family: "Sora", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.eprf-dept-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #03363d;
+  background: rgba(212, 242, 101, 0.35);
+  padding: 4px 12px;
+  border-radius: 99px;
+  margin-top: 4px;
+}
+
+.eprf-identity__meta {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(3, 54, 61, 0.09);
+}
+
+.eprf-identity__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: left;
+}
+
+.eprf-identity__row i {
+  color: #9ca3af;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* === forms column === */
+.eprf-forms {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.eprf-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 560px) {
+  .eprf-field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.eprf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.eprf-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.eprf-field input {
+  padding: 9px 12px;
+  border: 1px solid rgba(3, 54, 61, 0.12);
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-family: "DM Sans", sans-serif;
+  color: #1f2937;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.eprf-field input:focus {
+  border-color: #03363d;
+}
+
+.eprf-field input:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* === buttons === */
+.eprf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.eprf-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.eprf-btn--primary {
+  background: #03363d;
+  color: #d4f265;
+}
+
+.eprf-btn--primary:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.eprf-btn--ghost {
+  background: #ffffff;
+  color: #374151;
+  border-color: rgba(3, 54, 61, 0.15);
+}
+
+.eprf-btn--ghost:hover:not(:disabled) {
+  background: #f3f4f0;
+}
+
+/* === loading state === */
+.eprf-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-size: 13.5px;
+}
+
+.eprf-spin {
+  animation: eprf-spin 1s linear infinite;
+}
+
+@keyframes eprf-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === toast === */
+.eprf-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  animation: eprf-toast-in 0.2s ease-out;
+  z-index: 50;
+}
+
+@keyframes eprf-toast-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+.eprf-toast--success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.eprf-toast--error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* === dark mode (Employee portal supports a dark toggle) === */
+.el--dark .eprf-card {
+  background: #1a1d27 !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+.el--dark .eprf-header__title,
+.el--dark .eprf-card__title,
+.el--dark .eprf-identity__name {
+  color: #e5e7eb !important;
+}
+
+.el--dark .eprf-header__sub,
+.el--dark .eprf-card__sub,
+.el--dark .eprf-identity__row,
+.el--dark .eprf-field label {
+  color: #9ca3af !important;
+}
+
+.el--dark .eprf-field input {
+  background: #12151f !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e5e7eb !important;
+}
+
+.el--dark .eprf-field input:focus {
+  border-color: #d4f265 !important;
+}
+
+.el--dark .eprf-btn--ghost {
+  background: #1a1d27;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #d1d5db;
+}

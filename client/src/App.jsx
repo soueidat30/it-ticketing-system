@@ -40,6 +40,7 @@ import TeamTicket from "./pages/manager/Tickets/TeamTicket";
 import TeamTicketDetail from "./pages/manager/Tickets/TeamTicketDetail";
 import Notification from "./pages/employee/Notification/Notification";
 import KnowledgeBase from "./pages/employee/KnowledgeBase/KnowledgeBase";
+import EmployeeProfile from "./pages/employee/EmployeeProfile/EmployeeProfile";
 
 function App() {
   return (
@@ -124,6 +125,7 @@ function App() {
           <Route path="my-tickets" element={<MyTickets />} />
           <Route path="notification" element={<Notification />} />
           <Route path="knowledge-base" element={<KnowledgeBase />} />
+          <Route path="profile" element={<EmployeeProfile />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
         

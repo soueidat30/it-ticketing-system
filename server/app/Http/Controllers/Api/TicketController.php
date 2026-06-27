@@ -993,8 +993,7 @@ class TicketController extends Controller
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'priority_id' => 'required|exists:priorities,id',
-            'content' => 'required|string|max:2000',
-            'visibility' => 'required|in:employee,agent,all,internal',
+
         ]);
 
         $lastTicket = Ticket::orderBy('id', 'desc')->first();

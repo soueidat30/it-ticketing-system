@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import AIChatbot from "../components/common/AIChatbot/AIChatbot";
 import "./EmployeeLayout.css";
 
 const NAV_ITEMS = [
@@ -14,30 +15,30 @@ const NAV_ITEMS = [
   {
     group: "Resources",
     items: [
-      { to: "/employee/knowledge-base", icon: "ti-book",        label: "Knowledge Base" },
-      { to: "/employee/announcements",  icon: "ti-speakerphone", label: "Announcements" },
+      { to: "/employee/knowledge-base", icon: "ti-book",         label: "Knowledge Base" },
+      { to: "/employee/announcements",  icon: "ti-speakerphone", label: "Announcements"  },
     ]
   },
   {
     group: "Account",
     items: [
-      { to: "/employee/profile",       icon: "ti-user",     label: "Profile"      },
-      { to: "/employee/notification",  icon: "ti-bell",     label: "Notification" },
-      { to: "/employee/settings",      icon: "ti-settings", label: "Settings"     },
+      { to: "/employee/profile",      icon: "ti-user",     label: "Profile"      },
+      { to: "/employee/notification", icon: "ti-bell",     label: "Notification" },
+      { to: "/employee/settings",     icon: "ti-settings", label: "Settings"     },
     ]
   }
 ];
 
 const EmployeeLayout = () => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notifCount]  = useState(2);
 
   // ── Dark mode ─────────────────────────────────────────────────────────────
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("emp-dark") === "true";
-  });
+  const [darkMode, setDarkMode] = useState(
+    () => localStorage.getItem("emp-dark") === "true"
+  );
 
   useEffect(() => {
     localStorage.setItem("emp-dark", darkMode);
@@ -106,17 +107,8 @@ const EmployeeLayout = () => {
           ))}
         </nav>
 
-        {/* Help box */}
-        {sidebarOpen && (
-          <div className="el__help-box">
-            <i className="ti ti-headset el__help-icon" />
-            <div className="el__help-text">
-              <span className="el__help-title">Need immediate help?</span>
-              <span className="el__help-sub">Contact IT Support</span>
-            </div>
-            <button className="el__help-btn">Live Chat</button>
-          </div>
-        )}
+        {/* ── AI Chatbot (replaces old static help box) ── */}
+        {sidebarOpen && <AIChatbot />}
 
         {/* User card */}
         <div className="el__user-card">
@@ -148,7 +140,10 @@ const EmployeeLayout = () => {
               onClick={() => setSidebarOpen(v => !v)}
               aria-label="Toggle sidebar"
             >
-              <i className={`ti ${sidebarOpen ? "ti-layout-sidebar-left-collapse" : "ti-layout-sidebar-left-expand"}`} />
+              <i className={`ti ${sidebarOpen
+                ? "ti-layout-sidebar-left-collapse"
+                : "ti-layout-sidebar-left-expand"}`}
+              />
             </button>
             <div className="el__breadcrumb">
               <span className="el__breadcrumb-root">Employee</span>
@@ -168,7 +163,7 @@ const EmployeeLayout = () => {
               />
             </div>
 
-            {/* ── Dark mode toggle ── */}
+            {/* Dark mode toggle */}
             <button
               className="el__dark-toggle"
               onClick={toggleDark}
@@ -178,9 +173,15 @@ const EmployeeLayout = () => {
               <i className={`ti ${darkMode ? "ti-sun" : "ti-moon"}`} />
             </button>
 
-            <NavLink to="/employee/notification" className="el__topbar-icon" aria-label="Notification">
+            <NavLink
+              to="/employee/notification"
+              className="el__topbar-icon"
+              aria-label="Notifications"
+            >
               <i className="ti ti-bell" />
-              {notifCount > 0 && <span className="el__topbar-badge">{notifCount}</span>}
+              {notifCount > 0 && (
+                <span className="el__topbar-badge">{notifCount}</span>
+              )}
             </NavLink>
 
             <div className="el__topbar-profile">

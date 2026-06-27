@@ -34,7 +34,8 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-'openai' => [
-        'key' => env('OPENAI_API_KEY'),
-    ],
+'ollama' => [
+    'url'   => env('OLLAMA_URL', 'http://127.0.0.1:11434'),
+    'model' => env('OLLAMA_MODEL', 'llama3.1'),
+],
 ];

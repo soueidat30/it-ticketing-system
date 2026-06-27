@@ -104,6 +104,7 @@ Route::middleware('auth:api')->group(function () {
 
     Route::post('/tickets/{id}/comments', [TicketController::class, 'storeComment']);
     Route::post('/ai/suggest-ticket-fields', [AiTicketAssistController::class, 'suggestFields']);
+    Route::post('/ai/chat', [AiTicketAssistController::class, 'chat']);
 });
 
 

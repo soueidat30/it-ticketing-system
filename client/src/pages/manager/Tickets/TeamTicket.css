@@ -136,7 +136,7 @@
 .priority-badge--low { background: #93c5fd; }       /* light blue */
 .priority-badge--medium { background: #3b82f6; }    /* medium blue */
 .priority-badge--high { background: #1d4ed8; }      /* darker blue */
-.priority-badge--urgent { background: #1e3a8a; }    /* deep navy blue */
+.priority-badge--critical { background: #1e3a8a; }    /* deep navy blue */
 
 /* Status Badges - Blue Theme */
 .status-badge {

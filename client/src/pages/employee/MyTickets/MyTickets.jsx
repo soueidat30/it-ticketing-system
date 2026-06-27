@@ -181,12 +181,12 @@ export default function MyTickets() {
 </td>
                     <td><span className="mt-ticket-cat">{t.category?.category_name || "-"}</span></td>
                     <td>
-                      <span className={`priority-badge priority-badge--${(t.priority?.priority_name || "").toLowerCase()}`}>
+                      <span className={`mt-priority-badge mt-priority-badge--${(t.priority?.priority_name || "").toLowerCase()}`}>
                         {t.priority?.priority_name || "-"}
                       </span>
                     </td>
                     <td>
-                      <span className={`status-badge status-badge--${(t.status?.status_name || "").toLowerCase().replace(" ", "-")}`}>
+                      <span className={`mt-status-badge mt-status-badge--${(t.status?.status_name || "").toLowerCase().replace(/\s+/g, "-")}`}>
                         {t.status?.status_name || "-"}
                       </span>
                     </td>

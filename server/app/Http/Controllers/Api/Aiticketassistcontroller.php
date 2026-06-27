@@ -12,7 +12,12 @@ use Illuminate\Support\Facades\Log;
 class AiTicketAssistController extends Controller
 {
     /**
-     * Suggest a category + priority for a ticket draft using OpenAI.
+     * Suggest a category + priority for a ticket draft using a local
+     * Ollama model. Free, no API key, no internet required — runs on
+     * the same machine as the Laravel server.
+     *
+     * Requires Ollama installed and running (https://ollama.com) with
+     * a model pulled, e.g.: `ollama pull llama3.1`
      *
      * POST /api/ai/suggest-ticket-fields
      * body: { title: string, description: string }
@@ -24,8 +29,6 @@ class AiTicketAssistController extends Controller
             'description' => 'required|string|max:5000',
         ]);
 
-        // Pull the real options from the DB so the model can only choose
-        // from values that actually exist in this system.
         $categories = Category::pluck('category_name')->values()->all();
         $priorities = Priority::pluck('priority_name')->values()->all();
 
@@ -35,96 +38,133 @@ class AiTicketAssistController extends Controller
             ], 422);
         }
 
-        $apiKey = config('services.openai.key');
-        if (!$apiKey) {
-            Log::error('OPENAI_API_KEY is not configured.');
-            return response()->json([
-                'message' => 'AI suggestions are not configured on the server.',
-            ], 503);
-        }
+        $ollamaUrl   = config('services.ollama.url', 'http://127.0.0.1:11434');
+        $ollamaModel = config('services.ollama.model', 'llama3.1');
 
+        // JSON schema Ollama will constrain the model's output to.
         $schema = [
             'type' => 'object',
             'properties' => [
-                'category' => [
-                    'type' => 'string',
-                    'enum' => $categories,
-                ],
-                'priority' => [
-                    'type' => 'string',
-                    'enum' => $priorities,
-                ],
-                'reasoning' => [
-                    'type' => 'string',
-                    'description' => 'One short sentence explaining the suggestion.',
-                ],
+                'category'  => ['type' => 'string'],
+                'priority'  => ['type' => 'string'],
+                'reasoning' => ['type' => 'string'],
             ],
             'required' => ['category', 'priority', 'reasoning'],
-            'additionalProperties' => false,
         ];
 
         try {
-            $response = Http::withToken($apiKey)
-                ->timeout(20)
-                ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => 'gpt-4o-mini',
-                    'messages' => [
-                        [
-                            'role' => 'system',
-                            'content' => 'You are an IT helpdesk triage assistant. Given a ticket '
-                                . 'title and description, choose the single best-fitting category '
-                                . 'and priority from the allowed lists. Be decisive. Critical/High '
-                                . 'priority is only for outages, security issues, or anything '
-                                . 'blocking multiple people from working.',
-                        ],
-                        [
-                            'role' => 'user',
-                            'content' => "Title: {$request->input('title')}\n"
-                                . "Description: {$request->input('description')}\n\n"
-                                . 'Allowed categories: ' . implode(', ', $categories) . "\n"
-                                . 'Allowed priorities: ' . implode(', ', $priorities),
-                        ],
+            $response = Http::timeout(45)->post("{$ollamaUrl}/api/chat", [
+                'model' => $ollamaModel,
+                'stream' => false,
+                'options' => ['temperature' => 0],
+                'format' => $schema,
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'You are an IT helpdesk triage assistant. Given a ticket '
+                            . 'title and description, choose the single best-fitting category '
+                            . 'and priority from the allowed lists below. You must pick values '
+                            . 'EXACTLY as written in the lists, with the same spelling and '
+                            . 'capitalization. Critical/High priority is only for outages, '
+                            . 'security issues, or anything blocking multiple people from working.'
+                            . "\n\nAllowed categories: " . implode(', ', $categories)
+                            . "\nAllowed priorities: " . implode(', ', $priorities),
                     ],
-                    'response_format' => [
-                        'type' => 'json_schema',
-                        'json_schema' => [
-                            'name' => 'ticket_triage',
-                            'schema' => $schema,
-                            'strict' => true,
-                        ],
+                    [
+                        'role' => 'user',
+                        'content' => "Title: {$request->input('title')}\n"
+                            . "Description: {$request->input('description')}",
                     ],
-                ]);
+                ],
+            ]);
 
             if (!$response->successful()) {
-                Log::error('OpenAI triage call failed', [
+                Log::error('Ollama triage call failed', [
                     'status' => $response->status(),
                     'body'   => $response->body(),
                 ]);
                 return response()->json([
-                    'message' => 'AI suggestion failed. Please choose manually.',
+                    'message' => 'AI suggestion failed. Make sure Ollama is running locally.',
                 ], 502);
             }
 
-            $content = $response->json('choices.0.message.content');
+            $content = $response->json('message.content');
             $parsed  = json_decode($content, true);
 
             if (!$parsed || !isset($parsed['category'], $parsed['priority'])) {
+                Log::error('Ollama returned unparseable content', ['raw' => $content]);
                 return response()->json([
                     'message' => 'AI returned an unexpected response. Please choose manually.',
                 ], 502);
             }
 
+            $matchedCategory = $this->matchOption($parsed['category'], $categories);
+            $matchedPriority = $this->matchOption($parsed['priority'], $priorities);
+
+            if (!$matchedCategory || !$matchedPriority) {
+                return response()->json([
+                    'message' => "AI suggestion didn't match a known category/priority. Please choose manually.",
+                ], 502);
+            }
+
             return response()->json([
-                'category'  => $parsed['category'],
-                'priority'  => $parsed['priority'],
+                'category'  => $matchedCategory,
+                'priority'  => $matchedPriority,
                 'reasoning' => $parsed['reasoning'] ?? null,
             ]);
 
         } catch (\Throwable $e) {
             Log::error('AI triage exception: ' . $e->getMessage());
             return response()->json([
-                'message' => 'AI suggestion failed. Please choose manually.',
+                'message' => 'Could not reach the local AI model. Is Ollama running?',
             ], 500);
         }
     }
+
+    /**
+     * Case-insensitive match of a model-returned value against the
+     * real allowed list, returning the correctly-cased original.
+     */
+    private function matchOption(string $value, array $options): ?string
+    {
+        foreach ($options as $option) {
+            if (strtolower(trim($value)) === strtolower(trim($option))) {
+                return $option;
+            }
+        }
+        return null;
+    }
+    public function chat(Request $request)
+{
+    $request->validate([
+        'message' => 'required|string|max:2000',
+        'history' => 'array',
+    ]);
+
+    $ollamaUrl   = config('services.ollama.url', 'http://127.0.0.1:11434');
+    $ollamaModel = config('services.ollama.model', 'llama3.2:3b');
+
+    try {
+        $response = Http::timeout(45)->post("{$ollamaUrl}/api/chat", [
+            'model' => $ollamaModel,
+            'stream' => false,
+            'messages' => array_merge(
+                $request->input('history', []),
+                [['role' => 'user', 'content' => $request->input('message')]]
+            ),
+        ]);
+
+        if (!$response->successful()) {
+            return response()->json(['message' => 'AI chat failed.'], 502);
+        }
+
+        $reply = $response->json('message.content') ?? 'No reply generated.';
+        return response()->json(['reply' => $reply]);
+
+    } catch (\Throwable $e) {
+        \Log::error('AI chat exception', ['error' => $e->getMessage()]);
+        return response()->json(['message' => 'Could not reach Ollama. Is it running?'], 500);
+    }
+}
+
 }
