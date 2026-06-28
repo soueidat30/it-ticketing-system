@@ -528,3 +528,63 @@
   .rpt-resolution { flex-direction: column; align-items: flex-start; gap: 12px; }
   .rpt-resolution__track { width: 100%; }
 }
+
+.rpt-export-menu {
+  position: relative;
+}
+ 
+/* extend the existing export button with a chevron */
+.rpt-export-btn__chevron {
+  font-size: 0.7rem;
+  margin-left: 2px;
+}
+ 
+.rpt-export-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  min-width: 160px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: rpt-export-in 0.12s ease-out;
+}
+ 
+@keyframes rpt-export-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+ 
+.rpt-export-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.13s;
+}
+ 
+.rpt-export-option:hover {
+  background: #f1f5f9;
+}
+ 
+.rpt-export-option i {
+  font-size: 1rem;
+  color: #64748b;
+  width: 18px;
+  text-align: center;
+}

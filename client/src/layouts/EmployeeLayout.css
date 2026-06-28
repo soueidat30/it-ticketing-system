@@ -676,3 +676,174 @@
   color: #d4f265 !important;
   border-bottom-color: #d4f265 !important;
 }
+
+
+/* ─────────────────────────────────────────────
+   Language switcher + RTL support
+   Append to EmployeeLayout.css
+───────────────────────────────────────────── */
+
+.el__lang-menu {
+  position: relative;
+}
+
+.el__lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: auto;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--el-border);
+  background: transparent;
+  color: var(--el-muted);
+  cursor: pointer;
+  font-size: 17px;
+  font-family: inherit;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+
+.el__lang-toggle:hover {
+  background: var(--el-bg);
+  color: var(--el-green);
+}
+
+.el__lang-code {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.el--dark .el__lang-toggle {
+  border-color: rgba(255,255,255,0.08);
+  color: #9ca3af;
+}
+.el--dark .el__lang-toggle:hover {
+  background: rgba(255,255,255,0.06);
+  color: #d4f265;
+}
+
+.el__lang-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  /* anchor to the side closest to text start; flipped automatically
+     under [dir="rtl"] below */
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--el-border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  padding: 6px;
+  min-width: 150px;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.el--dark .el__lang-dropdown {
+  background: #1a1d27;
+  border-color: rgba(255,255,255,0.08);
+}
+
+.el__lang-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.13s;
+}
+
+.el__lang-option:hover {
+  background: var(--el-bg);
+}
+
+.el__lang-option--active {
+  color: #03363d;
+}
+
+.el--dark .el__lang-option--active {
+  color: #d4f265;
+}
+
+.el__lang-option i {
+  font-size: 14px;
+  color: #16a34a;
+}
+
+
+───────────────────────────────────────────── */
+
+[dir="rtl"] .el {
+  direction: rtl;
+}
+
+/* sidebar active-tab accent bar: was anchored left, needs to sit on
+   the visual "start" side, which is the right edge in RTL */
+[dir="rtl"] .el__nav-link--active::before {
+  left: auto;
+  right: 0;
+  border-radius: 3px 0 0 3px;
+}
+
+/* badges that used margin-left:auto to push to the far side now need
+   to push to the opposite side instead */
+[dir="rtl"] .el__badge {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* topbar notification badge sits at top-right of the bell icon in LTR;
+   mirror it to top-left in RTL */
+[dir="rtl"] .el__topbar-badge {
+  right: auto;
+  left: -4px;
+}
+
+/* chevron-right icons in the breadcrumb visually point the wrong way
+   once flipped; rotate them 180° so they still point "forward" */
+[dir="rtl"] .el__breadcrumb i.ti-chevron-right {
+  transform: rotate(180deg);
+}
+
+/* sidebar toggle icon (collapse/expand) should mirror direction too */
+[dir="rtl"] .el__toggle-btn i.ti-layout-sidebar-left-collapse,
+[dir="rtl"] .el__toggle-btn i.ti-layout-sidebar-left-expand {
+  transform: scaleX(-1);
+}
+
+/* language dropdown should open from the side nearest where the
+   button visually sits in RTL (mirrors to the left edge) */
+[dir="rtl"] .el__lang-dropdown {
+  right: auto;
+  left: 0;
+}
+
+[dir="rtl"] .el__lang-option {
+  text-align: right;
+}
+
+/* collapsed sidebar slides in from the opposite side on mobile */
+@media (max-width: 768px) {
+  [dir="rtl"] .el__sidebar {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+  }
+  [dir="rtl"].el--open .el__sidebar,
+  [dir="rtl"] .el--open .el__sidebar {
+    transform: translateX(0);
+  }
+}

@@ -102,6 +102,9 @@ export default function ManagerDashboard() {
   const criticalCount = tickets.filter(t => priorityName(t).toLowerCase() === "critical").length;
   const highCount     = tickets.filter(t => ["high", "critical"].includes(priorityName(t).toLowerCase())).length;
 
+  // ✅ ADDED (same logic as employee dashboard)
+  const activeCount = openCount + inProgCount;
+
   // category breakdown for bar chart
   const categoryMap = tickets.reduce((acc, t) => {
     const cat = categoryName(t);
@@ -178,6 +181,16 @@ export default function ManagerDashboard() {
           color="orange"
           sub="Being worked on"
         />
+
+        {/* ✅ ADDED NEW CARD */}
+        <StatCard
+          label="Active Tickets"
+          value={activeCount}
+          icon="ti-activity"
+          color="blue"
+          sub={`${openCount} open · ${inProgCount} in progress`}
+        />
+
         <StatCard
           label="Resolved"
           value={resolvedCount}

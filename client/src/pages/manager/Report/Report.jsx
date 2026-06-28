@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getAllTickets } from "../../../services/ticketService";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import "./Report.css";
 
 const BASE = "http://127.0.0.1:8000/api";
@@ -23,6 +26,22 @@ function fmt(n) { return n < 10 ? `0${n}` : `${n}`; }
 function getMonthLabel(dateStr) {
   const d = new Date(dateStr);
   return `${fmt(d.getMonth()+1)}/${d.getFullYear().toString().slice(2)}`;
+}
+
+// ── export table builders ──────────────────────────────────────────────────────
+const EXPORT_COLUMNS = ["Ticket #", "Title", "Employee", "Category", "Priority", "Status", "Created", "Resolved"];
+
+function buildExportRows(tickets) {
+  return tickets.map(t => [
+    t.ticket_number || "",
+    t.title || "",
+    employeeName(t),
+    categoryName(t),
+    priorityName(t),
+    statusName(t),
+    t.created_at ? new Date(t.created_at).toLocaleDateString("en-GB") : "",
+    t.resolved_at ? new Date(t.resolved_at).toLocaleDateString("en-GB") : "",
+  ]);
 }
 
 // ── stat card ─────────────────────────────────────────────────────────────────
@@ -56,6 +75,46 @@ function CustomTooltip({ active, payload, label }) {
           <span>{p.name}:</span> <b>{p.value}</b>
         </p>
       ))}
+    </div>
+  );
+}
+
+// ── export dropdown ────────────────────────────────────────────────────────────
+function ExportMenu({ onExport, exporting }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const choose = (format) => {
+    setOpen(false);
+    onExport(format);
+  };
+
+  return (
+    <div className="rpt-export-menu" ref={ref}>
+      <button className="rpt-export-btn" onClick={() => setOpen(o => !o)} disabled={exporting}>
+        <i className={`ti ${exporting ? "ti-loader rpt-spin" : "ti-download"}`}/>
+        Export
+        <i className="ti ti-chevron-down rpt-export-btn__chevron"/>
+      </button>
+      {open && (
+        <div className="rpt-export-dropdown">
+          <button className="rpt-export-option" onClick={() => choose("csv")}>
+            <i className="ti ti-file-text"/> CSV
+          </button>
+          <button className="rpt-export-option" onClick={() => choose("xlsx")}>
+            <i className="ti ti-table"/> Excel (.xlsx)
+          </button>
+          <button className="rpt-export-option" onClick={() => choose("pdf")}>
+            <i className="ti ti-file-type-pdf"/> PDF
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -133,30 +192,70 @@ export default function Report() {
   });
   const topEmployees = Object.entries(empMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
-  // ── export CSV ─────────────────────────────────────────────────────────────
+  const resolutionRate = total > 0 ? Math.round((resolved/total)*100) : 0;
+  const filenameBase = `tickora-report-${new Date().toISOString().slice(0,10)}`;
+
+  // ── export: CSV ──────────────────────────────────────────────────────────────
   const exportCSV = () => {
-    setExporting(true);
-    const rows = [
-      ["Ticket #","Title","Employee","Category","Priority","Status","Created","Resolved"],
-      ...filtered.map(t => [
-        t.ticket_number,
-        `"${(t.title||"").replace(/"/g,'""')}"`,
-        employeeName(t),
-        categoryName(t),
-        priorityName(t),
-        statusName(t),
-        t.created_at ? new Date(t.created_at).toLocaleDateString("en-GB") : "",
-        t.resolved_at ? new Date(t.resolved_at).toLocaleDateString("en-GB") : "",
-      ])
-    ];
-    const csv = rows.map(r => r.join(",")).join("\n");
+    const rows = [EXPORT_COLUMNS, ...buildExportRows(filtered)];
+    const csv = rows
+      .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `tickora-report-${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `${filenameBase}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
-    setTimeout(() => setExporting(false), 800);
+  };
+
+  // ── export: Excel ────────────────────────────────────────────────────────────
+  const exportExcel = () => {
+    const rows = [EXPORT_COLUMNS, ...buildExportRows(filtered)];
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    worksheet["!cols"] = [
+      { wch: 12 }, { wch: 32 }, { wch: 20 }, { wch: 14 },
+      { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Tickets");
+    XLSX.writeFile(workbook, `${filenameBase}.xlsx`);
+  };
+
+  // ── export: PDF ──────────────────────────────────────────────────────────────
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: "landscape" });
+
+    doc.setFontSize(16);
+    doc.text("Tickora — Ticket Report", 14, 16);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(
+      `Generated ${new Date().toLocaleDateString("en-GB")} · ${range === "all" ? "All time" : `Last ${range} days`} · ${total} tickets · ${resolutionRate}% resolved`,
+      14, 22
+    );
+
+    autoTable(doc, {
+      startY: 28,
+      head: [EXPORT_COLUMNS],
+      body: buildExportRows(filtered),
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 245, 250] },
+    });
+
+    doc.save(`${filenameBase}.pdf`);
+  };
+
+  const handleExport = async (format) => {
+    setExporting(true);
+    try {
+      if (format === "csv") exportCSV();
+      else if (format === "xlsx") exportExcel();
+      else if (format === "pdf") exportPDF();
+    } finally {
+      setTimeout(() => setExporting(false), 500);
+    }
   };
 
   if (loading) return (
@@ -165,8 +264,6 @@ export default function Report() {
       <span>Loading reports…</span>
     </div>
   );
-
-  const resolutionRate = total > 0 ? Math.round((resolved/total)*100) : 0;
 
   return (
     <div className="rpt-page">
@@ -187,10 +284,7 @@ export default function Report() {
               >{l}</button>
             ))}
           </div>
-          <button className="rpt-export-btn" onClick={exportCSV} disabled={exporting}>
-            <i className={`ti ${exporting?"ti-loader rpt-spin":"ti-download"}`}/>
-            Export CSV
-          </button>
+          <ExportMenu onExport={handleExport} exporting={exporting} />
         </div>
       </div>
 

@@ -441,3 +441,20 @@
   color: #9ca3af;
   margin: 0;
 }
+
+.mgr-stat-card--teal .mgr-stat-icon {
+  background: #ecfeff;
+  color: #0891b2;
+}
+.mgr-stat-card--teal {
+  border-left: 4px solid #0891b2;
+}
+
+.mgr-stat-card--teal .mgr-stat-icon {
+  animation: pulseSoft 2s infinite;
+}
+
+@keyframes pulseSoft {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}

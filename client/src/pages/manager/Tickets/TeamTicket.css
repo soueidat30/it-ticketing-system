@@ -133,10 +133,10 @@
   color: #fff;
 }
 
-.priority-badge--low { background: #93c5fd; }       /* light blue */
-.priority-badge--medium { background: #3b82f6; }    /* medium blue */
-.priority-badge--high { background: #1d4ed8; }      /* darker blue */
-.priority-badge--critical { background: #1e3a8a; }    /* deep navy blue */
+.priority-badge--low { background: #f0fdf4; color: #15803d; }       /* light blue */
+.priority-badge--medium { background: #fefce8; color: #a16207; }   /* medium blue */
+.priority-badge--high { background: #fff7ed; color: #c2410c; }      /* darker blue */
+.priority-badge--critical { background: #fef2f2; color: #dc2626; }    /* deep navy blue */
 
 /* Status Badges - Blue Theme */
 .status-badge {
@@ -149,10 +149,10 @@
   color: #fff;
 }
 
-.status-open { background: #2563eb; }          /* bright blue */
-.status-in-progress { background: #1d4ed8; }   /* darker blue */
-.status-resolved { background: #3b82f6; }      /* medium blue */
-.status-closed { background: #6b7280; }        /* gray for closed */
+.status-open { background: #eff6ff; color: #1d4ed8; }        /* bright blue */
+.status-in-progress { background: #f5f3ff; color: #7c3aed; }  /* darker blue */
+.status-resolved  { background: #f0fdf4; color: #15803d; }    /* medium blue */
+.status-closed  { background: #f3f4f6; color: #6b7280; }       /* gray for closed */
 
 /* Ticket ID & Title */
 .team__ticket-id {

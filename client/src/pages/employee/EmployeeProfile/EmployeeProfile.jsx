@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import "./EmployeeProfile.css";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 const BASE = "http://127.0.0.1:8000/api";
 
 function Toast({ message, type, onClose }) {
   useEffect(() => {
-    const t = setTimeout(onClose, 3200);
-    return () => clearTimeout(t);
+    const tmr = setTimeout(onClose, 3200);
+    return () => clearTimeout(tmr);
   }, [onClose]);
 
   return (
@@ -19,6 +20,7 @@ function Toast({ message, type, onClose }) {
 
 export default function EmployeeProfile() {
   const token = localStorage.getItem("token");
+  const { t } = useLanguage();
 
   const [user, setUser] = useState(() =>
     JSON.parse(localStorage.getItem("user") || "{}")
@@ -28,26 +30,45 @@ export default function EmployeeProfile() {
   const [changingPw, setChangingPw] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "" });
-  const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
+  const [form, setForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+  });
+
+  const [pwForm, setPwForm] = useState({
+    current: "",
+    next: "",
+    confirm: "",
+  });
 
   // ── load fresh profile from server ──────────────────────────────────────
   useEffect(() => {
-    if (!token) { setLoading(false); return; }
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     (async () => {
       try {
         const res = await fetch(`${BASE}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
         });
+
         if (res.ok) {
           const data = await res.json();
           const u = data?.data || data;
+
           setUser(u);
           setForm({
             full_name: u.full_name || "",
             email: u.email || "",
             phone: u.phone || "",
           });
+
           localStorage.setItem("user", JSON.stringify(u));
         }
       } catch {
@@ -61,6 +82,7 @@ export default function EmployeeProfile() {
         setLoading(false);
       }
     })();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -75,6 +97,7 @@ export default function EmployeeProfile() {
   const saveProfile = async (e) => {
     e.preventDefault();
     setSaving(true);
+
     try {
       const res = await fetch(`${BASE}/auth/me`, {
         method: "PUT",
@@ -85,15 +108,26 @@ export default function EmployeeProfile() {
         },
         body: JSON.stringify(form),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Could not save changes.");
+
+      if (!res.ok)
+        throw new Error(data?.message || t("profile.toast.couldNotSave"));
 
       const updated = { ...user, ...form };
+
       setUser(updated);
       localStorage.setItem("user", JSON.stringify(updated));
-      setToast({ type: "success", message: "Profile updated." });
+
+      setToast({
+        type: "success",
+        message: t("profile.toast.profileUpdated"),
+      });
     } catch (err) {
-      setToast({ type: "error", message: err.message || "Something went wrong." });
+      setToast({
+        type: "error",
+        message: err.message || t("profile.toast.somethingWrong"),
+      });
     } finally {
       setSaving(false);
     }
@@ -104,15 +138,23 @@ export default function EmployeeProfile() {
     e.preventDefault();
 
     if (pwForm.next.length < 8) {
-      setToast({ type: "error", message: "New password must be at least 8 characters." });
+      setToast({
+        type: "error",
+        message: t("profile.toast.passwordTooShort"),
+      });
       return;
     }
+
     if (pwForm.next !== pwForm.confirm) {
-      setToast({ type: "error", message: "New password and confirmation don't match." });
+      setToast({
+        type: "error",
+        message: t("profile.toast.passwordMismatch"),
+      });
       return;
     }
 
     setChangingPw(true);
+
     try {
       const res = await fetch(`${BASE}/auth/change-password`, {
         method: "POST",
@@ -127,13 +169,29 @@ export default function EmployeeProfile() {
           password_confirmation: pwForm.confirm,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Could not change password.");
 
-      setPwForm({ current: "", next: "", confirm: "" });
-      setToast({ type: "success", message: "Password changed." });
+      const data = await res.json();
+
+      if (!res.ok)
+        throw new Error(
+          data?.message || t("profile.toast.couldNotChangePassword")
+        );
+
+      setPwForm({
+        current: "",
+        next: "",
+        confirm: "",
+      });
+
+      setToast({
+        type: "success",
+        message: t("profile.toast.passwordChanged"),
+      });
     } catch (err) {
-      setToast({ type: "error", message: err.message || "Something went wrong." });
+      setToast({
+        type: "error",
+        message: err.message || t("profile.toast.somethingWrong"),
+      });
     } finally {
       setChangingPw(false);
     }
@@ -143,7 +201,7 @@ export default function EmployeeProfile() {
     return (
       <div className="eprf-loading">
         <i className="ti ti-loader eprf-spin" />
-        <span>Loading profile…</span>
+        <span>{t("profile.loading")}</span>
       </div>
     );
   }
@@ -154,8 +212,12 @@ export default function EmployeeProfile() {
       {/* ── HEADER ── */}
       <div className="eprf-header">
         <div>
-          <h1 className="eprf-header__title">Profile</h1>
-          <p className="eprf-header__sub">Manage your account details and security</p>
+          <h1 className="eprf-header__title">
+            {t("profile.title")}
+          </h1>
+          <p className="eprf-header__sub">
+            {t("profile.subtitle")}
+          </p>
         </div>
       </div>
 
@@ -164,30 +226,42 @@ export default function EmployeeProfile() {
         {/* ── LEFT: identity card ── */}
         <div className="eprf-card eprf-identity">
           <div className="eprf-avatar">{initials}</div>
-          <h2 className="eprf-identity__name">{user.full_name || "Employee"}</h2>
-          <span className="eprf-dept-badge">{user.department || "Staff"}</span>
+
+          <h2 className="eprf-identity__name">
+            {user.full_name || t("profile.employee")}
+          </h2>
+
+          <span className="eprf-dept-badge">
+            {user.department || t("profile.staff")}
+          </span>
 
           <div className="eprf-identity__meta">
+
             <div className="eprf-identity__row">
               <i className="ti ti-mail" />
               <span>{user.email || "—"}</span>
             </div>
+
             {user.phone && (
               <div className="eprf-identity__row">
                 <i className="ti ti-phone" />
                 <span>{user.phone}</span>
               </div>
             )}
+
             {user.created_at && (
               <div className="eprf-identity__row">
                 <i className="ti ti-calendar" />
                 <span>
-                  Joined {new Date(user.created_at).toLocaleDateString("en-GB", {
-                    month: "long", year: "numeric",
+                  {t("profile.joined")}{" "}
+                  {new Date(user.created_at).toLocaleDateString("en-GB", {
+                    month: "long",
+                    year: "numeric",
                   })}
                 </span>
               </div>
             )}
+
           </div>
         </div>
 
@@ -196,106 +270,189 @@ export default function EmployeeProfile() {
 
           {/* personal info */}
           <form className="eprf-card" onSubmit={saveProfile}>
+
             <div className="eprf-card__header">
-              <h2 className="eprf-card__title">Personal information</h2>
-              <span className="eprf-card__sub">Update your name and contact details</span>
+              <h2 className="eprf-card__title">
+                {t("profile.personal.title")}
+              </h2>
+
+              <span className="eprf-card__sub">
+                {t("profile.personal.subtitle")}
+              </span>
             </div>
 
             <div className="eprf-card__body">
+
               <div className="eprf-field-row">
+
                 <div className="eprf-field">
-                  <label htmlFor="full_name">Full name</label>
+                  <label htmlFor="full_name">
+                    {t("profile.fullName")}
+                  </label>
+
                   <input
                     id="full_name"
                     type="text"
                     value={form.full_name}
-                    onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
-                    placeholder="Your full name"
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        full_name: e.target.value,
+                      }))
+                    }
+                    placeholder={t("profile.placeholders.fullName")}
                     required
                   />
                 </div>
+
                 <div className="eprf-field">
-                  <label htmlFor="email">Email address</label>
+                  <label htmlFor="email">
+                    {t("profile.email")}
+                  </label>
+
                   <input
                     id="email"
                     type="email"
                     value={form.email}
-                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    placeholder="you@company.com"
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        email: e.target.value,
+                      }))
+                    }
+                    placeholder={t("profile.placeholders.email")}
                     required
                   />
                 </div>
+
               </div>
 
               <div className="eprf-field-row">
+
                 <div className="eprf-field">
-                  <label htmlFor="phone">Phone number</label>
+                  <label htmlFor="phone">
+                    {t("profile.phone")}
+                  </label>
+
                   <input
                     id="phone"
                     type="tel"
                     value={form.phone}
-                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                    placeholder="Optional"
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        phone: e.target.value,
+                      }))
+                    }
+                    placeholder={t("profile.placeholders.phone")}
                   />
                 </div>
+
                 <div className="eprf-field">
-                  <label>Department</label>
-                  <input type="text" value={user.department || "Staff"} disabled />
+                  <label>
+                    {t("profile.department")}
+                  </label>
+
+                  <input
+                    type="text"
+                    value={user.department || t("profile.staff")}
+                    disabled
+                  />
                 </div>
+
               </div>
+
             </div>
 
             <div className="eprf-card__footer">
-              <button type="submit" className="eprf-btn eprf-btn--primary" disabled={saving}>
+              <button
+                type="submit"
+                className="eprf-btn eprf-btn--primary"
+                disabled={saving}
+              >
                 {saving ? (
-                  <><i className="ti ti-loader eprf-spin" /> Saving…</>
+                  <>
+                    <i className="ti ti-loader eprf-spin" />
+                    {" "}
+                    {t("profile.buttons.saving")}
+                  </>
                 ) : (
-                  <><i className="ti ti-check" /> Save changes</>
+                  <>
+                    <i className="ti ti-check" />
+                    {" "}
+                    {t("profile.buttons.save")}
+                  </>
                 )}
               </button>
             </div>
-          </form>
 
-          {/* security */}
+          </form>
+              {/* security */}
           <form className="eprf-card" onSubmit={changePassword}>
             <div className="eprf-card__header">
-              <h2 className="eprf-card__title">Security</h2>
-              <span className="eprf-card__sub">Change your password</span>
+              <h2 className="eprf-card__title">
+                {t("profile.security.title")}
+              </h2>
+              <span className="eprf-card__sub">
+                {t("profile.security.subtitle")}
+              </span>
             </div>
 
             <div className="eprf-card__body">
               <div className="eprf-field">
-                <label htmlFor="current_pw">Current password</label>
+                <label htmlFor="current_pw">
+                  {t("profile.currentPassword")}
+                </label>
                 <input
                   id="current_pw"
                   type="password"
                   value={pwForm.current}
-                  onChange={(e) => setPwForm((f) => ({ ...f, current: e.target.value }))}
-                  placeholder="••••••••"
+                  onChange={(e) =>
+                    setPwForm((f) => ({
+                      ...f,
+                      current: e.target.value,
+                    }))
+                  }
+                  placeholder={t("profile.placeholders.password")}
                   required
                 />
               </div>
 
               <div className="eprf-field-row">
                 <div className="eprf-field">
-                  <label htmlFor="new_pw">New password</label>
+                  <label htmlFor="new_pw">
+                    {t("profile.newPassword")}
+                  </label>
                   <input
                     id="new_pw"
                     type="password"
                     value={pwForm.next}
-                    onChange={(e) => setPwForm((f) => ({ ...f, next: e.target.value }))}
-                    placeholder="At least 8 characters"
+                    onChange={(e) =>
+                      setPwForm((f) => ({
+                        ...f,
+                        next: e.target.value,
+                      }))
+                    }
+                    placeholder={t("profile.placeholders.newPassword")}
                     required
                   />
                 </div>
+
                 <div className="eprf-field">
-                  <label htmlFor="confirm_pw">Confirm new password</label>
+                  <label htmlFor="confirm_pw">
+                    {t("profile.confirmPassword")}
+                  </label>
                   <input
                     id="confirm_pw"
                     type="password"
                     value={pwForm.confirm}
-                    onChange={(e) => setPwForm((f) => ({ ...f, confirm: e.target.value }))}
-                    placeholder="Repeat new password"
+                    onChange={(e) =>
+                      setPwForm((f) => ({
+                        ...f,
+                        confirm: e.target.value,
+                      }))
+                    }
+                    placeholder={t("profile.placeholders.confirmPassword")}
                     required
                   />
                 </div>
@@ -303,11 +460,23 @@ export default function EmployeeProfile() {
             </div>
 
             <div className="eprf-card__footer">
-              <button type="submit" className="eprf-btn eprf-btn--ghost" disabled={changingPw}>
+              <button
+                type="submit"
+                className="eprf-btn eprf-btn--ghost"
+                disabled={changingPw}
+              >
                 {changingPw ? (
-                  <><i className="ti ti-loader eprf-spin" /> Updating…</>
+                  <>
+                    <i className="ti ti-loader eprf-spin" />
+                    {" "}
+                    {t("profile.buttons.updating")}
+                  </>
                 ) : (
-                  <><i className="ti ti-lock" /> Update password</>
+                  <>
+                    <i className="ti ti-lock" />
+                    {" "}
+                    {t("profile.buttons.updatePassword")}
+                  </>
                 )}
               </button>
             </div>
@@ -326,3 +495,4 @@ export default function EmployeeProfile() {
     </div>
   );
 }
+ 

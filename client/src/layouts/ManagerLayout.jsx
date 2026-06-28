@@ -23,7 +23,7 @@ const NAV_ITEMS = [
     group: "Account",
     items: [
       { to: "/manager/profile",  icon: "ti-user",     label: "Profile"  },
-      { to: "/manager/settings", icon: "ti-settings", label: "Settings" },
+
     ]
   }
 ];
