@@ -26,7 +26,7 @@ const EmployeeLayout = () => {
       group: t("employee.nav.groupResources"),
       items: [
         { to: "/employee/knowledge-base", icon: "ti-book",         label: t("employee.nav.knowledgeBase") },
-        { to: "/employee/announcements",  icon: "ti-speakerphone", label: t("employee.nav.announcements")  },
+    
       ]
     },
     {

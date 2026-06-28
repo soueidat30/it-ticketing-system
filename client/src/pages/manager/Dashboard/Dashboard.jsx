@@ -1,9 +1,9 @@
 import "./Dashboard.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAllTickets } from "../../../services/ticketService";
 
-// ─── helpers — matched to your exact API shape ───────────────────────────────
-// field is "title" not "subject"
+// ─── helpers ─────────────────────────────────────────────────────────────────
 const ticketTitle  = (t) => t.title || "—";
 const statusName   = (t) => t.status?.status_name    || "Unknown";
 const priorityName = (t) => t.priority?.priority_name || "Unknown";
@@ -18,18 +18,14 @@ const STATUS_COLORS = {
   resolved:      "green",
   closed:        "gray",
 };
-
 const PRIORITY_COLORS = {
-  low:      "green",
-  medium:   "orange",
-  high:     "red",
-  critical: "red",
+  low: "green", medium: "orange", high: "red", critical: "red",
 };
 
 const statusColor   = (s = "") => STATUS_COLORS[s.toLowerCase()]   || "gray";
 const priorityColor = (p = "") => PRIORITY_COLORS[p.toLowerCase()] || "gray";
 
-// ─── sub-components ──────────────────────────────────────────────────────────
+// ─── sub-components ───────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, color, sub }) {
   return (
     <div className={`mgr-stat-card mgr-stat-card--${color}`}>
@@ -46,9 +42,7 @@ function StatCard({ label, value, icon, color, sub }) {
 }
 
 function Badge({ text, colorKey }) {
-  return (
-    <span className={`mgr-badge mgr-badge--${colorKey}`}>{text}</span>
-  );
+  return <span className={`mgr-badge mgr-badge--${colorKey}`}>{text}</span>;
 }
 
 function MiniBar({ label, count, max, color }) {
@@ -57,90 +51,92 @@ function MiniBar({ label, count, max, color }) {
     <div className="mgr-minibar">
       <span className="mgr-minibar__label">{label}</span>
       <div className="mgr-minibar__track">
-        <div
-          className={`mgr-minibar__fill mgr-minibar__fill--${color}`}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={`mgr-minibar__fill mgr-minibar__fill--${color}`} style={{ width: `${pct}%` }} />
       </div>
       <span className="mgr-minibar__count">{count}</span>
     </div>
   );
 }
 
-// ─── main component ──────────────────────────────────────────────────────────
+// ─── main component ───────────────────────────────────────────────────────────
 export default function ManagerDashboard() {
+  const navigate = useNavigate();
   const [tickets,      setTickets]      = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
 
-  const token = localStorage.getItem("token");
-  const user  = JSON.parse(localStorage.getItem("user") || "{}");
+  // token read once — never changes during session
+  const tokenRef = useRef(localStorage.getItem("token"));
+  const user     = JSON.parse(localStorage.getItem("user") || "{}");
 
   useEffect(() => {
-    const fetchTickets = async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        if (!token) { setTickets([]); return; }
-        const data = await getAllTickets(token);
-        // your API returns a plain array
-        setTickets(Array.isArray(data) ? data : data?.data || []);
+        if (!tokenRef.current) { setTickets([]); return; }
+        const res  = await fetch("http://127.0.0.1:8000/api/tickets", {
+          headers: {
+            Authorization: `Bearer ${tokenRef.current}`,
+            Accept: "application/json",
+          },
+        });
+        const data = await res.json();
+        if (!cancelled) setTickets(Array.isArray(data) ? data : data?.data || []);
       } catch (err) {
         console.error("Error loading tickets:", err);
-        setTickets([]);
+        if (!cancelled) setTickets([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    fetchTickets();
-  }, [token]);
+    })();
+    return () => { cancelled = true; };
+  }, []); // ← fetch once on mount, no infinite loop
 
-  // ── derived stats (all live from real data) ───────────────────────────────
+  // ── derived stats ─────────────────────────────────────────────────────────
   const total         = tickets.length;
   const openCount     = tickets.filter(t => statusName(t).toLowerCase() === "open").length;
   const inProgCount   = tickets.filter(t => statusName(t).toLowerCase() === "in progress").length;
-  const resolvedCount = tickets.filter(t => ["resolved", "closed"].includes(statusName(t).toLowerCase())).length;
-  const criticalCount = tickets.filter(t => priorityName(t).toLowerCase() === "critical").length;
-  const highCount     = tickets.filter(t => ["high", "critical"].includes(priorityName(t).toLowerCase())).length;
+  const pendingCount  = tickets.filter(t => statusName(t).toLowerCase() === "pending").length;
+  const resolvedCount = tickets.filter(t => ["resolved","closed"].includes(statusName(t).toLowerCase())).length;
+  const highCount     = tickets.filter(t => ["high","critical"].includes(priorityName(t).toLowerCase())).length;
 
-  // ✅ ADDED (same logic as employee dashboard)
+  // Active = open + in progress (tickets not yet resolved/closed)
   const activeCount = openCount + inProgCount;
 
-  // category breakdown for bar chart
+  // category breakdown
   const categoryMap = tickets.reduce((acc, t) => {
     const cat = categoryName(t);
     acc[cat] = (acc[cat] || 0) + 1;
     return acc;
   }, {});
   const catMax = Math.max(...Object.values(categoryMap), 1);
-  const CAT_COLORS = ["blue", "orange", "green", "purple", "red", "gray"];
+  const CAT_COLORS = ["blue","orange","green","purple","red","gray"];
 
-  // recent 8 tickets sorted by newest first
+  // recent 8
   const recentTickets = [...tickets]
     .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
     .slice(0, 8);
 
-  // search (title, ticket_number, employee name) + status filter
-  const statusOptions = ["All", "Open", "In Progress", "Pending", "Resolved", "Closed"];
+  // search + status filter
+  const statusOptions = ["All","Open","In Progress","Pending","Resolved","Closed"];
 
   const filteredTickets = tickets.filter(t => {
     const q = search.toLowerCase();
     const matchSearch =
       !search ||
-      ticketTitle(t).toLowerCase().includes(q) ||
+      ticketTitle(t).toLowerCase().includes(q)  ||
       ticketNumber(t).toLowerCase().includes(q) ||
       employeeName(t).toLowerCase().includes(q) ||
       categoryName(t).toLowerCase().includes(q);
-
     const matchStatus =
       filterStatus === "All" ||
       statusName(t).toLowerCase() === filterStatus.toLowerCase();
-
     return matchSearch && matchStatus;
   });
 
-  // greeting based on time of day
-  const hour     = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const hour      = new Date().getHours();
+  const greeting  = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const firstName = user.full_name?.split(" ")[0] ?? "Manager";
 
   return (
@@ -149,58 +145,46 @@ export default function ManagerDashboard() {
       {/* ── HEADER ── */}
       <div className="mgr-dashboard__header">
         <div>
-          <h1 className="mgr-dashboard__title">
-            {greeting}, {firstName} 👋
-          </h1>
+          <h1 className="mgr-dashboard__title">{greeting}, {firstName} 👋</h1>
           <p className="mgr-dashboard__subtitle">
             Here's what your team is working on today —{" "}
             <strong>{total}</strong> ticket{total !== 1 ? "s" : ""} total
           </p>
         </div>
-        <div className="mgr-dashboard__meta">
-          <span className="mgr-live-badge">
-            <span className="mgr-live-dot" />
-            Live
-          </span>
-        </div>
+        <span className="mgr-live-badge">
+          <span className="mgr-live-dot" />
+          Live
+        </span>
       </div>
 
-      {/* ── STATS ── */}
+      {/* ── STATS — 4 cards, clean grid ── */}
       <div className="mgr-stats-grid">
         <StatCard
-          label="Open Tickets"
-          value={openCount}
+          label="Active Tickets"
+          value={loading ? "…" : activeCount}
           icon="ti-folder-open"
           color="blue"
-          sub={`${total ? Math.round((openCount / total) * 100) : 0}% of total`}
+          sub={activeCount > 0
+            ? `${openCount} open · ${inProgCount} in progress`
+            : "No active tickets"}
         />
         <StatCard
           label="In Progress"
-          value={inProgCount}
+          value={loading ? "…" : inProgCount}
           icon="ti-loader"
           color="orange"
-          sub="Being worked on"
+          sub="Being worked on by agents"
         />
-
-        {/* ✅ ADDED NEW CARD */}
-        <StatCard
-          label="Active Tickets"
-          value={activeCount}
-          icon="ti-activity"
-          color="blue"
-          sub={`${openCount} open · ${inProgCount} in progress`}
-        />
-
         <StatCard
           label="Resolved"
-          value={resolvedCount}
+          value={loading ? "…" : resolvedCount}
           icon="ti-circle-check"
           color="green"
-          sub="Closed & resolved"
+          sub={`${total ? Math.round((resolvedCount / total) * 100) : 0}% resolution rate`}
         />
         <StatCard
           label="High / Critical"
-          value={highCount}
+          value={loading ? "…" : highCount}
           icon="ti-alert-triangle"
           color="red"
           sub={highCount > 0 ? "Needs attention" : "All clear"}
@@ -225,7 +209,6 @@ export default function ManagerDashboard() {
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
-
               <select
                 className="mgr-select"
                 value={filterStatus}
@@ -263,27 +246,25 @@ export default function ManagerDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTickets.map((t) => {
+                  {filteredTickets.map(t => {
                     const sName = statusName(t);
                     const pName = priorityName(t);
                     const date  = t.created_at
-                      ? new Date(t.created_at).toLocaleDateString("en-GB", {
-                          day: "2-digit", month: "short",
-                        })
+                      ? new Date(t.created_at).toLocaleDateString("en-GB", { day:"2-digit", month:"short" })
                       : "—";
-
                     return (
-                      <tr key={t.id} className="mgr-table__row">
+                      <tr
+                        key={t.id}
+                        className="mgr-table__row mgr-table__row--clickable"
+                        onClick={() => navigate(`/manager/team-tickets/${t.id}`)}
+                        title="Open ticket detail"
+                      >
                         <td className="mgr-table__id">{ticketNumber(t)}</td>
                         <td className="mgr-table__subject">{ticketTitle(t)}</td>
                         <td>{employeeName(t)}</td>
                         <td>{categoryName(t)}</td>
-                        <td>
-                          <Badge text={pName} colorKey={priorityColor(pName)} />
-                        </td>
-                        <td>
-                          <Badge text={sName} colorKey={statusColor(sName)} />
-                        </td>
+                        <td><Badge text={pName} colorKey={priorityColor(pName)} /></td>
+                        <td><Badge text={sName} colorKey={statusColor(sName)} /></td>
                         <td className="mgr-table__date">{date}</td>
                       </tr>
                     );
@@ -303,6 +284,23 @@ export default function ManagerDashboard() {
         {/* RIGHT SIDEBAR */}
         <div className="mgr-sidebar-col">
 
+          {/* Status breakdown */}
+          <div className="mgr-card">
+            <div className="mgr-card__header">
+              <h2 className="mgr-card__title">Status Breakdown</h2>
+            </div>
+            <div className="mgr-card__body">
+              {[
+                { label: "Open",        count: openCount,     color: "blue"   },
+                { label: "In Progress", count: inProgCount,   color: "orange" },
+                { label: "Pending",     count: pendingCount,  color: "purple" },
+                { label: "Resolved",    count: resolvedCount, color: "green"  },
+              ].map(({ label, count, color }) => (
+                <MiniBar key={label} label={label} count={count} max={total || 1} color={color} />
+              ))}
+            </div>
+          </div>
+
           {/* Category breakdown */}
           <div className="mgr-card">
             <div className="mgr-card__header">
@@ -315,19 +313,13 @@ export default function ManagerDashboard() {
                 Object.entries(categoryMap)
                   .sort((a, b) => b[1] - a[1])
                   .map(([cat, count], i) => (
-                    <MiniBar
-                      key={cat}
-                      label={cat}
-                      count={count}
-                      max={catMax}
-                      color={CAT_COLORS[i % CAT_COLORS.length]}
-                    />
+                    <MiniBar key={cat} label={cat} count={count} max={catMax} color={CAT_COLORS[i % CAT_COLORS.length]} />
                   ))
               )}
             </div>
           </div>
 
-          {/* Recent activity feed */}
+          {/* Recent activity */}
           <div className="mgr-card">
             <div className="mgr-card__header">
               <h2 className="mgr-card__title">Recent Activity</h2>
@@ -344,9 +336,7 @@ export default function ManagerDashboard() {
                     <div key={t.id} className="mgr-activity__item">
                       <span className={`mgr-activity__dot mgr-activity__dot--${statusColor(sName)}`} />
                       <div className="mgr-activity__text">
-                        <span className="mgr-activity__subject">
-                          {ticketTitle(t)}
-                        </span>
+                        <span className="mgr-activity__subject">{ticketTitle(t)}</span>
                         <span className="mgr-activity__meta">
                           {employeeName(t)} · <Badge text={sName} colorKey={statusColor(sName)} />
                         </span>

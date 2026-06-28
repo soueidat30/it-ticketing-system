@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   {
     group: "Communication",
     items: [
-      { to: "/manager/announcements", icon: "ti-speakerphone", label: "Announcements" },
+      
       { to: "/manager/notifications", icon: "ti-bell",         label: "Notifications" },
     ]
   },

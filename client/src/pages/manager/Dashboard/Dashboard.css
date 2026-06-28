@@ -1,17 +1,14 @@
 /* ─────────────────────────────────────────────
-   Manager Dashboard — Dashboard.css
-   Designed to work inside ManagerLayout's
-   .el__content area (already has padding).
+   Manager Dashboard.css
 ───────────────────────────────────────────── */
 
-/* === layout === */
 .mgr-dashboard {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-/* === header === */
+/* ── header ── */
 .mgr-dashboard__header {
   display: flex;
   align-items: flex-start;
@@ -32,13 +29,6 @@
   margin: 0;
 }
 
-.mgr-dashboard__meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 4px;
-}
-
 .mgr-live-badge {
   display: inline-flex;
   align-items: center;
@@ -49,6 +39,8 @@
   background: #dcfce7;
   padding: 4px 10px;
   border-radius: 99px;
+  flex-shrink: 0;
+  margin-top: 4px;
 }
 
 .mgr-live-dot {
@@ -64,7 +56,7 @@
   50%       { opacity: 0.5; transform: scale(1.3); }
 }
 
-/* === stats grid === */
+/* ── stats — always 4 columns ── */
 .mgr-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -98,17 +90,18 @@
   flex-shrink: 0;
 }
 
-/* color variants */
-.mgr-stat-card--blue   .mgr-stat-icon { background:#eff6ff; color:#2563eb; }
-.mgr-stat-card--orange .mgr-stat-icon { background:#fff7ed; color:#ea580c; }
-.mgr-stat-card--green  .mgr-stat-icon { background:#f0fdf4; color:#16a34a; }
-.mgr-stat-card--red    .mgr-stat-icon { background:#fef2f2; color:#dc2626; }
-.mgr-stat-card--purple .mgr-stat-icon { background:#faf5ff; color:#7c3aed; }
+.mgr-stat-card--blue   .mgr-stat-icon { background: #eff6ff; color: #2563eb; }
+.mgr-stat-card--orange .mgr-stat-icon { background: #fff7ed; color: #ea580c; }
+.mgr-stat-card--green  .mgr-stat-icon { background: #f0fdf4; color: #16a34a; }
+.mgr-stat-card--red    .mgr-stat-icon { background: #fef2f2; color: #dc2626; }
+.mgr-stat-card--purple .mgr-stat-icon { background: #faf5ff; color: #7c3aed; }
+.mgr-stat-card--gray   .mgr-stat-icon { background: #f3f4f6; color: #6b7280; }
 
 .mgr-stat-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .mgr-stat-value {
@@ -125,26 +118,23 @@
 }
 
 .mgr-stat-sub {
-  font-size: 0.72rem;
+  font-size: 0.71rem;
   color: #9ca3af;
   margin-top: 2px;
+  line-height: 1.3;
 }
 
-/* === body two-column layout === */
+/* ── body ── */
 .mgr-body-grid {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 300px;
   gap: 20px;
   align-items: start;
 }
 
-@media (max-width: 1024px) {
-  .mgr-body-grid {
-    grid-template-columns: 1fr;
-  }
-}
+@media (max-width: 1024px) { .mgr-body-grid { grid-template-columns: 1fr; } }
 
-/* === cards === */
+/* ── cards ── */
 .mgr-card {
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -184,14 +174,13 @@
   color: #9ca3af;
 }
 
-/* sidebar column stacks its cards */
 .mgr-sidebar-col {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
-/* === search + controls === */
+/* ── search + controls ── */
 .mgr-controls {
   display: flex;
   align-items: center;
@@ -199,9 +188,7 @@
   flex-wrap: wrap;
 }
 
-.mgr-search {
-  position: relative;
-}
+.mgr-search { position: relative; }
 
 .mgr-search__icon {
   position: absolute;
@@ -219,14 +206,11 @@
   border-radius: 8px;
   font-size: 0.82rem;
   outline: none;
-  width: 240px;
+  width: 220px;
   color: #111827;
   transition: border-color 0.15s;
 }
-
-.mgr-search__input:focus {
-  border-color: #6366f1;
-}
+.mgr-search__input:focus { border-color: #6366f1; }
 
 .mgr-select {
   padding: 7px 10px;
@@ -238,13 +222,10 @@
   cursor: pointer;
   outline: none;
 }
-
 .mgr-select:focus { border-color: #6366f1; }
 
-/* === table === */
-.mgr-table-wrapper {
-  overflow-x: auto;
-}
+/* ── table ── */
+.mgr-table-wrapper { overflow-x: auto; }
 
 .mgr-table {
   width: 100%;
@@ -252,9 +233,7 @@
   font-size: 0.84rem;
 }
 
-.mgr-table thead tr {
-  background: #f9fafb;
-}
+.mgr-table thead tr { background: #f9fafb; }
 
 .mgr-table th {
   text-align: left;
@@ -269,15 +248,18 @@
 }
 
 .mgr-table td {
-  padding: 13px 16px;
+  padding: 12px 16px;
   color: #374151;
   border-bottom: 1px solid #f3f4f6;
   vertical-align: middle;
 }
 
 .mgr-table__row:last-child td { border-bottom: none; }
-
 .mgr-table__row:hover td { background: #f9fafb; }
+
+/* clickable row bonus */
+.mgr-table__row--clickable { cursor: pointer; }
+.mgr-table__row--clickable:hover td { background: #f0f4ff; }
 
 .mgr-table__id {
   font-weight: 600;
@@ -287,7 +269,7 @@
 
 .mgr-table__subject {
   font-weight: 500;
-  max-width: 220px;
+  max-width: 200px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -299,7 +281,7 @@
   font-size: 0.78rem;
 }
 
-/* === badges === */
+/* ── badges ── */
 .mgr-badge {
   display: inline-block;
   padding: 3px 9px;
@@ -317,7 +299,7 @@
 .mgr-badge--purple { background: #faf5ff; color: #7c3aed; }
 .mgr-badge--gray   { background: #f3f4f6; color: #6b7280; }
 
-/* === mini bar chart === */
+/* ── mini bars ── */
 .mgr-minibar {
   display: flex;
   align-items: center;
@@ -326,7 +308,7 @@
 }
 
 .mgr-minibar__label {
-  flex: 0 0 100px;
+  flex: 0 0 90px;
   color: #374151;
   white-space: nowrap;
   overflow: hidden;
@@ -361,10 +343,8 @@
   color: #6b7280;
 }
 
-/* === activity feed === */
-.mgr-activity {
-  gap: 14px !important;
-}
+/* ── activity feed ── */
+.mgr-activity { gap: 14px !important; }
 
 .mgr-activity__item {
   display: flex;
@@ -408,7 +388,7 @@
   gap: 4px;
 }
 
-/* === loading / empty === */
+/* ── loading / empty ── */
 .mgr-loading {
   display: flex;
   align-items: center;
@@ -418,10 +398,7 @@
   font-size: 0.875rem;
 }
 
-.mgr-loading__icon {
-  animation: spin 1s linear infinite;
-}
-
+.mgr-loading__icon { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .mgr-empty {
@@ -433,28 +410,10 @@
   color: #9ca3af;
   font-size: 0.875rem;
 }
-
 .mgr-empty i { font-size: 2rem; }
 
 .mgr-empty-text {
   font-size: 0.82rem;
   color: #9ca3af;
   margin: 0;
-}
-
-.mgr-stat-card--teal .mgr-stat-icon {
-  background: #ecfeff;
-  color: #0891b2;
-}
-.mgr-stat-card--teal {
-  border-left: 4px solid #0891b2;
-}
-
-.mgr-stat-card--teal .mgr-stat-icon {
-  animation: pulseSoft 2s infinite;
-}
-
-@keyframes pulseSoft {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
 }
