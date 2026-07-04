@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { RoleLanguageProvider } from "../contexts/RoleScopedLanguageContext";
 import "./AdminLayout.css";
 import { useTheme } from "../context/ThemeContext";
 import "../context/theme.css";
@@ -46,7 +47,15 @@ const NAV_ITEMS = [
   },
 ];
 
-const AdminLayout = () => {
+export default function AdminLayout() {
+  return (
+    <RoleLanguageProvider role="admin">
+      <AdminLayoutInner />
+    </RoleLanguageProvider>
+  );
+}
+
+const AdminLayoutInner = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,6 +68,9 @@ const AdminLayout = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("language");
+    document.documentElement.lang = "en";
+    document.documentElement.dir = "ltr";
     navigate("/");
   };
 
@@ -219,7 +231,5 @@ const AdminLayout = () => {
       </div>
     </div>
   );
-};
-
-export default AdminLayout;
+}
 

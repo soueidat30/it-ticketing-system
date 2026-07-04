@@ -1,13 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useLanguage, SUPPORTED_LANGUAGES } from "../contexts/LanguageContext";
+import { RoleLanguageProvider, useLanguage, SUPPORTED_LANGUAGES } from "../contexts/RoleScopedLanguageContext";
 import AIChatbot from "../components/common/AIChatbot/AIChatbot";
 import "./EmployeeLayout.css";
 
-const EmployeeLayout = () => {
+export default function EmployeeLayout() {
+  return (
+    <RoleLanguageProvider role="employee">
+      <EmployeeLayoutInner />
+    </RoleLanguageProvider>
+  );
+}
+
+function EmployeeLayoutInner() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, lang, setLang, isRTL, currentLang } = useLanguage();
+  const { t, language: lang, setLanguage: setLang } = useLanguage();
+  const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === lang) || SUPPORTED_LANGUAGES[0];
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notifCount]  = useState(2);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -68,7 +78,10 @@ const EmployeeLayout = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/");
+    localStorage.removeItem("language");
+    document.documentElement.lang = "en";
+    document.documentElement.dir = "ltr";
+    navigate("/" );
   };
 
   const currentItem = NAV_ITEMS.flatMap(g => g.items)
@@ -248,6 +261,4 @@ const EmployeeLayout = () => {
       </div>
     </div>
   );
-};
-
-export default EmployeeLayout;
+}

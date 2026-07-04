@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "./UserManagement.css";
 
 import {
@@ -59,7 +59,7 @@ export default function UserManagement() {
   const toggleSelectAll = () =>
     setSelectedUsers(allSelected ? [] : filteredUsers.map((u) => u.id));
 
-  const fetchAll = async (opts = {}) => {
+  const fetchAll = useCallback(async (opts = {}) => {
     if (!token) return;
     setIsLoading(true);
     setErrorMsg("");
@@ -78,42 +78,36 @@ export default function UserManagement() {
         role: roleName,
         department: departmentName,
         status: statusName,
-        page: 1,
         perPage: 50,
       });
 
-      // ── FIX: handle all common Laravel/Axios response shapes ──────────
-      // API returns: { users: [...], pagination: {...} }
-      const apiUsers =
-        data?.users ??
-        data?.data?.users ??
-        (Array.isArray(data?.data) ? data.data : null) ??
-        (Array.isArray(data) ? data : []);
+      const normalizeUsers = (payload) => {
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.data)) return payload.data;
+        if (Array.isArray(payload?.users)) return payload.users;
+        if (Array.isArray(payload?.users?.data)) return payload.users.data;
+        return [];
+      };
 
-      setUsers(Array.isArray(apiUsers) ? apiUsers : []);
+      const normalizePagination = (payload) => {
+        const meta = payload?.pagination ?? payload?.data?.pagination ?? payload?.users?.pagination ?? {};
+        return {
+          current_page: meta.current_page ?? meta.currentPage ?? 1,
+          last_page: meta.last_page ?? meta.lastPage ?? 1,
+          total: meta.total ?? 0,
+        };
+      };
 
-      // Ensure pagination.total reflects server total (not current page length)
-      setPagination({
-        current_page:
-          data?.pagination?.current_page ??
-          data?.data?.pagination?.current_page ??
-          1,
-        last_page:
-          data?.pagination?.last_page ??
-          data?.data?.pagination?.last_page ??
-          1,
-        total:
-          data?.pagination?.total ??
-          data?.data?.pagination?.total ??
-          (Array.isArray(apiUsers) ? apiUsers.length : 0),
-      });
+      const apiUsers = normalizeUsers(data);
+      setUsers(apiUsers);
+      setPagination(normalizePagination(data));
     } catch (e) {
       setErrorMsg(e?.message || "Failed to load users.");
       setUsers([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -138,15 +132,15 @@ export default function UserManagement() {
   useEffect(() => {
     // Avoid directly calling setState via fetchAll during effect render.
     // We run it in the microtask queue.
-    Promise.resolve().then(() =>
+      Promise.resolve().then(() =>
       fetchAll({
-        search: searchQuery,
+        search: searchQuery || undefined,
         role: roleFilter,
         department: deptFilter,
         status: statusFilter,
       })
     );
-  }, [searchQuery, roleFilter, deptFilter, statusFilter, token]);
+  }, [fetchAll, searchQuery, roleFilter, deptFilter, statusFilter, token]);
 
   // ── Modal helpers ────────────────────────────────────────────────────
   const openCreateModal = () => {

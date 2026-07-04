@@ -11,7 +11,11 @@ export const SUPPORTED_LANGUAGES = [
 ];
 
 // Languages that should flip the whole layout to right-to-left.
-const RTL_LANGUAGES = SUPPORTED_LANGUAGES.filter(l => l.code === "ar").map(l => l.code);
+const RTL_LANGUAGES = SUPPORTED_LANGUAGES.filter((l) => l.code === "ar").map((l) => l.code);
+
+const ROLE_LANGUAGE_KEY = (role) => `language:${role}`;
+const GLOBAL_LANGUAGE_KEY = "language";
+
 
 const LanguageContext = createContext(null);
 

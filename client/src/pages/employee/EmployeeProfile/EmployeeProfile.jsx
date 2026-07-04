@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import "./EmployeeProfile.css";
-import { useLanguage } from "../../../contexts/LanguageContext";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 
 const BASE = "http://127.0.0.1:8000/api";
 

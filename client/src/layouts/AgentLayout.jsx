@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
-import { useLanguage } from "../contexts/LanguageContext";
+import { useLanguage, RoleLanguageProvider } from "../contexts/RoleScopedLanguageContext";
 
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
@@ -81,6 +81,14 @@ function LanguageToggle() {
 }
 
 export default function AgentLayout() {
+  return (
+    <RoleLanguageProvider role="agent">
+      <AgentLayoutInner />
+    </RoleLanguageProvider>
+  );
+}
+
+function AgentLayoutInner() {
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen] = useState(false);
@@ -109,6 +117,7 @@ export default function AgentLayout() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    // Do NOT touch other roles. Language will be re-applied by the active role layout.
     navigate("/", { replace: true });
   };
 

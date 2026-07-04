@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { RoleLanguageProvider } from "../contexts/RoleScopedLanguageContext";
 import "./ManagerLayout.css";
 
 const NAV_ITEMS = [
@@ -29,6 +30,14 @@ const NAV_ITEMS = [
 ];
 
 export default function ManagerLayout() {
+  return (
+    <RoleLanguageProvider role="manager">
+      <ManagerLayoutInner />
+    </RoleLanguageProvider>
+  );
+}
+
+function ManagerLayoutInner() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -46,6 +55,9 @@ export default function ManagerLayout() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("language");
+    document.documentElement.lang = "en";
+    document.documentElement.dir = "ltr";
     navigate("/");
   };
 

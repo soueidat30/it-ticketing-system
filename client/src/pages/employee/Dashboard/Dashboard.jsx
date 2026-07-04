@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLanguage } from "../../../contexts/LanguageContext";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./Dashboard.css";
 import { getMyTickets } from "../../../services/ticketService";
 

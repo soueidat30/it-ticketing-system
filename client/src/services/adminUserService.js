@@ -18,21 +18,36 @@ export const getDepartments = async () => {
   return res.json();
 };
 
-export const getAdminUsers = async (token, filters = {}) => {
+export const getAdminUsers = async (_token, filters = {}) => {
   const params = new URLSearchParams();
+
+  // Backend expects: search, department, status, role (name)
   if (filters.search) params.set("search", filters.search);
-  if (filters.department && filters.department !== "All") params.set("department", filters.department);
-  if (filters.status && filters.status !== "All") params.set("status", filters.status);
-  if (filters.role && filters.role !== "All") params.set("role", filters.role);
-  if (filters.perPage) params.set("per_page", String(filters.perPage));
-  if (filters.page) params.set("page", String(filters.page));
+  if (filters.department && filters.department !== "All") {
+    params.set("department", filters.department);
+  }
+  if (filters.status && filters.status !== "All") {
+    params.set("status", filters.status);
+  }
+  if (filters.role && filters.role !== "All") {
+    params.set("role", filters.role);
+  }
 
-  const res = await authFetch(`${BASE}/admin/users?${params.toString()}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
+  const perPage = filters.perPage || 50;
+  params.set("per_page", String(perPage));
 
-  const data = await res.json().catch(() => ({}));
+  const queryString = params.toString();
+  const res = await authFetch(
+    `${BASE}/admin/users${queryString ? `?${queryString}` : ""}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+
+  // Important: always return JSON on 200, even if body is unexpected.
+  const text = await res.text().catch(() => "");
+  const data = text ? JSON.parse(text) : {};
   if (!res.ok) throw data;
   return data;
 };
