@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../contexts/LanguageContext";
 
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
@@ -46,21 +47,35 @@ const API_URL = "http://127.0.0.1:8000/api";
 
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
-
-
-
-
+  const { t } = useLanguage();
 
   return (
     <button
-
       type="button"
       className="agent-topbar__action-btn"
       onClick={toggleTheme}
-      aria-label="Toggle dark mode"
-      title="Toggle theme"
+      aria-label={t("topbar.toggleTheme")}
+      title={t("topbar.toggleTheme")}
     >
       {theme === "dark" ? "🌙" : "☀️"}
+    </button>
+  );
+}
+
+// Simple EN/AR toggle pill — matches the visual weight of ThemeToggle
+// so the two sit naturally side by side in the topbar.
+function LanguageToggle() {
+  const { language, toggleLanguage, t } = useLanguage();
+
+  return (
+    <button
+      type="button"
+      className="agent-topbar__action-btn agent-topbar__lang-btn"
+      onClick={toggleLanguage}
+      aria-label={t("topbar.toggleLanguage")}
+      title={t("topbar.toggleLanguage")}
+    >
+      {language === "en" ? "EN" : "AR"}
     </button>
   );
 }
@@ -74,6 +89,7 @@ export default function AgentLayout() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, isRTL } = useLanguage();
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const initials = (user.full_name || user.username || "AG")
@@ -123,7 +139,7 @@ export default function AgentLayout() {
   }, []);
 
   return (
-    <div className="agent-shell">
+    <div className={`agent-shell${isRTL ? " agent-shell--rtl" : ""}`}>
 
       <aside
         className={`agent-sidebar${collapsed ? " collapsed" : ""}${mobileOpen ? " mobile-open" : ""}`}
@@ -133,14 +149,14 @@ export default function AgentLayout() {
             <Icon d={Icons.support} />
           </div>
           <div className="agent-sidebar__brand-text">
-            <span className="agent-sidebar__brand-name">Tickora</span>
-            <span className="agent-sidebar__brand-role">Agent Portal</span>
+            <span className="agent-sidebar__brand-name">{t("sidebar.brandName")}</span>
+            <span className="agent-sidebar__brand-role">{t("sidebar.agentPortal")}</span>
           </div>
         </a>
 
         <nav className="agent-sidebar__nav">
           <div className="agent-sidebar__nav-group">
-            <div className="agent-sidebar__nav-label">Overview</div>
+            <div className="agent-sidebar__nav-label">{t("sidebar.overview")}</div>
             <NavLink
               to="/agent/dashboard"
               className={({ isActive }) =>
@@ -150,12 +166,12 @@ export default function AgentLayout() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.dashboard} />
               </span>
-              <span className="agent-nav-label">Dashboard</span>
+              <span className="agent-nav-label">{t("sidebar.dashboard")}</span>
             </NavLink>
           </div>
 
           <div className="agent-sidebar__nav-group">
-            <div className="agent-sidebar__nav-label">Tickets</div>
+            <div className="agent-sidebar__nav-label">{t("sidebar.tickets")}</div>
 
             <NavLink
               to="/agent/assigned-tickets"
@@ -166,7 +182,7 @@ export default function AgentLayout() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.assigned} />
               </span>
-              <span className="agent-nav-label">Assigned Tickets</span>
+              <span className="agent-nav-label">{t("sidebar.assignedTickets")}</span>
               <span className="agent-nav-badge">{assignedCount}</span>
             </NavLink>
 
@@ -179,7 +195,7 @@ export default function AgentLayout() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.ticket} />
               </span>
-              <span className="agent-nav-label">Ticket Details</span>
+              <span className="agent-nav-label">{t("sidebar.ticketDetails")}</span>
             </NavLink>
 
             <NavLink
@@ -191,7 +207,7 @@ export default function AgentLayout() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.update} />
               </span>
-              <span className="agent-nav-label">Update Status</span>
+              <span className="agent-nav-label">{t("sidebar.updateStatus")}</span>
             </NavLink>
 
             <NavLink
@@ -203,12 +219,12 @@ export default function AgentLayout() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.resolve} />
               </span>
-              <span className="agent-nav-label">Resolve Ticket</span>
+              <span className="agent-nav-label">{t("sidebar.resolveTicket")}</span>
             </NavLink>
           </div>
 
           <div className="agent-sidebar__nav-group">
-            <div className="agent-sidebar__nav-label">Activity</div>
+            <div className="agent-sidebar__nav-label">{t("sidebar.activity")}</div>
 
             <NavLink
               to="/agent/comments"
@@ -219,7 +235,7 @@ export default function AgentLayout() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.comments} />
               </span>
-              <span className="agent-nav-label">Comments</span>
+              <span className="agent-nav-label">{t("sidebar.comments")}</span>
             </NavLink>
 
             <NavLink
@@ -231,12 +247,12 @@ export default function AgentLayout() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.history} />
               </span>
-              <span className="agent-nav-label">History</span>
+              <span className="agent-nav-label">{t("sidebar.history")}</span>
             </NavLink>
           </div>
 
           <div className="agent-sidebar__nav-group">
-            <div className="agent-sidebar__nav-label">Account</div>
+            <div className="agent-sidebar__nav-label">{t("sidebar.account")}</div>
             <NavLink
               to="/agent/profile"
               className={({ isActive }) =>
@@ -246,7 +262,7 @@ export default function AgentLayout() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.profile} />
               </span>
-              <span className="agent-nav-label">Profile</span>
+              <span className="agent-nav-label">{t("sidebar.profile")}</span>
             </NavLink>
           </div>
         </nav>
@@ -256,7 +272,7 @@ export default function AgentLayout() {
             <span className="agent-nav-icon">
               <Icon d={Icons.logout} />
             </span>
-            <span className="agent-nav-label">Logout</span>
+            <span className="agent-nav-label">{t("sidebar.logout")}</span>
           </button>
         </div>
       </aside>
@@ -272,7 +288,7 @@ export default function AgentLayout() {
 
       <header className="agent-topbar">
         <div className="agent-topbar__breadcrumb">
-          <span>Agent</span>
+          <span>{t("topbar.breadcrumbRoot")}</span>
           <span className="agent-topbar__breadcrumb-sep">›</span>
           <span className="agent-topbar__breadcrumb-current">{crumb}</span>
         </div>
@@ -289,17 +305,16 @@ export default function AgentLayout() {
           >
             <path d={Icons.search} />
           </svg>
-          <input type="text" placeholder="Search tickets…" />
+          <input type="text" placeholder={t("common.searchTickets")} />
         </div>
 
         <div className="agent-topbar__actions">
           <NotificationPanel />
 
+          <LanguageToggle />
           <ThemeToggle />
 
           <div className="agent-topbar__user">
-
-
             <div className="agent-topbar__user-avatar">{initials}</div>
             <span className="agent-topbar__user-name">{displayName}</span>
           </div>

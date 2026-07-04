@@ -1,11 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+ import { useEffect, useState, useRef } from "react";
 import { getAllTickets } from "../../../services/ticketService";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import "./Report.css";
 

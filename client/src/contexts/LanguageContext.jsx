@@ -1,61 +1,68 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { en } from "../locales/en";
-import { ar } from "../locales/ar";
-import { fr } from "../locales/fr";
+import { createContext, useContext, useEffect, useState } from "react";
+import en from "../translations/en.json";
+import ar from "../translations/ar.json";
 
-const LOCALES = { en, ar, fr };
+const TRANSLATIONS = { en, ar };
 
+// Languages that should flip the whole layout to right-to-left.
 export const SUPPORTED_LANGUAGES = [
-  { code: "en", label: "EN", name: "English",  dir: "ltr", flag: "🇬🇧" },
-  { code: "ar", label: "عر", name: "العربية",  dir: "rtl", flag: "🇱🇧" },
-  { code: "fr", label: "FR", name: "Français", dir: "ltr", flag: "🇫🇷" },
+  { code: "en", name: "English", flag: "🇬🇧" },
+  { code: "ar", name: "العربية", flag: "🇸🇦" },
 ];
+
+// Languages that should flip the whole layout to right-to-left.
+const RTL_LANGUAGES = SUPPORTED_LANGUAGES.filter(l => l.code === "ar").map(l => l.code);
 
 const LanguageContext = createContext(null);
 
+const getNested = (obj, path) =>
+  path.split(".").reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj);
+
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState(() => {
-    return localStorage.getItem("lang") || "en";
-  });
+  const [language, setLanguageState] = useState(
+    () => localStorage.getItem("language") || "en"
+  );
+
+  const isRTL = RTL_LANGUAGES.includes(language);
 
   useEffect(() => {
-    const info = SUPPORTED_LANGUAGES.find(l => l.code === lang) ?? SUPPORTED_LANGUAGES[0];
-    document.documentElement.setAttribute("lang", lang);
-    document.documentElement.setAttribute("dir", info.dir);
-    localStorage.setItem("lang", lang);
-  }, [lang]);
+    localStorage.setItem("language", language);
+    document.documentElement.lang = language;
+    document.documentElement.dir = isRTL ? "rtl" : "ltr";
+  }, [language, isRTL]);
 
-  const t = (key) => {
-    const dict = LOCALES[lang] ?? LOCALES.en;
-    const parts = key.split(".");
-    let val = dict;
-    for (const p of parts) {
-      if (val == null) break;
-      val = val[p];
-    }
-    if (val != null) return val;
-
-    let fallback = LOCALES.en;
-    for (const p of parts) {
-      if (fallback == null) break;
-      fallback = fallback[p];
-    }
-    return fallback ?? key;
+  const setLanguage = (lang) => {
+    if (TRANSLATIONS[lang]) setLanguageState(lang);
   };
 
-  const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === lang) ?? SUPPORTED_LANGUAGES[0];
-  const isRTL = currentLang.dir === "rtl";
+  const toggleLanguage = () => {
+    setLanguageState((prev) => (prev === "en" ? "ar" : "en"));
+  };
+
+  // t("agent.dashboard.title") -> looks up nested key in the active
+  // translation file. Falls back to English, then to the key itself,
+  // so a missing translation never crashes the UI — it just shows the
+  // raw key, which is easy to spot while filling translations in.
+  const t = (key, vars = {}) => {
+    let str = getNested(TRANSLATIONS[language], key);
+    if (str === undefined) str = getNested(TRANSLATIONS.en, key);
+    if (str === undefined) return key;
+
+    return Object.keys(vars).reduce(
+      (acc, varKey) => acc.replace(`{{${varKey}}}`, vars[varKey]),
+      str
+    );
+  };
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t, isRTL, currentLang }}>
+    <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage, isRTL, t }}>
       {children}
     </LanguageContext.Provider>
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-export const useLanguage = () => {
+export function useLanguage() {
   const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error("useLanguage must be used inside <LanguageProvider>");
+  if (!ctx) throw new Error("useLanguage must be used within a LanguageProvider");
   return ctx;
-};
+}

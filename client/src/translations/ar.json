@@ -1,0 +1,93 @@
+{
+  "common": {
+    "loading": "جاري التحميل",
+    "save": "حفظ",
+    "cancel": "إلغاء"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "tickets": "التذاكر",
+    "users": "المستخدمون",
+    "reports": "التقارير"
+  },
+  "employee": {
+    "portalName": "بوابة الموظف",
+    "nav": {
+      "groupWorkspace": "مساحة العمل",
+      "groupResources": "الموارد",
+      "groupAccount": "الحساب",
+      "dashboard": "لوحة التحكم",
+      "myTickets": "تذاكري",
+      "createTicket": "إنشاء تذكرة",
+      "knowledgeBase": "قاعدة المعرفة",
+      "announcements": "الإعلانات",
+      "profile": "الملف الشخصي",
+      "notification": "الإشعارات"
+    },
+    "breadcrumbRoot": "الموظف",
+    "searchPlaceholder": "البحث عن التذاكر...",
+    "role": "موظف",
+    "staff": "طاقم العمل",
+    "logout": "تسجيل الخروج",
+    "darkMode": "التبديل إلى الوضع الداكن",
+    "lightMode": "التبديل إلى الوضع الفاتح",
+    "language": "اللغة"
+  },
+  "dashboard": {
+    "greetingPrefix": "اهلا بعودتك,",
+    "greetingFallback": "بك",
+    "subtitle": "أنشئ طلبات الدعم وتابعها.",
+    "newTicket": "تذكرة جديدة",
+    "stats": {
+      "open": "التذاكر المفتوحة",
+      "resolved": "التذاكر المحلولة",
+      "pending": "التذاكر المعلقة",
+      "total": "إجمالي التذاكر"
+    },
+    "charts": {
+      "statusBreakdown": "توزيع الحالة",
+      "byCategory": "حسب الفئة",
+      "ticketsOverTime": "التذاكر عبر الزمن (14 يومًا)",
+      "ticketsUnit": "تذاكر",
+      "noTicketsYet": "لا توجد تذاكر بعد",
+      "created": "تم الإنشاء",
+      "resolved": "تم الحل"
+    },
+    "table": {
+      "title": "تذاكري",
+      "viewAll": "عرض الكل",
+      "ticketId": "رقم التذكرة",
+      "subject": "الموضوع",
+      "category": "الفئة",
+      "priority": "الأولوية",
+      "status": "الحالة",
+      "updated": "آخر تحديث",
+      "loading": "جارٍ تحميل التذاكر…",
+      "empty": "لا توجد تذاكر"
+    },
+    "tabs": {
+      "all": "الكل",
+      "open": "مفتوحة",
+      "pending": "معلقة",
+      "resolved": "محلولة",
+      "closed": "مغلقة"
+    },
+    "cta": {
+      "title": "إنشاء تذكرة جديدة",
+      "subtitle": "تحتاج مساعدة؟ أرسل طلبًا جديدًا"
+    },
+    "resources": {
+      "title": "موارد مفيدة",
+      "resetPassword": "كيفية إعادة تعيين كلمة المرور",
+      "emailIssues": "حل مشاكل عدم استلام البريد الإلكتروني",
+      "vpnGuide": "دليل الاتصال بـ VPN",
+      "allArticles": "جميع مقالات المساعدة"
+    },
+    "announcement": {
+      "title": "صيانة النظام",
+      "text": "ستجرى صيانة النظام في 25 مايو 2025 من الساعة 12:00 صباحًا حتى 2:00 صباحًا.",
+      "viewDetails": "عرض التفاصيل"
+    }
+  }
+}
+
