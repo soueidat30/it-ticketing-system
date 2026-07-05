@@ -13,6 +13,7 @@ function norm(v) {
   return v == null ? "" : String(v).toLowerCase();
 }
 
+
 function computeActionStyle(action) {
   // No hardcoded action arrays; derive style heuristically from action string.
   const a = norm(action);
@@ -26,19 +27,6 @@ function computeActionStyle(action) {
   if (a.includes("delete") || a.includes("remove")) return { icon: "ti-trash", color: "orange" };
   if (a.includes("login")) return { icon: "ti-lock-exclamation", color: "red" };
   return { icon: "ti-point", color: "slate" };
-}
-
-function roleToClass(role) {
-  const r = norm(role).replace(/_/g, " ").trim();
-  const map = {
-    admin: "role-admin",
-    system: "role-system",
-    agent: "role-agent",
-    manager: "role-manager",
-    "end user": "role-end-user",
-    "end-user": "role-end-user",
-  };
-  return map[r] ?? "";
 }
 
 export default function ActivityLogs() {
@@ -189,10 +177,47 @@ export default function ActivityLogs() {
           <h1 className="log-title">Activity Logs</h1>
           <p className="log-subtitle">Full audit trail of all system and user actions</p>
         </div>
-        <button className="export-button" type="button" disabled>
+        <button
+          className="export-button"
+          type="button"
+          onClick={async () => {
+            if (!token) return;
+            const params = new URLSearchParams();
+            if (selectedModule !== DEFAULT_FILTERS.module) params.set("module", selectedModule);
+            if (selectedSeverity !== DEFAULT_FILTERS.severity) params.set("severity", selectedSeverity);
+            if (searchQuery.trim()) params.set("search", searchQuery.trim());
+
+            const url = `${"http://127.0.0.1:8000/api"}/admin/activity-logs/export/csv${params.toString() ? `?${params.toString()}` : ""}`;
+
+            const res = await fetch(url, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "text/csv",
+              },
+            });
+
+            if (!res.ok) {
+              // eslint-disable-next-line no-console
+              console.error("Export CSV failed", res.status);
+              return;
+            }
+
+            const blob = await res.blob();
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.download = `activity-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(downloadUrl);
+          }}
+          disabled={!token || (!filteredActivities.length && !loading)}
+        >
           <i className="ti ti-download" /> Export CSV
         </button>
       </div>
+
 
       <div className="stats-summary">
         <div className="stat-card">

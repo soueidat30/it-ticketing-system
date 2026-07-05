@@ -8,10 +8,8 @@ use Illuminate\Http\Request;
 
 class ActivityLogController extends Controller
 {
-    public function index(Request $request)
+    private function applyFilters($query, Request $request)
     {
-        $query = ActivityLog::query()->orderByDesc('created_at');
-
         // Optional filters
         if ($request->filled('module')) {
             $query->where('module', $request->string('module')->toString());
@@ -34,6 +32,14 @@ class ActivityLogController extends Controller
             });
         }
 
+        return $query;
+    }
+
+    public function index(Request $request)
+    {
+        $query = ActivityLog::query()->orderByDesc('created_at');
+
+        $this->applyFilters($query, $request);
 
         $hasSeverity = ActivityLog::query()->getModel()->getConnection()
             ->getSchemaBuilder()
@@ -46,7 +52,6 @@ class ActivityLogController extends Controller
             'danger' => $hasSeverity ? ActivityLog::where('severity', 'danger')->count() : 0,
         ];
 
-
         $logs = $query->with(['user', 'ticket'])->latest()->paginate(50);
 
         $logs->getCollection()->transform(function ($log) {
@@ -57,7 +62,7 @@ class ActivityLogController extends Controller
                 'action' => $log->action,
                 'target' => $log->ticket?->ticket_number ?? 'System',
                 'detail' => $log->description,
-'module' => $log->module ?: 'Tickets',
+                'module' => $log->module ?: 'Tickets',
                 'severity' => $log->severity ?: 'info',
                 'affected_ticket' => $log->affected_ticket ?: ($log->ticket?->ticket_number ? "Ticket #{$log->ticket->ticket_number}" : 'Unknown'),
                 'time' => optional($log->created_at)->diffForHumans(),
@@ -75,6 +80,58 @@ class ActivityLogController extends Controller
             ],
         ]);
     }
+
+    public function exportCsv(Request $request)
+    {
+        $query = ActivityLog::query()->orderByDesc('created_at');
+        $this->applyFilters($query, $request);
+
+        $logs = $query->with(['user', 'ticket'])->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="activity-logs-'.date('Y-m-d').'.csv"',
+        ];
+
+        $callback = function () use ($logs) {
+            $out = fopen('php://output', 'w');
+
+            fputcsv($out, [
+                'ID',
+                'Actor',
+                'Actor Role',
+                'Action',
+                'Target',
+                'Detail',
+                'Module',
+                'Severity',
+                'Affected Ticket',
+                'Time',
+                'Date',
+            ]);
+
+            foreach ($logs as $log) {
+                fputcsv($out, [
+                    $log->id,
+                    $log->user?->full_name ?? 'System',
+                    ucfirst($log->user?->role ?? 'System'),
+                    $log->action ?? '',
+                    $log->ticket?->ticket_number ?? 'System',
+                    $log->description ?? '',
+                    $log->module ?: 'Tickets',
+                    $log->severity ?: 'info',
+                    $log->affected_ticket ?: ($log->ticket?->ticket_number ? "Ticket #{$log->ticket->ticket_number}" : 'Unknown'),
+                    optional($log->created_at)->diffForHumans() ?? '',
+                    optional($log->created_at)->format('M d, Y h:i A') ?? '',
+                ]);
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }
+
 
 

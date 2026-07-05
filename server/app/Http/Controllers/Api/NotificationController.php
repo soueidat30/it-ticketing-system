@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class NotificationController extends Controller
 {
     /**
-     * GET /api/notifications
+     * GET /api/notifications (user-scoped)
      */
     public function index(Request $request)
     {
@@ -27,7 +27,6 @@ class NotificationController extends Controller
                     ->get()
             );
         } catch (\Throwable $e) {
-            // Return diagnostic info instead of a hard 500.
             return response()->json([
                 'message' => 'Failed to load notifications',
                 'debug' => [
@@ -37,9 +36,6 @@ class NotificationController extends Controller
             ], 500);
         }
     }
-
-
-
 
     /**
      * GET /api/notifications/unread-count
@@ -96,6 +92,91 @@ class NotificationController extends Controller
     }
 
     /**
+     * GET /api/admin/notifications (admin-scoped: returns everything)
+     */
+    public function adminIndex(Request $request)
+    {
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+                return response()->json([]);
+            }
+
+            return response()->json(
+                Notification::with(['ticket', 'triggeredBy'])
+                    ->orderByDesc('created_at')
+                    ->get()
+            );
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to load admin notifications',
+                'debug' => [
+                    'error' => class_basename($e),
+                    'detail' => $e->getMessage(),
+                ],
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /api/notifications/{id}/unread (user-scoped)
+     */
+    public function markUnread(Request $request, $id)
+    {
+        $notification = Notification::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $notification->update([
+            'is_read' => false,
+            'read_at' => null,
+        ]);
+
+        return response()->json(['message' => 'Marked as unread']);
+    }
+
+    /**
+     * PATCH /api/admin/notifications/{id}/read (admin-scoped)
+     */
+    public function adminMarkRead(Request $request, $id)
+    {
+        $notification = Notification::where('id', $id)->firstOrFail();
+
+        $notification->update([
+            'is_read' => true,
+            'read_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Marked as read']);
+    }
+
+    /**
+     * PATCH /api/admin/notifications/{id}/unread (admin-scoped)
+     */
+    public function adminMarkUnread(Request $request, $id)
+    {
+        $notification = Notification::where('id', $id)->firstOrFail();
+
+        $notification->update([
+            'is_read' => false,
+            'read_at' => null,
+        ]);
+
+        return response()->json(['message' => 'Marked as unread']);
+    }
+
+    /**
+     * DELETE /api/admin/notifications/{id} (admin-scoped)
+     */
+    public function adminDestroy(Request $request, $id)
+    {
+        Notification::where('id', $id)->firstOrFail()->delete();
+
+        return response()->json(['message' => 'Notification deleted']);
+    }
+
+
+
+    /**
      * Static helper — call from other controllers to create notifications.
      */
     public static function notify(
@@ -107,13 +188,14 @@ class NotificationController extends Controller
         string $message
     ): Notification {
         return Notification::create([
-            'user_id'      => $user_id,
-            'ticket_id'    => $ticket_id,
+            'user_id' => $user_id,
+            'ticket_id' => $ticket_id,
             'triggered_by' => $triggered_by,
-            'type'         => $type,
-            'title'        => $title,
-            'message'      => $message,
-            'is_read'      => false,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'is_read' => false,
         ]);
     }
 }
+

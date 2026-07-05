@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./StatusManagement.css";
 
 const BASE_URL = "http://127.0.0.1:8000/api";
@@ -144,6 +144,14 @@ export default function StatusManagement() {
     [token]
   );
 
+  const handleAuthError = (statusCode) => {
+    if (statusCode !== 401) return false;
+
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+    return true;
+  };
+
   const showToast = (message) => {
     setToast(message);
 
@@ -162,6 +170,7 @@ export default function StatusManagement() {
       const data = await response.json().catch(() => []);
 
       if (!response.ok) {
+        if (handleAuthError(response.status)) return null;
         throw new Error(data?.message || "Request failed.");
       }
 
@@ -203,25 +212,36 @@ export default function StatusManagement() {
     };
   }, [headers]);
 
-  const statusTicketCount = (status) => {
-    const statusId = String(getStatusId(status) ?? "");
-    const statusName = ns(getStatusName(status));
-
-    return tickets.filter((ticket) => {
-      const ticketStatusId = ticket.status_id ?? ticket.status?.id;
-      const ticketStatusName =
-        ticket.status?.status_name ?? ticket.status_name ?? ticket.status;
-
-      if (
-        ticketStatusId !== null &&
-        ticketStatusId !== undefined &&
-        String(ticketStatusId) === statusId
-      ) {
-        return true;
+  const statusTicketCount = useCallback(
+    (status) => {
+      if (typeof status.tickets_count === "number") {
+        return status.tickets_count;
       }
 
-      return ns(ticketStatusName) === statusName;
-    }).length;
+      const statusId = String(getStatusId(status) ?? "");
+      const statusName = ns(getStatusName(status));
+
+      return tickets.filter((ticket) => {
+        const ticketStatusId = ticket.status_id ?? ticket.status?.id;
+        const ticketStatusName =
+          ticket.status?.status_name ?? ticket.status_name ?? ticket.status;
+
+        if (
+          ticketStatusId !== null &&
+          ticketStatusId !== undefined &&
+          String(ticketStatusId) === statusId
+        ) {
+          return true;
+        }
+
+        return ns(ticketStatusName) === statusName;
+      }).length;
+    },
+    [tickets]
+  );
+
+  const statusHistoryCount = (status) => {
+    return Number(status.histories_count ?? status.history_count ?? 0);
   };
 
   const stats = useMemo(() => {
@@ -236,7 +256,7 @@ export default function StatusManagement() {
       inactive,
       used,
     };
-  }, [statuses, tickets]);
+  }, [statuses, statusTicketCount]);
 
   const filteredStatuses = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -270,7 +290,7 @@ export default function StatusManagement() {
 
         return 0;
       });
-  }, [statuses, search, activeFilter, sort, tickets]);
+  }, [statuses, search, activeFilter, sort, statusTicketCount]);
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -371,7 +391,7 @@ export default function StatusManagement() {
           : {
               ...(editingStatus ?? {}),
               ...body,
-              id: editingStatus?.id ?? Date.now(),
+              id: editingStatus?.id ?? 0,
             };
 
       if (isEdit) {
@@ -455,11 +475,23 @@ export default function StatusManagement() {
   const handleDeleteStatus = async (status) => {
     const name = getStatusName(status);
     const usage = statusTicketCount(status);
+    const historyRefs = statusHistoryCount(status);
 
-    const message =
-      usage > 0
-        ? `"${name}" is used by ${usage} ticket${usage !== 1 ? "s" : ""}. Delete anyway?`
-        : `Delete "${name}"? This action cannot be undone.`;
+    if (usage > 0 || historyRefs > 0) {
+      const details = [
+        usage > 0 ? `Tickets: ${usage}` : null,
+        historyRefs > 0 ? `History: ${historyRefs}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      setError(
+        `Cannot delete status while it is referenced by tickets or ticket history. (${details})`
+      );
+      return;
+    }
+
+    const message = `Delete "${name}"? This action cannot be undone.`;
 
     if (!window.confirm(message)) return;
 
@@ -471,7 +503,31 @@ export default function StatusManagement() {
 
       const payload = await response.json().catch(() => ({}));
 
+      // 409 Conflict is an expected business rule (status is referenced)
       if (!response.ok) {
+        if (response.status === 401) {
+          handleAuthError(response.status);
+          return;
+        }
+
+        if (response.status === 409) {
+          const message = payload?.message || "Cannot delete status.";
+          const ticketRefs = payload?.ticket_references;
+          const historyRefs = payload?.history_references;
+
+          const details = [
+            typeof ticketRefs === "number" ? `Tickets: ${ticketRefs}` : null,
+            typeof historyRefs === "number"
+              ? `History: ${historyRefs}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+
+          setError(details ? `${message} (${details})` : message);
+          return;
+        }
+
         throw new Error(payload?.message || "Could not delete status.");
       }
 
@@ -731,8 +787,19 @@ export default function StatusManagement() {
                           </button>
 
                           <button
-                            className="sm-icon-btn sm-icon-btn--danger"
-                            title="Delete status"
+                            className={`sm-icon-btn sm-icon-btn--danger${
+                              statusTicketCount(status) > 0 || statusHistoryCount(status) > 0
+                                ? ' sm-icon-btn--disabled'
+                                : ''
+                            }`}
+                            title={
+                              statusTicketCount(status) > 0 || statusHistoryCount(status) > 0
+                                ? "Cannot delete status while it is referenced by tickets or ticket history"
+                                : "Delete status"
+                            }
+                            disabled={
+                              statusTicketCount(status) > 0 || statusHistoryCount(status) > 0
+                            }
                             onClick={() => handleDeleteStatus(status)}
                           >
                             <Icon d={IC.trash} size={14} />

@@ -57,7 +57,8 @@ const getDepartmentName = (department) =>
 const getDepartmentDescription = (department) =>
   department?.description ?? department?.department_description ?? "";
 
-const getDepartmentId = (department) => department?.id ?? department?.department_id;
+const getDepartmentId = (department) =>
+  department?.id ?? department?.department_id ?? department?.name;
 
 const getManagerId = (department) =>
   department?.manager_id ??
@@ -447,7 +448,6 @@ export default function DepartmentManagement() {
           : {
               ...(editingDepartment ?? {}),
               ...body,
-              id: editingDepartment?.id ?? Date.now(),
             };
 
       if (isEdit) {

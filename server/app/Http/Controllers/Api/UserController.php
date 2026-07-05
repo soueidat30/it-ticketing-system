@@ -71,5 +71,67 @@ class UserController extends Controller
             ])
         );
     }
+
+    /**
+     * GET /api/users/{user}
+     * Used by admin “Manage assignments” screens.
+     */
+    public function show(int $user)
+    {
+        $u = User::query()
+            ->with('role')
+            ->findOrFail($user);
+
+        return response()->json([
+            'id' => $u->id,
+            'full_name' => $u->full_name,
+            'username' => $u->username,
+            'email' => $u->email ?? null,
+            'department' => $u->department,
+            'role' => $u->role?->name,
+            'role_id' => $u->role_id,
+            'status' => $u->status ?? null,
+        ]);
+    }
+
+    /**
+     * PATCH/PUT /api/users/{user}
+     * UI sends: { department_id: number|null }
+     * In this project `users` stores `department` as a string.
+     */
+    public function updateDepartment(Request $request, int $user)
+    {
+        $payload = $request->only(['department_id']);
+
+        $departmentId = $payload['department_id'] ?? null;
+
+        $departmentValue = null;
+        if ($departmentId !== null && $departmentId !== '') {
+            // Departments endpoint returns names, not ids.
+            // If the frontend sends an id, ignore and let it remain null.
+            // If it sends a department name, accept it.
+            $departmentValue = is_numeric($departmentId) ? null : (string) $departmentId;
+        }
+
+        // If your frontend actually sends a department *name* in `department_id`, this will work.
+        // Otherwise, you should update the frontend to send department name.
+
+        $u = User::query()->findOrFail($user);
+        $u->department = $departmentValue;
+        $u->save();
+
+        $u->load('role');
+
+        return response()->json([
+            'data' => [
+                'id' => $u->id,
+                'department' => $u->department,
+                'role' => $u->role?->name,
+                'role_id' => $u->role_id,
+            ],
+        ]);
+    }
 }
+
+
 

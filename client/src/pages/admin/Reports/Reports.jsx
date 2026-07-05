@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import "./Reports.css";
 
 const BASE_URL = "http://127.0.0.1:8000/api";
@@ -188,7 +190,7 @@ export default function Reports() {
       return data;
     };
 
-        const load = async () => {
+    const load = async () => {
       setLoading(true);
       setError("");
 
@@ -203,7 +205,6 @@ export default function Reports() {
             fetchJson(`${BASE_URL}/priorities`),
             fetchJson(`${BASE_URL}/categories`),
           ]);
-
 
         if (ignore) return;
 
@@ -631,6 +632,93 @@ export default function Reports() {
     URL.revokeObjectURL(url);
   };
 
+  const exportPDF = async () => {
+    const reportElement = document.querySelector('.rp-page');
+
+    if (!reportElement) {
+      console.error('Report container not found');
+      return;
+    }
+
+    try {
+      // Create a clone of the element to style it for print
+      const clone = reportElement.cloneNode(true);
+
+      // Create a style element for print-specific styles
+      const style = document.createElement('style');
+      style.textContent = `
+        @page {
+          size: A4;
+          margin: 0;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+        }
+        .rp-page {
+          width: 100%;
+          padding: 20px;
+          box-sizing: border-box;
+        }
+        .rp-page-header, .rp-filter-card, .rp-actions {
+          display: none !important;
+        }
+        .rp-grid, .rp-kpis, .rp-card {
+          display: block !important;
+        }
+      `;
+
+      // Append the style to the clone
+      clone.appendChild(style);
+
+      // Append the clone to the body temporarily
+      document.body.appendChild(clone);
+
+      // Use html2canvas to capture the element
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true
+      });
+
+      // Create a new PDF document
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Calculate dimensions
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add the image to the PDF
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add new pages if content is longer than one page
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Save the PDF
+      pdf.save(`ticket-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+
+      // Remove the clone from the DOM
+      document.body.removeChild(clone);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
+
   return (
     <div className="rp-page">
       <div className="rp-page-header">
@@ -642,7 +730,7 @@ export default function Reports() {
         </div>
 
         <div className="rp-actions">
-          <button className="rp-btn rp-btn--ghost" onClick={() => window.print()}>
+          <button className="rp-btn rp-btn--ghost" onClick={exportPDF}>
             <Icon d={IC.print} size={14} />
             Print / PDF
           </button>

@@ -195,7 +195,7 @@ export default function Notifications() {
     setError("");
 
     try {
-      const response = await fetch(`${BASE_URL}/notifications`, { headers });
+      const response = await fetch(`${BASE_URL}/admin/notifications`, { headers });
       const data = await response.json().catch(() => []);
 
       if (!response.ok) {
@@ -211,8 +211,17 @@ export default function Notifications() {
   }, [headers]);
 
   useEffect(() => {
-    loadNotifications();
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      await loadNotifications();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadNotifications]);
+
 
   const requestWithFallback = async (attempts) => {
     let lastMessage = "Request failed.";
@@ -249,36 +258,24 @@ export default function Notifications() {
       if (desiredRead) {
         await requestWithFallback([
           {
-            url: `${BASE_URL}/notifications/${id}/read`,
+            url: `${BASE_URL}/admin/notifications/${id}/read`,
             method: "PATCH",
-          },
-          {
-            url: `${BASE_URL}/notifications/${id}`,
-            method: "PATCH",
-            body: { is_read: true },
-          },
-          {
-            url: `${BASE_URL}/notifications/${id}/read`,
-            method: "POST",
           },
         ]);
       } else {
         await requestWithFallback([
           {
-            url: `${BASE_URL}/notifications/${id}/unread`,
+            url: `${BASE_URL}/admin/notifications/${id}/unread`,
             method: "PATCH",
-          },
-          {
-            url: `${BASE_URL}/notifications/${id}`,
-            method: "PATCH",
-            body: { is_read: false, read_at: null },
           },
         ]);
       }
 
+
       const patch = desiredRead
         ? { is_read: true, read: true, read_at: new Date().toISOString() }
         : { is_read: false, read: false, read_at: null };
+
 
       setNotifications((previous) =>
         previous.map((item) =>
@@ -311,10 +308,11 @@ export default function Notifications() {
     try {
       await requestWithFallback([
         {
-          url: `${BASE_URL}/notifications/${id}`,
+          url: `${BASE_URL}/admin/notifications/${id}`,
           method: "DELETE",
         },
       ]);
+
 
       setNotifications((previous) =>
         previous.filter((item) => String(getNotificationId(item)) !== String(id))
@@ -346,22 +344,32 @@ export default function Notifications() {
           url: `${BASE_URL}/notifications/mark-all-read`,
           method: "PATCH",
         },
-        {
-          url: `${BASE_URL}/notifications/read-all`,
-          method: "POST",
-        },
+
       ]);
 
       const now = new Date().toISOString();
 
       setNotifications((previous) =>
-        previous.map((notification) => ({
-          ...notification,
-          is_read: true,
-          read: true,
-          read_at: notification.read_at ?? now,
-        }))
+        previous.map((notification) => {
+          const createdAt = notification.created_at ? new Date(notification.created_at) : null;
+          const nowDate = new Date(now);
+          const isToday = createdAt
+            ? createdAt.getFullYear() === nowDate.getFullYear() &&
+              createdAt.getMonth() === nowDate.getMonth() &&
+              createdAt.getDate() === nowDate.getDate()
+            : false;
+
+          return {
+            ...notification,
+            is_read: true,
+            read: true,
+            read_at: notification.read_at ?? now,
+            // keep any existing “received today” derived values consistent
+            received_today: isToday,
+          };
+        })
       );
+
 
       showToast("All notifications marked as read.");
     } catch {

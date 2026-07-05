@@ -29,16 +29,47 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware(['auth:api'])->group(function () {
+
+    // Added: allow frontend assignment UI to fetch user details
+    Route::get('/users/{user}', [UserController::class, 'show']);
+
+    // Added: allow department assignment UI to update a user's department
+    Route::patch('/users/{user}', [UserController::class, 'updateDepartment']);
+    Route::put('/users/{user}', [UserController::class, 'updateDepartment']);
+
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);
     Route::get('/admin/activity-logs', [ActivityLogController::class, 'index']);
+    Route::get('/admin/activity-logs/export/csv', [ActivityLogController::class, 'exportCsv']);
 
     Route::get('/roles', [RoleController::class, 'index']);
+
+    // Departments
+    // Existing: list departments
     Route::get('/departments', [DepartmentController::class, 'index']);
+
+    // Support fetching by department name/id/slug (frontend sometimes calls /departments/{name})
+    Route::get('/departments/{department}', [DepartmentController::class, 'show']);
+
+    // Department management CRUD (implemented in DepartmentController)
+    Route::post('/departments', [DepartmentController::class, 'store']);
+    Route::put('/departments/{department}', [DepartmentController::class, 'update']);
+    Route::patch('/departments/{department}', [DepartmentController::class, 'update']);
+    Route::delete('/departments/{department}', [DepartmentController::class, 'destroy']);
 });
 
 
+
 Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function () {
+    // Notifications
+    Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'adminIndex']);
+
+    Route::patch('/notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'adminMarkRead']);
+    Route::patch('/notifications/{id}/unread', [\App\Http\Controllers\Api\NotificationController::class, 'adminMarkUnread']);
+    Route::delete('/notifications/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'adminDestroy']);
+
+
     // Users
+
     Route::get('/users', [UserManagementController::class, 'index']);
     Route::post('/users', [UserManagementController::class, 'store']);
     Route::put('/users/{user}', [UserManagementController::class, 'update']);
@@ -93,7 +124,10 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/priorities/reorder', [PriorityController::class, 'reorder']);
     Route::delete('/priorities/{priority}', [PriorityController::class, 'destroy']);
     Route::get('/statuses', [StatusController::class, 'index']);
-
+    Route::post('/statuses', [StatusController::class, 'store']);
+    Route::put('/statuses/{status}', [StatusController::class, 'update']);
+    Route::patch('/statuses/{status}', [StatusController::class, 'update']);
+    Route::delete('/statuses/{status}', [StatusController::class, 'destroy']);
 
     Route::get('/my-tickets', [TicketController::class, 'myTickets']);
     Route::post('/tickets', [TicketController::class, 'store']);
@@ -164,7 +198,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get   ('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::patch ('/notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::patch ('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+    Route::patch ('/notifications/{id}/unread', [NotificationController::class, 'markUnread']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
 
     Route::get('/tickets/{id}', [TicketController::class, 'showSingle']);
 });
@@ -177,12 +213,12 @@ Route::middleware('auth:api')->prefix('kb')->group(function () {
     Route::get('/articles/{id}',       [KnowledgeBaseController::class, 'show']);
     Route::post('/articles/{id}/helpful', [KnowledgeBaseController::class, 'helpful']);
 });
- 
+
 // ── Knowledge Base — agents/managers/admins can CREATE ──────────────────────
 Route::middleware(['auth:api', 'role:agent,manager,admin'])->prefix('kb')->group(function () {
     Route::post('/articles',               [KnowledgeBaseController::class, 'store']);
 });
- 
+
 // ── Knowledge Base — admin only can APPROVE ──────────────────────────────────
 Route::middleware(['auth:api', 'role:admin'])->prefix('kb')->group(function () {
     Route::patch('/articles/{id}/approve', [KnowledgeBaseController::class, 'approve']);
@@ -195,4 +231,3 @@ Route::middleware(['auth:api', 'role:manager,admin'])->prefix('report')->group(f
     // Export as CSV (alternative server-side export)
     Route::get('/export/csv', [ReportsController::class, 'exportCsv']);
 });
- 
