@@ -421,13 +421,7 @@ export default function Tickets() {
                             <Icon d={IC.eye} size={13} />
                           </button>
 
-                          <button
-                            className="at-action-btn"
-                            title="View ticket"
-                            onClick={() => navigate("/agent/ticket-details", { state: { ticketId: t.id } })}
-                          >
-                            <Icon d={IC.eye} size={13} />
-                          </button>
+                          
                         </div>
                       </td>
                     </tr>

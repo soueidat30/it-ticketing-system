@@ -79,6 +79,8 @@ Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function (
 
     Route::post('/users/bulk-delete', [UserManagementController::class, 'bulkDelete']);
     Route::post('/users/bulk-deactivate', [UserManagementController::class, 'bulkDeactivate']);
+    Route::post('/users/bulk-activate', [UserManagementController::class, 'bulkActivate']);
+
 
     // Categories (Admin)
     Route::get('/categories', [CategoryManagementController::class, 'index']);

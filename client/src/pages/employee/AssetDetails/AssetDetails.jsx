@@ -115,8 +115,8 @@ export default function AssetDetails() {
   }, [id, token, t]);
 
   useEffect(() => {
-    const t = setTimeout(() => { void fetchAssetDetails(); }, 0);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => { void fetchAssetDetails(); }, 0);
+    return () => clearTimeout(timer);
   }, [fetchAssetDetails]);
 
   // Localized helpers
@@ -418,6 +418,25 @@ export default function AssetDetails() {
     { key: "tickets",  label: t("assetDetails.tabTickets",  "Related Tickets"),    icon: IC.ticket, count: asset.tickets?.length || 0 },
   ];
 
+  // FIX: previously each row's fallback was `r.labelKey.split(".").pop()`
+  // (e.g. "labelAssetName"), which is why every label rendered as a raw
+  // camelCase key fragment instead of real text. Each row now carries its
+  // own proper English fallback, same convention as the rest of the app.
+  const INFO_ROWS = [
+    { icon: IC.laptop,   labelKey: "assetDetails.labelAssetName",   fallback: "Asset Name",             val: asset.asset_name },
+    { icon: IC.tag,      labelKey: "assetDetails.labelAssetTag",    fallback: "Asset Tag",              val: asset.asset_tag || asset.asset_code, mono: true },
+    { icon: IC.hash,     labelKey: "assetDetails.labelSerial",      fallback: "Serial Number",          val: asset.serial_number, mono: true },
+    { icon: IC.building, labelKey: "assetDetails.labelBrand",       fallback: "Brand / Manufacturer",   val: asset.manufacturer || asset.brand },
+    { icon: IC.laptop,   labelKey: "assetDetails.labelModel",       fallback: "Model",                  val: asset.model },
+    { icon: IC.tag,      labelKey: "assetDetails.labelCategory",    fallback: "Category",               val: asset.category?.name || asset.category || asset.type || "—" },
+    { icon: IC.mapPin,   labelKey: "assetDetails.labelLocation",    fallback: "Location",               val: asset.location },
+    { icon: IC.building, labelKey: "assetDetails.labelDepartment",  fallback: "Department",             val: asset.department || asset.employee?.department },
+    { icon: IC.user,     labelKey: "assetDetails.labelAssignedTo",  fallback: "Assigned To",            val: currentAssignee },
+    { icon: IC.calendar, labelKey: "assetDetails.labelAssignedDate",fallback: "Assigned Date",          val: formatDate(asset.assigned_at) },
+    { icon: IC.calendar, labelKey: "assetDetails.labelPurchaseDate",fallback: "Purchase Date",          val: formatDate(asset.purchase_date) },
+    { icon: IC.shield,   labelKey: "assetDetails.labelWarranty",    fallback: "Warranty",               val: formatDate(asset.warranty_expiry), extra: warranty },
+  ];
+
   return (
     <div className="ad-page">
 
@@ -548,24 +567,11 @@ export default function AssetDetails() {
             <h2><Icon d={IC.info} size={15} /> {t("assetDetails.deviceInfoTitle", "Device Information")}</h2>
           </div>
           <div className="ad-info-grid">
-            {[
-              { icon: IC.laptop,   labelKey: "assetDetails.labelAssetName",  val: asset.asset_name },
-              { icon: IC.tag,      labelKey: "assetDetails.labelAssetTag",   val: asset.asset_tag || asset.asset_code, mono: true },
-              { icon: IC.hash,     labelKey: "assetDetails.labelSerial",     val: asset.serial_number, mono: true },
-              { icon: IC.building, labelKey: "assetDetails.labelBrand",      val: asset.manufacturer || asset.brand },
-              { icon: IC.laptop,   labelKey: "assetDetails.labelModel",      val: asset.model },
-              { icon: IC.tag,      labelKey: "assetDetails.labelCategory",   val: asset.category?.name || asset.category || asset.type || "—" },
-              { icon: IC.mapPin,   labelKey: "assetDetails.labelLocation",   val: asset.location },
-              { icon: IC.building, labelKey: "assetDetails.labelDepartment", val: asset.department || asset.employee?.department },
-              { icon: IC.user,     labelKey: "assetDetails.labelAssignedTo",val: currentAssignee },
-              { icon: IC.calendar, labelKey: "assetDetails.labelAssignedDate",val: formatDate(asset.assigned_at) },
-              { icon: IC.calendar, labelKey: "assetDetails.labelPurchaseDate",val: formatDate(asset.purchase_date) },
-              { icon: IC.shield,   labelKey: "assetDetails.labelWarranty",   val: formatDate(asset.warranty_expiry), extra: warranty },
-            ].map((r) => (
+            {INFO_ROWS.map((r) => (
               <div className="ad-info-cell" key={r.labelKey}>
                 <div className="ad-info-cell-icon"><Icon d={r.icon} size={15} /></div>
                 <div className="ad-info-cell-body">
-                  <div className="ad-info-cell-label">{t(r.labelKey, r.labelKey.split(".").pop())}</div>
+                  <div className="ad-info-cell-label">{t(r.labelKey, r.fallback)}</div>
                   <div className={`ad-info-cell-value ${r.mono ? "ad-mono" : ""}`}>{r.val !== undefined && r.val !== null && r.val !== "" ? r.val : "—"}</div>
                   {r.extra && <div className={`ad-info-cell-extra ad-warranty--${r.extra.cls}`}>{r.extra.label}</div>}
                 </div>
@@ -589,7 +595,7 @@ export default function AssetDetails() {
           <div className="ad-section-header">
             <h2><Icon d={IC.clock} size={15} /> {t("assetDetails.historyTitle", "Assignment History")}</h2>
             <span className="ad-section-count">
-              {historyForTimeline.length} {t("assetDetails.recordCount", "{{count}} record", { count: historyForTimeline.length })}
+              {t("assetDetails.recordCount", "{{count}} record", { count: historyForTimeline.length })}
             </span>
           </div>
           {historyForTimeline.length > 0 ? (
@@ -749,10 +755,10 @@ export default function AssetDetails() {
                   <label className="ad-label">{t("assetDetails.reportForm.priorityLabel", "Priority Level")}</label>
                   <div className="ad-priority-grid">
                     {[
-                      { v: "low",    labelKey: "assetDetails.reportForm.priorityLow",      descKey: "assetDetails.reportForm.priorityLowDesc"      },
-                      { v: "medium", labelKey: "assetDetails.reportForm.priorityMedium",   descKey: "assetDetails.reportForm.priorityMediumDesc"   },
-                      { v: "high",   labelKey: "assetDetails.reportForm.priorityHigh",     descKey: "assetDetails.reportForm.priorityHighDesc"     },
-                      { v: "urgent", labelKey: "assetDetails.reportForm.priorityUrgent",   descKey: "assetDetails.reportForm.priorityUrgentDesc"   },
+                      { v: "low",    labelKey: "assetDetails.reportForm.priorityLow",      labelFallback: "Low",    descKey: "assetDetails.reportForm.priorityLowDesc",    descFallback: "Minor issue, not urgent" },
+                      { v: "medium", labelKey: "assetDetails.reportForm.priorityMedium",   labelFallback: "Medium", descKey: "assetDetails.reportForm.priorityMediumDesc", descFallback: "Affects work but has a workaround" },
+                      { v: "high",   labelKey: "assetDetails.reportForm.priorityHigh",     labelFallback: "High",   descKey: "assetDetails.reportForm.priorityHighDesc",   descFallback: "Significant impact on productivity" },
+                      { v: "urgent", labelKey: "assetDetails.reportForm.priorityUrgent",   labelFallback: "Urgent", descKey: "assetDetails.reportForm.priorityUrgentDesc", descFallback: "Critical — blocking work entirely" },
                     ].map(p => (
                       <label key={p.v} className={`ad-priority-option ad-priority-option--${p.v} ${form.priority === p.v ? "is-active" : ""}`}>
                         <input
@@ -762,8 +768,8 @@ export default function AssetDetails() {
                           checked={form.priority === p.v}
                           onChange={() => setForm(f => ({ ...f, priority: p.v }))}
                         />
-                        <span className="ad-priority-name">{t(p.labelKey, p.v)}</span>
-                        <span className="ad-priority-desc">{t(p.descKey, "")}</span>
+                        <span className="ad-priority-name">{t(p.labelKey, p.labelFallback)}</span>
+                        <span className="ad-priority-desc">{t(p.descKey, p.descFallback)}</span>
                       </label>
                     ))}
                   </div>

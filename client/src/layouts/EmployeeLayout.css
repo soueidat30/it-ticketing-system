@@ -680,7 +680,6 @@
 
 /* ─────────────────────────────────────────────
    Language switcher + RTL support
-   Append to EmployeeLayout.css
 ───────────────────────────────────────────── */
 
 .el__lang-menu {
@@ -727,8 +726,6 @@
 .el__lang-dropdown {
   position: absolute;
   top: calc(100% + 6px);
-  /* anchor to the side closest to text start; flipped automatically
-     under [dir="rtl"] below */
   right: 0;
   background: #fff;
   border: 1px solid var(--el-border);
@@ -784,48 +781,39 @@
 }
 
 
+/* ─────────────────────────────────────────────
+   RTL overrides
 ───────────────────────────────────────────── */
 
 [dir="rtl"] .el {
   direction: rtl;
 }
 
-/* sidebar active-tab accent bar: was anchored left, needs to sit on
-   the visual "start" side, which is the right edge in RTL */
 [dir="rtl"] .el__nav-link--active::before {
   left: auto;
   right: 0;
   border-radius: 3px 0 0 3px;
 }
 
-/* badges that used margin-left:auto to push to the far side now need
-   to push to the opposite side instead */
 [dir="rtl"] .el__badge {
   margin-left: 0;
   margin-right: auto;
 }
 
-/* topbar notification badge sits at top-right of the bell icon in LTR;
-   mirror it to top-left in RTL */
 [dir="rtl"] .el__topbar-badge {
   right: auto;
   left: -4px;
 }
 
-/* chevron-right icons in the breadcrumb visually point the wrong way
-   once flipped; rotate them 180° so they still point "forward" */
 [dir="rtl"] .el__breadcrumb i.ti-chevron-right {
   transform: rotate(180deg);
 }
 
-/* sidebar toggle icon (collapse/expand) should mirror direction too */
 [dir="rtl"] .el__toggle-btn i.ti-layout-sidebar-left-collapse,
 [dir="rtl"] .el__toggle-btn i.ti-layout-sidebar-left-expand {
   transform: scaleX(-1);
 }
 
-/* language dropdown should open from the side nearest where the
-   button visually sits in RTL (mirrors to the left edge) */
 [dir="rtl"] .el__lang-dropdown {
   right: auto;
   left: 0;
@@ -835,7 +823,6 @@
   text-align: right;
 }
 
-/* collapsed sidebar slides in from the opposite side on mobile */
 @media (max-width: 768px) {
   [dir="rtl"] .el__sidebar {
     left: auto;
@@ -845,5 +832,220 @@
   [dir="rtl"].el--open .el__sidebar,
   [dir="rtl"] .el--open .el__sidebar {
     transform: translateX(0);
+  }
+}
+
+
+/* ─────────────────────────────────────────────
+   Logout confirmation modal
+───────────────────────────────────────────── */
+
+.el-logout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 54, 61, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: el-logout-fade-in 0.18s ease-out;
+}
+
+@keyframes el-logout-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.el-logout-modal {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 20px;
+  background: var(--el-white);
+  border: 1px solid var(--el-border);
+  border-radius: var(--el-radius);
+  box-shadow: 0 20px 60px rgba(3, 54, 61, 0.25);
+  padding: 32px 28px 28px;
+  text-align: center;
+  outline: none;
+  animation: el-logout-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes el-logout-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Dark mode for modal */
+.el--dark .el-logout-modal {
+  background: #1a1d27;
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.el-logout-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--el-muted);
+  transition: background 0.18s, color 0.18s;
+}
+
+.el-logout-modal__close:hover {
+  background: var(--el-bg);
+  color: var(--el-text);
+}
+
+.el--dark .el-logout-modal__close:hover {
+  background: rgba(255,255,255,0.06);
+  color: #e5e7eb;
+}
+
+.el-logout-modal__close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.el-logout-modal__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e53935;
+}
+
+.el--dark .el-logout-modal__icon {
+  background: linear-gradient(135deg, #2d1518, #3b1a1d);
+  color: #ef4444;
+}
+
+.el-logout-modal__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.el-logout-modal__title {
+  font-family: "Sora", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--el-text);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.el-logout-modal__desc {
+  font-size: 13.5px;
+  color: var(--el-muted);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+.el-logout-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.el-logout-modal__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 140px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: "DM Sans", sans-serif;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s ease;
+  text-decoration: none;
+}
+
+.el-logout-modal__btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.el-logout-modal__btn--ghost {
+  background: transparent;
+  color: var(--el-muted);
+  border: 1.5px solid var(--el-border);
+}
+
+.el-logout-modal__btn--ghost:hover {
+  border-color: var(--el-green);
+  color: var(--el-green);
+  background: rgba(3, 54, 61, 0.04);
+}
+
+.el--dark .el-logout-modal__btn--ghost {
+  border-color: rgba(255,255,255,0.1);
+  color: #9ca3af;
+}
+
+.el--dark .el-logout-modal__btn--ghost:hover {
+  border-color: #d4f265;
+  color: #d4f265;
+  background: rgba(212,242,101,0.06);
+}
+
+.el-logout-modal__btn--danger {
+  min-width: 160px;
+  background: #fee2e2;
+  color: #e53935;
+  border: 1.5px solid #fca5a5;
+}
+
+.el-logout-modal__btn--danger:hover {
+  background: #fecaca;
+}
+
+.el--dark .el-logout-modal__btn--danger {
+  background: #3b1a1d;
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.el--dark .el-logout-modal__btn--danger:hover {
+  background: #4d1f23;
+}
+
+@media (max-width: 480px) {
+  .el-logout-modal {
+    padding: 28px 20px 24px;
+  }
+
+  .el-logout-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .el-logout-modal__btn {
+    width: 100%;
+    min-width: 0;
   }
 }

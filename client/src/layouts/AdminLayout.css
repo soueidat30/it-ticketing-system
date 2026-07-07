@@ -481,3 +481,205 @@ body[data-theme="dark"] {
   .al__search { display: none; }
   .al__topbar-user { display: none; }
 }
+
+/* ─────────────────────────────────────────────
+   Logout confirmation modal
+───────────────────────────────────────────── */
+
+.al-logout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 54, 61, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: al-logout-fade-in 0.18s ease-out;
+}
+
+@keyframes al-logout-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.al-logout-modal {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 20px;
+  background: var(--al-surface);
+  border: 1px solid var(--al-border);
+  border-radius: var(--al-radius);
+  box-shadow: 0 20px 60px rgba(3, 54, 61, 0.25);
+  padding: 32px 28px 28px;
+  text-align: center;
+  outline: none;
+  animation: al-logout-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes al-logout-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Dark mode for modal */
+body[data-theme="dark"] .al-logout-modal {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.al-logout-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--al-muted);
+  transition: background 0.18s, color 0.18s;
+}
+
+.al-logout-modal__close:hover {
+  background: var(--al-bg);
+  color: var(--al-text);
+}
+
+.al-logout-modal__close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.al-logout-modal__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e53935;
+}
+
+body[data-theme="dark"] .al-logout-modal__icon {
+  background: linear-gradient(135deg, #2d1518, #3b1a1d);
+  color: #ef4444;
+}
+
+.al-logout-modal__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.al-logout-modal__title {
+  font-family: "Sora", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--al-text);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.al-logout-modal__desc {
+  font-size: 13.5px;
+  color: var(--al-muted);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+.al-logout-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.al-logout-modal__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 140px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: "DM Sans", sans-serif;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s ease;
+  text-decoration: none;
+}
+
+.al-logout-modal__btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.al-logout-modal__btn--ghost {
+  background: transparent;
+  color: var(--al-muted);
+  border: 1.5px solid var(--al-border);
+}
+
+.al-logout-modal__btn--ghost:hover {
+  border-color: var(--al-green);
+  color: var(--al-green);
+  background: rgba(3, 54, 61, 0.04);
+}
+
+body[data-theme="dark"] .al-logout-modal__btn--ghost:hover {
+  border-color: var(--al-lime);
+  color: var(--al-lime);
+  background: rgba(212, 242, 101, 0.06);
+}
+
+.al-logout-modal__btn--danger {
+  min-width: 160px;
+  background: #fee2e2;
+  color: #e53935;
+  border: 1.5px solid #fca5a5;
+}
+
+.al-logout-modal__btn--danger:hover {
+  background: #fecaca;
+}
+
+body[data-theme="dark"] .al-logout-modal__btn--danger {
+  background: #3b1a1d;
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+body[data-theme="dark"] .al-logout-modal__btn--danger:hover {
+  background: #4d1f23;
+}
+
+@media (max-width: 480px) {
+  .al-logout-modal {
+    padding: 28px 20px 24px;
+  }
+
+  .al-logout-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .al-logout-modal__btn {
+    width: 100%;
+    min-width: 0;
+  }
+}

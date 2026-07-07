@@ -30,6 +30,15 @@ class AuthController extends Controller
         }
 
         $user = Auth::guard('api')->user()->load('role');
+
+        // Block deactivated users on login.
+        if (isset($user->status) && $user->status === 'Inactive') {
+            return response()->json([
+                'code' => 'USER_INACTIVE',
+                'message' => 'Your account is deactivated. Please contact the administrator.',
+            ], 403);
+        }
+
         $userData = $user->toArray();
         $userData['role'] = $user->role->name ?? 'employee';
 
@@ -38,6 +47,7 @@ class AuthController extends Controller
             'user' => $userData
         ]);
     }
+
 
     public function logout(): JsonResponse
     {

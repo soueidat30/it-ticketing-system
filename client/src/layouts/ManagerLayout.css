@@ -10,7 +10,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;       /* push to the right side of topbar */
+  margin-left: auto;
   background: none;
   border: none;
   cursor: pointer;
@@ -18,9 +18,9 @@
   border-radius: 8px;
   transition: background 0.14s;
 }
- 
+
 .el__dm-btn:hover { background: rgba(0,0,0,.05); }
- 
+
 .el__dm-track {
   position: relative;
   display: inline-flex;
@@ -33,7 +33,7 @@
   flex-shrink: 0;
   transition: background 0.2s;
 }
- 
+
 .el__dm-thumb {
   width: 20px;
   height: 20px;
@@ -48,43 +48,43 @@
   transition: transform 0.2s cubic-bezier(.4,0,.2,1), color 0.2s;
   flex-shrink: 0;
 }
- 
+
 .el__dm-label {
   font-size: 0.78rem;
   font-weight: 500;
   color: #64748b;
   white-space: nowrap;
 }
- 
+
 /* active (dark) state of the toggle */
 .el--dark .el__dm-track {
   background: #4f46e5;
 }
- 
+
 .el--dark .el__dm-thumb {
   transform: translateX(22px);
   color: #818cf8;
 }
- 
+
 .el--dark .el__dm-label {
   color: #94a3b8;
 }
- 
+
 /* ══════════════════════════════════════════════════════════════════════════════
    DARK MODE  —  el--dark class on the root .el wrapper
    All overrides live here so nothing leaks outside the manager layout
 ══════════════════════════════════════════════════════════════════════════════ */
- 
+
 /* ── Main area background ── */
 .el--dark .el__main        { background: #0f172a; }
 .el--dark .el__content     { background: #0f172a; }
- 
+
 /* ── Topbar ── */
 .el--dark .el__topbar {
   background: #1e293b;
   border-bottom-color: #334155;
 }
- 
+
 .el--dark .el__toggle-btn {
   color: #94a3b8;
 }
@@ -92,26 +92,24 @@
   background: #334155;
   color: #e2e8f0;
 }
- 
+
 .el--dark .el__breadcrumb      { color: #94a3b8; }
 .el--dark .el__breadcrumb span:last-child { color: #e2e8f0; font-weight: 600; }
 .el--dark .el__breadcrumb i    { color: #475569; }
- 
+
 .el--dark .el__dm-btn:hover { background: rgba(255,255,255,.06); }
- 
+
 /* ── Sidebar ── */
-/* Sidebar is already dark (#0f172a or similar) — just deepen it slightly */
 .el--dark .el__sidebar {
   background: #020617;
   border-right-color: #1e293b;
 }
- 
+
 .el--dark .el__logo-name { color: #f1f5f9; }
-/* keep the lime green sub-label — it reads well on dark */
 .el--dark .el__logo-sub  { color: #d4f265; }
- 
+
 .el--dark .el__nav-group-label { color: #475569; }
- 
+
 .el--dark .el__nav-link {
   color: #94a3b8;
 }
@@ -124,14 +122,14 @@
   color: #a5b4fc;
 }
 .el--dark .el__nav-link--active i { color: #818cf8; }
- 
+
 .el--dark .el__user-card  { border-top-color: #1e293b; }
 .el--dark .el__user-avatar {
   background: #4f46e5;
   color: #fff;
 }
 .el--dark .el__user-name  { color: #e2e8f0; }
-.el--dark .el__user-role  { color: #d4f265; }   /* keep lime green */
+.el--dark .el__user-role  { color: #d4f265; }
 .el--dark .el__logout-btn {
   color: #64748b;
 }
@@ -139,7 +137,7 @@
   background: rgba(255,255,255,.07);
   color: #f87171;
 }
- 
+
 /* ── Dashboard cards ── */
 .el--dark .mgr-stat-card,
 .el--dark .mgr-card {
@@ -147,18 +145,16 @@
   border-color: #334155;
   box-shadow: none;
 }
- 
+
 .el--dark .mgr-stat-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.3); }
- 
+
 .el--dark .mgr-dashboard__title { color: #f1f5f9; }
 .el--dark .mgr-dashboard__subtitle { color: #64748b; }
- 
+
 .el--dark .mgr-stat-value { color: #f1f5f9; }
 .el--dark .mgr-stat-label { color: #94a3b8; }
 .el--dark .mgr-stat-sub   { color: #475569; }
- 
-/* icon backgrounds stay the same — they're already colored */
- 
+
 /* ── Table ── */
 .el--dark .mgr-table thead tr { background: #0f172a; }
 .el--dark .mgr-table th {
@@ -173,12 +169,12 @@
 .el--dark .mgr-table__id    { color: #818cf8 !important; }
 .el--dark .mgr-table__date  { color: #475569 !important; }
 .el--dark .mgr-table__subject { color: #e2e8f0; }
- 
+
 /* ── Card headers & footers ── */
 .el--dark .mgr-card__header  { border-bottom-color: #334155; }
 .el--dark .mgr-card__footer  { border-top-color: #334155; color: #475569; }
 .el--dark .mgr-card__title   { color: #e2e8f0; }
- 
+
 /* ── Search & select ── */
 .el--dark .mgr-search__input {
   background: #0f172a;
@@ -188,29 +184,29 @@
 .el--dark .mgr-search__input:focus { border-color: #6366f1; }
 .el--dark .mgr-search__input::placeholder { color: #475569; }
 .el--dark .mgr-search__icon  { color: #475569; }
- 
+
 .el--dark .mgr-select {
   background: #0f172a;
   border-color: #334155;
   color: #e2e8f0;
 }
- 
+
 /* ── Mini bar chart ── */
 .el--dark .mgr-minibar__label { color: #94a3b8; }
 .el--dark .mgr-minibar__track { background: #334155; }
 .el--dark .mgr-minibar__count { color: #64748b; }
- 
+
 /* ── Activity feed ── */
 .el--dark .mgr-activity__subject { color: #e2e8f0; }
 .el--dark .mgr-activity__meta    { color: #475569; }
- 
+
 /* ── Live badge ── */
 .el--dark .mgr-live-badge {
   background: rgba(22,163,74,.15);
   color: #4ade80;
 }
 .el--dark .mgr-live-dot { background: #4ade80; }
- 
+
 /* ── Badges ── */
 .el--dark .mgr-badge--blue   { background: rgba(37,99,235,.18); color: #93c5fd; }
 .el--dark .mgr-badge--orange { background: rgba(234,88,12,.18);  color: #fdba74; }
@@ -218,12 +214,12 @@
 .el--dark .mgr-badge--red    { background: rgba(220,38,38,.18);  color: #fca5a5; }
 .el--dark .mgr-badge--purple { background: rgba(124,58,237,.18); color: #c4b5fd; }
 .el--dark .mgr-badge--gray   { background: rgba(107,114,128,.18);color: #9ca3af; }
- 
+
 /* ── Empty / loading states ── */
 .el--dark .mgr-loading  { color: #475569; }
 .el--dark .mgr-empty    { color: #475569; }
 .el--dark .mgr-empty-text { color: #475569; }
- 
+
 /* ── Reports page ── */
 .el--dark .rpt-stat,
 .el--dark .rpt-card {
@@ -261,4 +257,226 @@
 .el--dark .rpt-ai__insight         { background: #0f172a; border-color: #334155; }
 .el--dark .rpt-ai__insight-text    { color: #94a3b8; }
 .el--dark .rpt-empty-text          { color: #475569; }
- 
+
+
+/* ─────────────────────────────────────────────
+   Logout confirmation modal
+───────────────────────────────────────────── */
+
+.el-logout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 54, 61, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: el-logout-fade-in 0.18s ease-out;
+}
+
+@keyframes el-logout-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.el-logout-modal {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 20px;
+  background: #ffffff;
+  border: 1px solid rgba(3, 54, 61, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(3, 54, 61, 0.25);
+  padding: 32px 28px 28px;
+  text-align: center;
+  outline: none;
+  animation: el-logout-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes el-logout-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Dark mode for modal */
+.el--dark .el-logout-modal {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.el-logout-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: background 0.18s, color 0.18s;
+}
+
+.el-logout-modal__close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1f2937;
+}
+
+.el--dark .el-logout-modal__close:hover {
+  background: rgba(255,255,255,0.06);
+  color: #e2e8f0;
+}
+
+.el-logout-modal__close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.el-logout-modal__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e53935;
+}
+
+.el--dark .el-logout-modal__icon {
+  background: linear-gradient(135deg, #2d1518, #3b1a1d);
+  color: #ef4444;
+}
+
+.el-logout-modal__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.el-logout-modal__title {
+  font-family: "Sora", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.el--dark .el-logout-modal__title {
+  color: #f1f5f9;
+}
+
+.el-logout-modal__desc {
+  font-size: 13.5px;
+  color: #6b7280;
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+.el--dark .el-logout-modal__desc {
+  color: #94a3b8;
+}
+
+.el-logout-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.el-logout-modal__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 140px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: "DM Sans", sans-serif;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s ease;
+  text-decoration: none;
+}
+
+.el-logout-modal__btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.el-logout-modal__btn--ghost {
+  background: transparent;
+  color: #6b7280;
+  border: 1.5px solid rgba(3, 54, 61, 0.08);
+}
+
+.el-logout-modal__btn--ghost:hover {
+  border-color: #03363d;
+  color: #03363d;
+  background: rgba(3, 54, 61, 0.04);
+}
+
+.el--dark .el-logout-modal__btn--ghost {
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+.el--dark .el-logout-modal__btn--ghost:hover {
+  border-color: #818cf8;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.el-logout-modal__btn--danger {
+  min-width: 160px;
+  background: #fee2e2;
+  color: #e53935;
+  border: 1.5px solid #fca5a5;
+}
+
+.el-logout-modal__btn--danger:hover {
+  background: #fecaca;
+}
+
+.el--dark .el-logout-modal__btn--danger {
+  background: #3b1a1d;
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.el--dark .el-logout-modal__btn--danger:hover {
+  background: #4d1f23;
+}
+
+@media (max-width: 480px) {
+  .el-logout-modal {
+    padding: 28px 20px 24px;
+  }
+
+  .el-logout-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .el-logout-modal__btn {
+    width: 100%;
+    min-width: 0;
+  }
+}

@@ -22,11 +22,9 @@ export const authFetch = async (url, options = {}, { retry = true } = {}) => {
 
   if (res.status !== 401 || !retry) return res;
 
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-
   return res;
 };
+
 
 
 export const authJson = async (url, options = {}, { retry = true } = {}) => {

@@ -112,7 +112,7 @@ export default function EmployeeProfile() {
       const data = await res.json();
 
       if (!res.ok)
-        throw new Error(data?.message || t("profile.toast.couldNotSave"));
+        throw new Error(data?.message || t("profile.toast.couldNotSave", "Could not save changes."));
 
       const updated = { ...user, ...form };
 
@@ -121,12 +121,12 @@ export default function EmployeeProfile() {
 
       setToast({
         type: "success",
-        message: t("profile.toast.profileUpdated"),
+        message: t("profile.toast.profileUpdated", "Profile updated."),
       });
     } catch (err) {
       setToast({
         type: "error",
-        message: err.message || t("profile.toast.somethingWrong"),
+        message: err.message || t("profile.toast.somethingWrong", "Something went wrong."),
       });
     } finally {
       setSaving(false);
@@ -140,7 +140,7 @@ export default function EmployeeProfile() {
     if (pwForm.next.length < 8) {
       setToast({
         type: "error",
-        message: t("profile.toast.passwordTooShort"),
+        message: t("profile.toast.passwordTooShort", "New password must be at least 8 characters."),
       });
       return;
     }
@@ -148,7 +148,7 @@ export default function EmployeeProfile() {
     if (pwForm.next !== pwForm.confirm) {
       setToast({
         type: "error",
-        message: t("profile.toast.passwordMismatch"),
+        message: t("profile.toast.passwordMismatch", "New password and confirmation do not match."),
       });
       return;
     }
@@ -174,7 +174,7 @@ export default function EmployeeProfile() {
 
       if (!res.ok)
         throw new Error(
-          data?.message || t("profile.toast.couldNotChangePassword")
+          data?.message || t("profile.toast.couldNotChangePassword", "Could not change password.")
         );
 
       setPwForm({
@@ -185,12 +185,12 @@ export default function EmployeeProfile() {
 
       setToast({
         type: "success",
-        message: t("profile.toast.passwordChanged"),
+        message: t("profile.toast.passwordChanged", "Password changed."),
       });
     } catch (err) {
       setToast({
         type: "error",
-        message: err.message || t("profile.toast.somethingWrong"),
+        message: err.message || t("profile.toast.somethingWrong", "Something went wrong."),
       });
     } finally {
       setChangingPw(false);
@@ -201,7 +201,7 @@ export default function EmployeeProfile() {
     return (
       <div className="eprf-loading">
         <i className="ti ti-loader eprf-spin" />
-        <span>{t("profile.loading")}</span>
+        <span>{t("profile.loading", "Loading profile...")}</span>
       </div>
     );
   }
@@ -213,10 +213,10 @@ export default function EmployeeProfile() {
       <div className="eprf-header">
         <div>
           <h1 className="eprf-header__title">
-            {t("profile.title")}
+            {t("profile.title", "Profile")}
           </h1>
           <p className="eprf-header__sub">
-            {t("profile.subtitle")}
+            {t("profile.subtitle", "Manage your account details and security")}
           </p>
         </div>
       </div>
@@ -228,11 +228,11 @@ export default function EmployeeProfile() {
           <div className="eprf-avatar">{initials}</div>
 
           <h2 className="eprf-identity__name">
-            {user.full_name || t("profile.employee")}
+            {user.full_name || t("profile.employee", "Employee")}
           </h2>
 
           <span className="eprf-dept-badge">
-            {user.department || t("profile.staff")}
+            {user.department || t("profile.staff", "Staff")}
           </span>
 
           <div className="eprf-identity__meta">
@@ -253,7 +253,7 @@ export default function EmployeeProfile() {
               <div className="eprf-identity__row">
                 <i className="ti ti-calendar" />
                 <span>
-                  {t("profile.joined")}{" "}
+                  {t("profile.joined", "Joined")}{" "}
                   {new Date(user.created_at).toLocaleDateString("en-GB", {
                     month: "long",
                     year: "numeric",
@@ -273,11 +273,11 @@ export default function EmployeeProfile() {
 
             <div className="eprf-card__header">
               <h2 className="eprf-card__title">
-                {t("profile.personal.title")}
+                {t("profile.personal.title", "Personal Information")}
               </h2>
 
               <span className="eprf-card__sub">
-                {t("profile.personal.subtitle")}
+                {t("profile.personal.subtitle", "Update your name and contact details")}
               </span>
             </div>
 
@@ -287,7 +287,7 @@ export default function EmployeeProfile() {
 
                 <div className="eprf-field">
                   <label htmlFor="full_name">
-                    {t("profile.fullName")}
+                    {t("profile.fullName", "Full Name")}
                   </label>
 
                   <input
@@ -300,14 +300,14 @@ export default function EmployeeProfile() {
                         full_name: e.target.value,
                       }))
                     }
-                    placeholder={t("profile.placeholders.fullName")}
+                    placeholder={t("profile.placeholders.fullName", "Your full name")}
                     required
                   />
                 </div>
 
                 <div className="eprf-field">
                   <label htmlFor="email">
-                    {t("profile.email")}
+                    {t("profile.email", "Email Address")}
                   </label>
 
                   <input
@@ -320,7 +320,7 @@ export default function EmployeeProfile() {
                         email: e.target.value,
                       }))
                     }
-                    placeholder={t("profile.placeholders.email")}
+                    placeholder={t("profile.placeholders.email", "you@company.com")}
                     required
                   />
                 </div>
@@ -331,7 +331,7 @@ export default function EmployeeProfile() {
 
                 <div className="eprf-field">
                   <label htmlFor="phone">
-                    {t("profile.phone")}
+                    {t("profile.phone", "Phone Number")}
                   </label>
 
                   <input
@@ -344,18 +344,18 @@ export default function EmployeeProfile() {
                         phone: e.target.value,
                       }))
                     }
-                    placeholder={t("profile.placeholders.phone")}
+                    placeholder={t("profile.placeholders.phone", "Optional")}
                   />
                 </div>
 
                 <div className="eprf-field">
                   <label>
-                    {t("profile.department")}
+                    {t("profile.department", "Department")}
                   </label>
 
                   <input
                     type="text"
-                    value={user.department || t("profile.staff")}
+                    value={user.department || t("profile.staff", "Staff")}
                     disabled
                   />
                 </div>
@@ -374,13 +374,13 @@ export default function EmployeeProfile() {
                   <>
                     <i className="ti ti-loader eprf-spin" />
                     {" "}
-                    {t("profile.buttons.saving")}
+                    {t("profile.buttons.saving", "Saving...")}
                   </>
                 ) : (
                   <>
                     <i className="ti ti-check" />
                     {" "}
-                    {t("profile.buttons.save")}
+                    {t("profile.buttons.save", "Save Changes")}
                   </>
                 )}
               </button>
@@ -391,17 +391,17 @@ export default function EmployeeProfile() {
           <form className="eprf-card" onSubmit={changePassword}>
             <div className="eprf-card__header">
               <h2 className="eprf-card__title">
-                {t("profile.security.title")}
+                {t("profile.security.title", "Security")}
               </h2>
               <span className="eprf-card__sub">
-                {t("profile.security.subtitle")}
+                {t("profile.security.subtitle", "Change your password")}
               </span>
             </div>
 
             <div className="eprf-card__body">
               <div className="eprf-field">
                 <label htmlFor="current_pw">
-                  {t("profile.currentPassword")}
+                  {t("profile.currentPassword", "Current Password")}
                 </label>
                 <input
                   id="current_pw"
@@ -413,7 +413,7 @@ export default function EmployeeProfile() {
                       current: e.target.value,
                     }))
                   }
-                  placeholder={t("profile.placeholders.password")}
+                  placeholder={t("profile.placeholders.password", "••••••••")}
                   required
                 />
               </div>
@@ -421,7 +421,7 @@ export default function EmployeeProfile() {
               <div className="eprf-field-row">
                 <div className="eprf-field">
                   <label htmlFor="new_pw">
-                    {t("profile.newPassword")}
+                    {t("profile.newPassword", "New Password")}
                   </label>
                   <input
                     id="new_pw"
@@ -433,14 +433,14 @@ export default function EmployeeProfile() {
                         next: e.target.value,
                       }))
                     }
-                    placeholder={t("profile.placeholders.newPassword")}
+                    placeholder={t("profile.placeholders.newPassword", "At least 8 characters")}
                     required
                   />
                 </div>
 
                 <div className="eprf-field">
                   <label htmlFor="confirm_pw">
-                    {t("profile.confirmPassword")}
+                    {t("profile.confirmPassword", "Confirm New Password")}
                   </label>
                   <input
                     id="confirm_pw"
@@ -452,7 +452,7 @@ export default function EmployeeProfile() {
                         confirm: e.target.value,
                       }))
                     }
-                    placeholder={t("profile.placeholders.confirmPassword")}
+                    placeholder={t("profile.placeholders.confirmPassword", "Repeat new password")}
                     required
                   />
                 </div>
@@ -469,13 +469,13 @@ export default function EmployeeProfile() {
                   <>
                     <i className="ti ti-loader eprf-spin" />
                     {" "}
-                    {t("profile.buttons.updating")}
+                    {t("profile.buttons.updating", "Updating...")}
                   </>
                 ) : (
                   <>
                     <i className="ti ti-lock" />
                     {" "}
-                    {t("profile.buttons.updatePassword")}
+                    {t("profile.buttons.updatePassword", "Update Password")}
                   </>
                 )}
               </button>

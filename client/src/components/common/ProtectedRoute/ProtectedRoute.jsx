@@ -10,7 +10,12 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
 
 const role = typeof user.role === "object" ? user.role.name : user.role;
 
+    // If admin deactivates user, backend login is blocked, but also guard route access.
+    // Note: we don't rely on user.status stored in localStorage (can be stale).
+    // The backend blocks inactive users and the frontend logout happens on API error.
+
     if (!allowedRoles.includes(role)) {
+
         return role ? <Navigate to={`/${role}/dashboard`} replace /> : <Navigate to="/" replace />;
     }
 

@@ -4,6 +4,107 @@ import { RoleLanguageProvider, useLanguage, SUPPORTED_LANGUAGES } from "../conte
 import AIChatbot from "../components/common/AIChatbot/AIChatbot";
 import "./EmployeeLayout.css";
 
+const Icon = ({ d, ...p }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...p}
+  >
+    <path d={d} />
+  </svg>
+);
+
+const Icons = {
+  alertCircle: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 8v4 M12 16h.01",
+  x: "M18 6L6 18 M6 6l12 12",
+  logout: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
+};
+
+const IC_CHECK = "M20 6L9 17l-5-5";
+
+/* ── Logout confirmation modal ────────────────────────────────────── */
+function LogoutModal({ open, onConfirm, onCancel }) {
+  const { t } = useLanguage();
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement;
+    modalRef.current?.focus();
+    return () => prev?.focus?.();
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="el-logout-overlay" onClick={onCancel} role="presentation">
+      <div
+        className="el-logout-modal"
+        ref={modalRef}
+        tabIndex={-1}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="el-logout-title"
+        aria-describedby="el-logout-desc"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="el-logout-modal__close"
+          onClick={onCancel}
+          aria-label={t("logout.close", "Close")}
+        >
+          <Icon d={Icons.x} />
+        </button>
+
+        <div className="el-logout-modal__icon">
+          <Icon d={Icons.alertCircle} />
+        </div>
+
+        <h3 id="el-logout-title" className="el-logout-modal__title">
+          {t("logout.title", "Are you sure you want to leave?")}
+        </h3>
+
+        <p id="el-logout-desc" className="el-logout-modal__desc">
+          {t(
+            "logout.description",
+            "You will be signed out of the Employee Portal. Any unsaved changes may be lost."
+          )}
+        </p>
+
+        <div className="el-logout-modal__actions">
+          <button
+            type="button"
+            className="el-logout-modal__btn el-logout-modal__btn--ghost"
+            onClick={onCancel}
+          >
+            {t("logout.cancel", "Stay Logged In")}
+          </button>
+          <button
+            type="button"
+            className="el-logout-modal__btn el-logout-modal__btn--danger"
+            onClick={onConfirm}
+          >
+            <Icon d={Icons.logout} />
+            {t("logout.confirm", "Yes, Log Out")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EmployeeLayout() {
   return (
     <RoleLanguageProvider role="employee">
@@ -22,6 +123,9 @@ function EmployeeLayoutInner() {
   const [notifCount]  = useState(2);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const langMenuRef = useRef(null);
+
+  /* ── Logout modal state ── */
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const NAV_ITEMS = [
     {
@@ -77,7 +181,20 @@ function EmployeeLayoutInner() {
     localStorage.removeItem("language");
     document.documentElement.lang = "en";
     document.documentElement.dir = "ltr";
-    navigate("/" );
+    navigate("/", { replace: true });
+  };
+
+  const handleLogoutRequest = () => {
+    setLogoutOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setLogoutOpen(false);
+    handleLogout();
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutOpen(false);
   };
 
   const currentItem = NAV_ITEMS.flatMap(g => g.items)
@@ -148,7 +265,7 @@ function EmployeeLayoutInner() {
             </div>
           )}
           {sidebarOpen && (
-            <button className="el__logout-btn" onClick={handleLogout} title={t("employee.logout", "Logout")}>
+            <button className="el__logout-btn" onClick={handleLogoutRequest} title={t("employee.logout", "Logout")}>
               <i className="ti ti-logout" />
             </button>
           )}
@@ -255,6 +372,13 @@ function EmployeeLayoutInner() {
           <Outlet />
         </main>
       </div>
+
+      {/* ── Logout confirmation modal ── */}
+      <LogoutModal
+        open={logoutOpen}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </div>
   );
 }

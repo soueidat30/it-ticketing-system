@@ -1,7 +1,102 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { RoleLanguageProvider } from "../contexts/RoleScopedLanguageContext";
 import "./ManagerLayout.css";
+
+const Icon = ({ d, ...p }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...p}
+  >
+    <path d={d} />
+  </svg>
+);
+
+const Icons = {
+  alertCircle: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 8v4 M12 16h.01",
+  x: "M18 6L6 18 M6 6l12 12",
+  logout: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
+};
+
+/* ── Logout confirmation modal ────────────────────────────────────── */
+function LogoutModal({ open, onConfirm, onCancel }) {
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement;
+    modalRef.current?.focus();
+    return () => prev?.focus?.();
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="el-logout-overlay" onClick={onCancel} role="presentation">
+      <div
+        className="el-logout-modal"
+        ref={modalRef}
+        tabIndex={-1}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="el-logout-title"
+        aria-describedby="el-logout-desc"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="el-logout-modal__close"
+          onClick={onCancel}
+          aria-label="Close"
+        >
+          <Icon d={Icons.x} />
+        </button>
+
+        <div className="el-logout-modal__icon">
+          <Icon d={Icons.alertCircle} />
+        </div>
+
+        <h3 id="el-logout-title" className="el-logout-modal__title">
+          Are you sure you want to leave?
+        </h3>
+
+        <p id="el-logout-desc" className="el-logout-modal__desc">
+          You will be signed out of the Manager Portal. Any unsaved changes may be lost.
+        </p>
+
+        <div className="el-logout-modal__actions">
+          <button
+            type="button"
+            className="el-logout-modal__btn el-logout-modal__btn--ghost"
+            onClick={onCancel}
+          >
+            Stay Logged In
+          </button>
+          <button
+            type="button"
+            className="el-logout-modal__btn el-logout-modal__btn--danger"
+            onClick={onConfirm}
+          >
+            <Icon d={Icons.logout} />
+            Yes, Log Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const NAV_ITEMS = [
   {
@@ -16,7 +111,6 @@ const NAV_ITEMS = [
   {
     group: "Communication",
     items: [
-      
       { to: "/manager/notifications", icon: "ti-bell",         label: "Notifications" },
     ]
   },
@@ -24,7 +118,6 @@ const NAV_ITEMS = [
     group: "Account",
     items: [
       { to: "/manager/profile",  icon: "ti-user",     label: "Profile"  },
-
     ]
   }
 ];
@@ -42,6 +135,9 @@ function ManagerLayoutInner() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  /* ── Logout modal state ── */
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
   // ── dark mode ────────────────────────────────────────────────────────────────
   const [dark, setDark] = useState(() => localStorage.getItem("mgr-theme") === "dark");
 
@@ -58,7 +154,20 @@ function ManagerLayoutInner() {
     localStorage.removeItem("language");
     document.documentElement.lang = "en";
     document.documentElement.dir = "ltr";
-    navigate("/");
+    navigate("/", { replace: true });
+  };
+
+  const handleLogoutRequest = () => {
+    setLogoutOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setLogoutOpen(false);
+    handleLogout();
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutOpen(false);
   };
 
   const currentItem = NAV_ITEMS.flatMap(g => g.items)
@@ -117,7 +226,7 @@ function ManagerLayoutInner() {
             </div>
           )}
           {sidebarOpen && (
-            <button className="el__logout-btn" onClick={handleLogout} title="Logout">
+            <button className="el__logout-btn" onClick={handleLogoutRequest} title="Logout">
               <i className="ti ti-logout" />
             </button>
           )}
@@ -164,6 +273,13 @@ function ManagerLayoutInner() {
         </main>
 
       </div>
+
+      {/* ── Logout confirmation modal ── */}
+      <LogoutModal
+        open={logoutOpen}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </div>
   );
 }

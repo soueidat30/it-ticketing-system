@@ -10,7 +10,6 @@ import "./AgentLayout.css";
 import "../context/theme.css";
 
 const Icon = ({ d, ...p }) => (
-
   <svg
     viewBox="0 0 24 24"
     fill="none"
@@ -42,6 +41,8 @@ const Icons = {
   chevronDown: "M6 9l6 6 6-6",
   support: "M3 18v-6a9 9 0 0118 0v6 M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3v5z M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3v5z",
   profile: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z",
+  alertCircle: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 8v4 M12 16h.01",
+  x: "M18 6L6 18 M6 6l12 12",
 };
 
 const API_URL = "http://127.0.0.1:8000/api";
@@ -65,7 +66,6 @@ function ThemeToggle() {
 
 const IC_CHECK = "M20 6L9 17l-5-5";
 
-// EN/AR/FR dropdown — replaces the old 2-state EN/AR toggle pill.
 function LanguageDropdown() {
   const { language, setLanguage, t, isRTL } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -79,7 +79,6 @@ function LanguageDropdown() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Close on Escape for keyboard users
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
@@ -137,6 +136,87 @@ function LanguageDropdown() {
   );
 }
 
+/* ── Logout confirmation modal ────────────────────────────────────── */
+function LogoutModal({ open, onConfirm, onCancel }) {
+  const { t } = useLanguage();
+  const modalRef = useRef(null);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  // Trap focus inside modal
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement;
+    modalRef.current?.focus();
+    return () => prev?.focus?.();
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="agent-logout-overlay" onClick={onCancel} role="presentation">
+      <div
+        className="agent-logout-modal"
+        ref={modalRef}
+        tabIndex={-1}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="agent-logout-title"
+        aria-describedby="agent-logout-desc"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="agent-logout-modal__close"
+          onClick={onCancel}
+          aria-label={t("logout.close", "Close")}
+        >
+          <Icon d={Icons.x} />
+        </button>
+
+        <div className="agent-logout-modal__icon">
+          <Icon d={Icons.alertCircle} />
+        </div>
+
+        <h3 id="agent-logout-title" className="agent-logout-modal__title">
+          {t("logout.title", "Are you sure you want to leave?")}
+        </h3>
+
+        <p id="agent-logout-desc" className="agent-logout-modal__desc">
+          {t(
+            "logout.description",
+            "You will be signed out of the Agent Portal. Any unsaved changes may be lost."
+          )}
+        </p>
+
+        <div className="agent-logout-modal__actions">
+          <button
+            type="button"
+            className="agent-btn agent-btn--ghost agent-logout-modal__btn"
+            onClick={onCancel}
+          >
+            {t("logout.cancel", "Stay Logged In")}
+          </button>
+          <button
+            type="button"
+            className="agent-btn agent-btn--danger agent-logout-modal__btn agent-logout-modal__btn--confirm"
+            onClick={onConfirm}
+          >
+            <Icon d={Icons.logout} />
+            {t("logout.confirm", "Yes, Log Out")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AgentLayout() {
   return (
     <RoleLanguageProvider role="agent">
@@ -146,9 +226,9 @@ export default function AgentLayout() {
 }
 
 function AgentLayoutInner() {
-
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const [assignedCount, setAssignedCount] = useState(0);
 
@@ -174,12 +254,21 @@ function AgentLayoutInner() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    // Do NOT touch other roles. Language will be re-applied by the active role layout.
     navigate("/", { replace: true });
   };
 
+  const handleLogoutRequest = () => {
+    setLogoutOpen(true);
+  };
 
+  const handleLogoutConfirm = () => {
+    setLogoutOpen(false);
+    handleLogout();
+  };
 
+  const handleLogoutCancel = () => {
+    setLogoutOpen(false);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -197,7 +286,7 @@ function AgentLayoutInner() {
         const data = await res.json();
         setAssignedCount(Number(data?.assigned) || 0);
       } catch {
-        // ignore - keep badge at 0
+        // ignore
       }
     };
 
@@ -206,7 +295,6 @@ function AgentLayoutInner() {
 
   return (
     <div className={`agent-shell${isRTL ? " agent-shell--rtl" : ""}`}>
-
       <aside
         className={`agent-sidebar${collapsed ? " collapsed" : ""}${mobileOpen ? " mobile-open" : ""}`}
       >
@@ -334,7 +422,7 @@ function AgentLayoutInner() {
         </nav>
 
         <div className="agent-sidebar__footer">
-          <button className="agent-sidebar__logout" onClick={handleLogout}>
+          <button className="agent-sidebar__logout" onClick={handleLogoutRequest}>
             <span className="agent-nav-icon">
               <Icon d={Icons.logout} />
             </span>
@@ -390,6 +478,12 @@ function AgentLayoutInner() {
       <main className="agent-main">
         <Outlet />
       </main>
+
+      <LogoutModal
+        open={logoutOpen}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </div>
   );
 }

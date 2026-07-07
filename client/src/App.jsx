@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute/ProtectedRoute";
 
+import UserInactiveNotice from "./components/common/UserInactiveNotice/UserInactiveNotice";
+
 import HomePage from "./pages/Home";
 import AdminDashboard from "./pages/admin/Dashboard/Dashboard";
 import UserManagement from "./pages/admin/UserManagement/UserManagement";
@@ -52,6 +54,7 @@ import MyAssets from "./pages/employee/MyAssets/MyAssets";
 function App() {
   return (
     <BrowserRouter>
+      <UserInactiveNotice />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route

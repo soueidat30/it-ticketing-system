@@ -184,7 +184,7 @@ class UserManagementController extends Controller
 
     /**
      * POST /api/admin/users/bulk-deactivate
-     * body: { ids: [1,2,3] }
+     * body: { user_ids: [1,2,3] }
      */
     public function bulkDeactivate(Request $request)
     {
@@ -202,8 +202,29 @@ class UserManagementController extends Controller
         ]);
     }
 
+    /**
+     * POST /api/admin/users/bulk-activate
+     * body: { user_ids: [1,2,3] }
+     */
+    public function bulkActivate(Request $request)
+    {
+        $validated = $request->validate([
+            'user_ids' => ['required', 'array', 'min:1'],
+            'user_ids.*' => ['integer', 'distinct', 'exists:users,id'],
+        ]);
+
+        User::whereIn('id', $validated['user_ids'])->update([
+            'status' => 'Active',
+        ]);
+
+        return response()->json([
+            'message' => 'Users activated successfully',
+        ]);
+    }
+
 
     private function resolveRoleId(array $validated): int
+
     {
         if (!empty($validated['role_id'])) {
             return (int) $validated['role_id'];

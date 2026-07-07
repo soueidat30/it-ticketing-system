@@ -92,6 +92,14 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     } catch (err) {
 
+      // When backend blocks inactive users we get: { code: 'USER_INACTIVE', message: '...' }
+      if (err.response?.data?.code === 'USER_INACTIVE') {
+        setError(err.response.data.message || 'Your account is deactivated. Please contact the administrator.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        return;
+      }
+
       if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {

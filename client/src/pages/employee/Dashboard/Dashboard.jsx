@@ -6,12 +6,12 @@ import { getMyTickets } from "../../../services/ticketService";
 
 // ── FIX: Added "In progress" tab ─────────────────────────────────────────────
 const TAB_DEFS = [
-  { value: "All",         labelKey: "dashboard.tabs.all"        },
-  { value: "Open",        labelKey: "dashboard.tabs.open"       },
-  { value: "In progress", labelKey: "dashboard.tabs.inProgress" },
-  { value: "Pending",     labelKey: "dashboard.tabs.pending"    },
-  { value: "Resolved",    labelKey: "dashboard.tabs.resolved"   },
-  { value: "Closed",      labelKey: "dashboard.tabs.closed"     },
+  { value: "All",         labelKey: "dashboard.tabs.all",        fallback: "All"         },
+  { value: "Open",        labelKey: "dashboard.tabs.open",       fallback: "Open"        },
+  { value: "In progress", labelKey: "dashboard.tabs.inProgress", fallback: "In Progress" },
+  { value: "Pending",     labelKey: "dashboard.tabs.pending",    fallback: "Pending"     },
+  { value: "Resolved",    labelKey: "dashboard.tabs.resolved",   fallback: "Resolved"    },
+  { value: "Closed",      labelKey: "dashboard.tabs.closed",     fallback: "Closed"      },
 ];
 
 // ── Donut Chart ───────────────────────────────────────────────────────────────
@@ -198,10 +198,10 @@ export default function EmployeeDashboard() {
   const token = localStorage.getItem("token");
 
   const resources = [
-    { icon: "ti-lock",  textKey: "dashboard.resources.resetPassword" },
-    { icon: "ti-mail",  textKey: "dashboard.resources.emailIssues"   },
-    { icon: "ti-wifi",  textKey: "dashboard.resources.vpnGuide"      },
-    { icon: "ti-books", textKey: "dashboard.resources.allArticles"   },
+    { icon: "ti-lock",  textKey: "dashboard.resources.resetPassword", fallback: "How to reset your password" },
+    { icon: "ti-mail",  textKey: "dashboard.resources.emailIssues",   fallback: "Fix email delivery issues"   },
+    { icon: "ti-wifi",  textKey: "dashboard.resources.vpnGuide",      fallback: "VPN connection guide"        },
+    { icon: "ti-books", textKey: "dashboard.resources.allArticles",   fallback: "All help articles"           },
   ];
 
   useEffect(() => {
@@ -234,12 +234,12 @@ export default function EmployeeDashboard() {
 
   // ── Donut data — all statuses shown separately ────────────────────────────
   const donutData = [
-    { key: "open",        label: t("dashboard.tabs.open"),     value: openCount,       color: "#3b82f6" },
-    { key: "in-progress", label: "In Progress",                value: inProgressCount, color: "#f97316" },
-    { key: "pending",     label: t("dashboard.tabs.pending"),  value: pendingCount,    color: "#eab308" },
-    { key: "resolved",    label: t("dashboard.tabs.resolved"), value: resolvedCount,   color: "#22c55e" },
+    { key: "open",        label: t("dashboard.tabs.open", "Open"),         value: openCount,       color: "#3b82f6" },
+    { key: "in-progress", label: t("dashboard.tabs.inProgress", "In Progress"), value: inProgressCount, color: "#f97316" },
+    { key: "pending",     label: t("dashboard.tabs.pending", "Pending"),   value: pendingCount,    color: "#eab308" },
+    { key: "resolved",    label: t("dashboard.tabs.resolved", "Resolved"), value: resolvedCount,   color: "#22c55e" },
     { key: "closed",
-      label: t("dashboard.tabs.closed"),
+      label: t("dashboard.tabs.closed", "Closed"),
       value: tickets.filter(t => statusOf(t).toLowerCase() === "closed").length,
       color: "#8b5cf6",
     },
@@ -268,12 +268,12 @@ export default function EmployeeDashboard() {
       <div className="emp-dashboard__header">
         <div>
           <h1 className="emp-dashboard__title">
-            {t("dashboard.greetingPrefix")} {user.full_name?.split(" ")[0] ?? t("dashboard.greetingFallback")}! 👋
+            {t("dashboard.greetingPrefix", "Welcome back,")} {user.full_name?.split(" ")[0] ?? t("dashboard.greetingFallback", "there")}! 👋
           </h1>
-          <p className="emp-dashboard__subtitle">{t("dashboard.subtitle")}</p>
+          <p className="emp-dashboard__subtitle">{t("dashboard.subtitle", "Create and track your support requests.")}</p>
         </div>
         <button className="emp-dashboard__new-btn" onClick={() => navigate("/employee/create-ticket")}>
-          <i className="ti ti-plus" /> {t("dashboard.newTicket")}
+          <i className="ti ti-plus" /> {t("dashboard.newTicket", "New Ticket")}
         </button>
       </div>
 
@@ -281,7 +281,7 @@ export default function EmployeeDashboard() {
       <div className="emp-stats-grid">
         {[
           {
-            label: t("dashboard.stats.open"),
+            label: t("dashboard.stats.open", "Open Tickets"),
             value: loading ? "…" : activeCount,
             icon: "ti-ticket",
             color: "blue",
@@ -291,21 +291,21 @@ export default function EmployeeDashboard() {
               : null,
           },
           {
-            label: t("dashboard.stats.resolved"),
+            label: t("dashboard.stats.resolved", "Resolved Tickets"),
             value: loading ? "…" : resolvedCount,
             icon: "ti-circle-check",
             color: "green",
             sub: null,
           },
           {
-            label: t("dashboard.stats.pending"),
+            label: t("dashboard.stats.pending", "Pending Tickets"),
             value: loading ? "…" : pendingCount,
             icon: "ti-clock",
             color: "orange",
             sub: null,
           },
           {
-            label: t("dashboard.stats.total"),
+            label: t("dashboard.stats.total", "Total Tickets"),
             value: loading ? "…" : total,
             icon: "ti-chart-bar",
             color: "purple",
@@ -328,13 +328,13 @@ export default function EmployeeDashboard() {
 
         <div className="emp-card emp-chart-card">
           <div className="emp-card__header">
-            <h2 className="emp-card__title">{t("dashboard.charts.statusBreakdown")}</h2>
+            <h2 className="emp-card__title">{t("dashboard.charts.statusBreakdown", "Status Breakdown")}</h2>
           </div>
           <div className="emp-donut-section">
-            <DonutChart data={donutData} centerLabel={t("dashboard.charts.ticketsUnit")} />
+            <DonutChart data={donutData} centerLabel={t("dashboard.charts.ticketsUnit", "Tickets")} />
             <div className="emp-donut-legend">
               {donutData.length === 0 ? (
-                <p className="emp-empty-text">{t("dashboard.charts.noTicketsYet")}</p>
+                <p className="emp-empty-text">{t("dashboard.charts.noTicketsYet", "No tickets yet")}</p>
               ) : donutData.map(d => (
                 <div key={d.key} className="emp-donut-legend-item">
                   <span className="emp-donut-legend-dot" style={{ background: d.color }} />
@@ -351,13 +351,13 @@ export default function EmployeeDashboard() {
 
         <div className="emp-card emp-chart-card">
           <div className="emp-card__header">
-            <h2 className="emp-card__title">{t("dashboard.charts.byCategory")}</h2>
+            <h2 className="emp-card__title">{t("dashboard.charts.byCategory", "By Category")}</h2>
           </div>
           <div className="emp-donut-section">
-            <DonutChart data={catDonutData} centerLabel={t("dashboard.charts.ticketsUnit")} />
+            <DonutChart data={catDonutData} centerLabel={t("dashboard.charts.ticketsUnit", "Tickets")} />
             <div className="emp-donut-legend">
               {catDonutData.length === 0 ? (
-                <p className="emp-empty-text">{t("dashboard.charts.noTicketsYet")}</p>
+                <p className="emp-empty-text">{t("dashboard.charts.noTicketsYet", "No tickets yet")}</p>
               ) : catDonutData.map(d => (
                 <div key={d.key} className="emp-donut-legend-item">
                   <span className="emp-donut-legend-dot" style={{ background: d.color }} />
@@ -371,14 +371,14 @@ export default function EmployeeDashboard() {
 
         <div className="emp-card emp-chart-card emp-chart-card--wide">
           <div className="emp-card__header">
-            <h2 className="emp-card__title">{t("dashboard.charts.ticketsOverTime")}</h2>
+            <h2 className="emp-card__title">{t("dashboard.charts.ticketsOverTime", "Tickets Over Time (14 Days)")}</h2>
           </div>
           <div className="emp-card__body-chart">
             <LineChart
               tickets={tickets}
               labels={{
-                created:  t("dashboard.charts.created"),
-                resolved: t("dashboard.charts.resolved"),
+                created:  t("dashboard.charts.created", "Created"),
+                resolved: t("dashboard.charts.resolved", "Resolved"),
               }}
             />
           </div>
@@ -390,9 +390,9 @@ export default function EmployeeDashboard() {
 
         <div className="emp-card emp-tickets-card">
           <div className="emp-card__header">
-            <h2 className="emp-card__title">{t("dashboard.table.title")}</h2>
+            <h2 className="emp-card__title">{t("dashboard.table.title", "My Tickets")}</h2>
             <button className="emp-card__link" onClick={() => navigate("/employee/my-tickets")}>
-              {t("dashboard.table.viewAll")} <i className="ti ti-arrow-right" />
+              {t("dashboard.table.viewAll", "View All")} <i className="ti ti-arrow-right" />
             </button>
           </div>
 
@@ -404,7 +404,7 @@ export default function EmployeeDashboard() {
                 onClick={() => setActiveTab(tab.value)}
               >
                 {/* show count badge next to In Progress tab */}
-                {t(tab.labelKey)}
+                {t(tab.labelKey, tab.fallback)}
                 {tab.value === "In progress" && inProgressCount > 0 && (
                   <span className="emp-tab-badge">{inProgressCount}</span>
                 )}
@@ -414,33 +414,33 @@ export default function EmployeeDashboard() {
 
           <div className="emp-table-wrapper">
             {loading ? (
-              <div className="emp-table-loading"><span className="emp-spinner" /> {t("dashboard.table.loading")}</div>
+              <div className="emp-table-loading"><span className="emp-spinner" /> {t("dashboard.table.loading", "Loading tickets…")}</div>
             ) : filtered.length === 0 ? (
               <div className="emp-table-empty">
                 <i className="ti ti-ticket" />
-                <p>{t("dashboard.table.empty")}</p>
+                <p>{t("dashboard.table.empty", "No tickets found")}</p>
               </div>
             ) : (
               <table className="emp-table">
                 <thead>
                   <tr>
-                    <th>{t("dashboard.table.ticketId")}</th>
-                    <th>{t("dashboard.table.subject")}</th>
-                    <th>{t("dashboard.table.category")}</th>
-                    <th>{t("dashboard.table.priority")}</th>
-                    <th>{t("dashboard.table.status")}</th>
-                    <th>{t("dashboard.table.updated")}</th>
+                    <th>{t("dashboard.table.ticketId", "Ticket ID")}</th>
+                    <th>{t("dashboard.table.subject", "Subject")}</th>
+                    <th>{t("dashboard.table.category", "Category")}</th>
+                    <th>{t("dashboard.table.priority", "Priority")}</th>
+                    <th>{t("dashboard.table.status", "Status")}</th>
+                    <th>{t("dashboard.table.updated", "Updated")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(t => (
-                    <tr key={t.id} className="emp-table__row">
-                      <td><span className="emp-ticket-id">{t.ticket_number}</span></td>
-                      <td><span className="emp-ticket-subject">{t.title}</span></td>
-                      <td><span className="emp-ticket-category">{t.category?.category_name || "—"}</span></td>
-                      <td><span className={`emp-priority-badge emp-priority-badge--${(t.priority?.priority_name || "").toLowerCase()}`}>{t.priority?.priority_name || "—"}</span></td>
-                      <td><span className={`emp-status-badge emp-status-badge--${statusOf(t).toLowerCase().replace(/\s+/g, "-")}`}>{statusOf(t)}</span></td>
-                      <td><span className="emp-time">{t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}</span></td>
+                  {filtered.map(t2 => (
+                    <tr key={t2.id} className="emp-table__row">
+                      <td><span className="emp-ticket-id">{t2.ticket_number}</span></td>
+                      <td><span className="emp-ticket-subject">{t2.title}</span></td>
+                      <td><span className="emp-ticket-category">{t2.category?.category_name || "—"}</span></td>
+                      <td><span className={`emp-priority-badge emp-priority-badge--${(t2.priority?.priority_name || "").toLowerCase()}`}>{t2.priority?.priority_name || "—"}</span></td>
+                      <td><span className={`emp-status-badge emp-status-badge--${statusOf(t2).toLowerCase().replace(/\s+/g, "-")}`}>{statusOf(t2)}</span></td>
+                      <td><span className="emp-time">{t2.created_at ? new Date(t2.created_at).toLocaleDateString() : "—"}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -453,21 +453,21 @@ export default function EmployeeDashboard() {
           <div className="emp-cta-card" onClick={() => navigate("/employee/create-ticket")}>
             <div className="emp-cta-icon"><i className="ti ti-plus" /></div>
             <div className="emp-cta-text">
-              <span className="emp-cta-title">{t("dashboard.cta.title")}</span>
-              <span className="emp-cta-sub">{t("dashboard.cta.subtitle")}</span>
+              <span className="emp-cta-title">{t("dashboard.cta.title", "Create New Ticket")}</span>
+              <span className="emp-cta-sub">{t("dashboard.cta.subtitle", "Need help? Submit a new request")}</span>
             </div>
             <i className="ti ti-arrow-right emp-cta-arrow" />
           </div>
 
           <div className="emp-card">
             <div className="emp-card__header">
-              <h2 className="emp-card__title">{t("dashboard.resources.title")}</h2>
+              <h2 className="emp-card__title">{t("dashboard.resources.title", "Helpful Resources")}</h2>
             </div>
             <div className="emp-resources">
               {resources.map(r => (
                 <button key={r.textKey} className="emp-resource-item">
                   <i className={`ti ${r.icon}`} />
-                  <span>{t(r.textKey)}</span>
+                  <span>{t(r.textKey, r.fallback)}</span>
                   <i className="ti ti-chevron-right emp-resource-arrow" />
                 </button>
               ))}
@@ -480,10 +480,10 @@ export default function EmployeeDashboard() {
         <div className="emp-announcement">
           <div className="emp-announcement__icon"><i className="ti ti-speakerphone" /></div>
           <div className="emp-announcement__content">
-            <span className="emp-announcement__title">{t("dashboard.announcement.title")}</span>
-            <span className="emp-announcement__text">{t("dashboard.announcement.text")}</span>
+            <span className="emp-announcement__title">{t("dashboard.announcement.title", "System Maintenance")}</span>
+            <span className="emp-announcement__text">{t("dashboard.announcement.text", "System maintenance will occur on May 25, 2025 from 12:00 AM to 2:00 AM.")}</span>
           </div>
-          <button className="emp-announcement__view">{t("dashboard.announcement.viewDetails")}</button>
+          <button className="emp-announcement__view">{t("dashboard.announcement.viewDetails", "View Details")}</button>
           <button className="emp-announcement__close" onClick={() => setShowAnnouncement(false)}>
             <i className="ti ti-x" />
           </button>
@@ -491,4 +491,4 @@ export default function EmployeeDashboard() {
       )}
     </div>
   );
-} 
+}

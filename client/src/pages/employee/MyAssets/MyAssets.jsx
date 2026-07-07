@@ -72,15 +72,16 @@ export default function MyAssets() {
           },
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || t("myAssets.loadError"));
+        if (!res.ok) throw new Error(data.message || t("myAssets.loadError", "Failed to load assets."));
         setAssets(Array.isArray(data.assets) ? data.assets : []);
       } catch (e) {
-        setError(e.message || t("myAssets.loadErrorGeneric"));
+        setError(e.message || t("myAssets.loadErrorGeneric", "Unable to load your assets."));
       } finally {
         setLoading(false);
       }
     })();
-  }, [token, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   // Localized status labels (rebuild on language change)
   const BUCKET_LABEL = useMemo(
@@ -93,7 +94,7 @@ export default function MyAssets() {
     return (
       <div className="ma-page ma-loading">
         <div className="ma-spinner" />
-        <p>{t("myAssets.loading")}</p>
+        <p>{t("myAssets.loading", "Loading your assets…")}</p>
       </div>
     );
   }
@@ -105,7 +106,7 @@ export default function MyAssets() {
         <div className="ma-error">
           <Icon d={IC.warning} size={20} />
           <div>
-            <strong>{t("myAssets.errorTitle")}</strong>
+            <strong>{t("myAssets.errorTitle", "Something went wrong")}</strong>
             <p style={{ margin: "4px 0 0" }}>{error}</p>
           </div>
         </div>
@@ -122,14 +123,14 @@ export default function MyAssets() {
             <Icon d={IC.laptop} size={20} />
           </div>
           <h2 className="ma-title">
-            {t("myAssets.title")}
+            {t("myAssets.title", "My Assets")}
             <span className="ma-title-pill">{assets.length}</span>
           </h2>
         </div>
         <span className="ma-count">
           <Icon d={IC.box} size={13} />
           {assets.length === 0
-            ? t("myAssets.noneAssigned")
+            ? t("myAssets.noneAssigned", "No assets assigned")
             : t("myAssets.count_other", "{{count}} assigned {{unit}}", {
                 count: assets.length,
                 unit: t(assets.length === 1 ? "myAssets.asset_one" : "myAssets.asset_other", "assets"),
@@ -144,11 +145,11 @@ export default function MyAssets() {
             <div className="ma-empty-icon">
               <Icon d={IC.box} size={32} />
             </div>
-            <h3 className="ma-empty-title">{t("myAssets.emptyTitle")}</h3>
-            <p className="ma-empty-text">{t("myAssets.emptyText")}</p>
+            <h3 className="ma-empty-title">{t("myAssets.emptyTitle", "No assets yet")}</h3>
+            <p className="ma-empty-text">{t("myAssets.emptyText", "Any equipment assigned to you by IT will show up here.")}</p>
             <Link to="/create-ticket" className="ma-empty-cta">
               <Icon d={IC.ticket} size={14} />
-              {t("myAssets.emptyCta")}
+              {t("myAssets.emptyCta", "Submit a Ticket")}
             </Link>
           </div>
         </div>
@@ -171,7 +172,7 @@ export default function MyAssets() {
                         {a.asset_name ?? a.name ?? t("common.unnamed", "Unnamed Asset")}
                       </div>
                       <div className="ma-asset-sub">
-                        {a.brand ? a.brand : t("myAssets.generic")}
+                        {a.brand ? a.brand : t("myAssets.generic", "Generic")}
                         {a.model ? ` · ${a.model}` : ""}
                       </div>
                     </div>
@@ -188,15 +189,15 @@ export default function MyAssets() {
                   {/* Info list */}
                   <div className="ma-asset-info">
                     <div className="ma-asset-info-row">
-                      <strong>{t("myAssets.labelSerial")}</strong>
+                      <strong>{t("myAssets.labelSerial", "Serial Number")}</strong>
                       <span>{a.serial_number ?? "—"}</span>
                     </div>
                     <div className="ma-asset-info-row">
-                      <strong>{t("myAssets.labelWarranty")}</strong>
+                      <strong>{t("myAssets.labelWarranty", "Warranty Until")}</strong>
                       <span>{formatDate(a.warranty_expiry, language)}</span>
                     </div>
                     <div className="ma-asset-info-row">
-                      <strong>{t("myAssets.labelLocation")}</strong>
+                      <strong>{t("myAssets.labelLocation", "Location")}</strong>
                       <span>{a.location ?? "—"}</span>
                     </div>
                   </div>
@@ -211,7 +212,7 @@ export default function MyAssets() {
                       }}
                     >
                       <Icon d={IC.external} size={13} />
-                      {t("myAssets.viewDetails")}
+                      {t("myAssets.viewDetails", "View Details")}
                     </span>
                     <div className="ma-action-divider" />
                     <span
@@ -222,7 +223,7 @@ export default function MyAssets() {
                       }}
                     >
                       <Icon d={IC.warning} size={13} />
-                      {t("myAssets.reportIssue")}
+                      {t("myAssets.reportIssue", "Report Issue")}
                     </span>
                   </div>
                 </button>

@@ -11,6 +11,9 @@ import {
   updateAdminUser,
 } from "../../../services/adminUserService";
 
+import { bulkActivateAdminUsers } from "../../../services/adminUserActivation";
+
+
 const STATUSES = ["All", "Active", "Inactive"];
 
 const EMPTY_FORM = {
@@ -243,6 +246,23 @@ export default function UserManagement() {
     }
   };
 
+  const onBulkActivate = async () => {
+    if (!token || selectedUsers.length === 0) return;
+    try {
+      await bulkActivateAdminUsers(token, selectedUsers);
+      setSelectedUsers([]);
+      await fetchAll({
+        search: searchQuery,
+        role: roleFilter,
+        department: deptFilter,
+        status: statusFilter,
+      });
+    } catch {
+      setErrorMsg("Failed to activate selected users.");
+    }
+  };
+
+
   return (
     <div className="user-management-container">
       <div className="user-management-header">
@@ -316,6 +336,7 @@ export default function UserManagement() {
         {selectedUsers.length > 0 && (
           <div className="bulk-actions">
             <span className="bulk-label">{selectedUsers.length} selected</span>
+
             <button
               className="bulk-button bulk-button--danger"
               onClick={onBulkDelete}
@@ -323,15 +344,42 @@ export default function UserManagement() {
             >
               <i className="ti ti-trash" /> Delete
             </button>
-            <button
-              className="bulk-button"
-              onClick={onBulkDeactivate}
-              title="Deactivate selected users"
-            >
-              <i className="ti ti-ban" /> Deactivate
-            </button>
+
+            {(() => {
+              const selected = safeUsers.filter((u) => selectedUsers.includes(u.id));
+              const anyActive = selected.some((u) => u.status === "Active");
+              const anyInactive = selected.some((u) => u.status === "Inactive");
+
+              if (anyActive) {
+                return (
+                  <button
+                    className="bulk-button"
+                    onClick={onBulkDeactivate}
+                    title="Deactivate selected users"
+                  >
+                    <i className="ti ti-ban" /> Deactivate
+                  </button>
+                );
+              }
+
+              if (anyInactive) {
+                return (
+                  <button
+                    className="bulk-button"
+                    onClick={onBulkActivate}
+                    title="Activate selected users"
+                  >
+                    <i className="ti ti-check" /> Activate
+                  </button>
+                );
+              }
+
+              return null;
+            })()}
           </div>
         )}
+
+
       </div>
 
       <div className="table-card">
