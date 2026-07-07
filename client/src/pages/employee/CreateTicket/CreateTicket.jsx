@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./CreateTicket.css";
 import { createTicket, getCategories, getPriorities } from "../../../services/ticketService";
 
@@ -11,6 +12,9 @@ const BASE_URL = "http://127.0.0.1:8000/api";
 
 export default function CreateTicket() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  const token = localStorage.getItem("token");
+
   const [form, setForm] = useState({ title: "", category_id: "", priority_id: "", description: "" });
   const [errors, setErrors]         = useState({});
   const [submitted, setSubmitted]   = useState(false);
@@ -21,12 +25,11 @@ export default function CreateTicket() {
   const [ticketRef, setTicketRef]   = useState("");
   const [attachments, setAttachments] = useState([]);
   const [fileError, setFileError]   = useState("");
-  const token = localStorage.getItem("token");
 
-  // ── AI suggestion state ──────────────────────────────────────────────────
+  // AI suggestion state
   const [aiLoading, setAiLoading]     = useState(false);
   const [aiError, setAiError]         = useState("");
-  const [aiSuggestion, setAiSuggestion] = useState(null); // { category, priority, reasoning }
+  const [aiSuggestion, setAiSuggestion] = useState(null);
   const [aiApplied, setAiApplied]     = useState(false);
 
   useEffect(() => {
@@ -36,11 +39,11 @@ export default function CreateTicket() {
         setCategories(cats.map(c => ({ id: c.id, name: c.category_name })));
         setPriorities(prios.map(p => ({ id: p.id, name: p.priority_name })));
       } catch {
-        setApiError("Failed to load form data. Please refresh.");
+        setApiError(t("createTicket.apiErrorLoadForm", "Failed to load form data. Please refresh."));
       }
     };
     fetchData();
-  }, [token]);
+  }, [token, t]);
 
   const update = (field) => (e) => {
     setForm(f => ({ ...f, [field]: e.target.value }));
@@ -49,15 +52,14 @@ export default function CreateTicket() {
 
   const validate = () => {
     const e = {};
-    if (!form.title.trim())                    e.title       = "Title is required";
-    if (!form.category_id)                     e.category_id = "Please select a category";
-    if (!form.priority_id)                     e.priority_id = "Please select a priority";
-    if (!form.description.trim())              e.description = "Description is required";
-    if (form.description.trim().length < 10)   e.description = "At least 10 characters required";
+    if (!form.title.trim())                    e.title       = t("createTicket.errTitleRequired",     "Title is required");
+    if (!form.category_id)                     e.category_id = t("createTicket.errCategoryRequired", "Please select a category");
+    if (!form.priority_id)                     e.priority_id = t("createTicket.errPriorityRequired", "Please select a priority");
+    if (!form.description.trim())              e.description = t("createTicket.errDescriptionRequired","Description is required");
+    if (form.description.trim().length < 10)   e.description = t("createTicket.errDescriptionTooShort","At least 10 characters required");
     return e;
   };
 
-  // ── AI: suggest category + priority from title/description ─────────────
   const canSuggest = form.title.trim().length > 0 && form.description.trim().length >= 10;
 
   const requestAiSuggestion = async () => {
@@ -82,11 +84,11 @@ export default function CreateTicket() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Could not get a suggestion.");
+      if (!res.ok) throw new Error(data?.message || t("createTicket.aiErrGeneric", "Could not get a suggestion."));
 
       setAiSuggestion(data);
     } catch (err) {
-      setAiError(err.message || "AI suggestion failed. Please choose manually.");
+      setAiError(err.message || t("createTicket.aiErrGeneric", "AI suggestion failed. Please choose manually."));
     } finally {
       setAiLoading(false);
     }
@@ -94,13 +96,8 @@ export default function CreateTicket() {
 
   const applyAiSuggestion = () => {
     if (!aiSuggestion) return;
-
-    const matchedCategory = categories.find(
-      c => c.name.toLowerCase() === aiSuggestion.category.toLowerCase()
-    );
-    const matchedPriority = priorities.find(
-      p => p.name.toLowerCase() === aiSuggestion.priority.toLowerCase()
-    );
+    const matchedCategory = categories.find(c => c.name.toLowerCase() === aiSuggestion.category.toLowerCase());
+    const matchedPriority = priorities.find(p => p.name.toLowerCase() === aiSuggestion.priority.toLowerCase());
 
     setForm(f => ({
       ...f,
@@ -131,7 +128,7 @@ export default function CreateTicket() {
 
       if (attachments.length > 0) {
         if (!createdTicketId) {
-          setApiError("Ticket was created, but attachments could not be uploaded (missing ticket id)." );
+          setApiError(t("createTicket.errUploadMissingId", "Ticket was created, but attachments could not be uploaded (missing ticket id)."));
         } else {
           for (const file of attachments) {
             const formData = new FormData();
@@ -148,10 +145,9 @@ export default function CreateTicket() {
 
             if (!res.ok) {
               const body = await res.json().catch(() => ({}));
-              throw new Error(body?.message || `Failed to upload attachment: ${file.name}`);
+              throw new Error(body?.message || t("createTicket.errUploadFailed", "Failed to upload attachment: {{name}}", { name: file.name }));
             }
           }
-
           setAttachments([]);
           setFileError("");
         }
@@ -160,7 +156,7 @@ export default function CreateTicket() {
       setTicketRef(createdTicketNumber || "TKT-" + Math.floor(1000 + Math.random() * 9000));
       setSubmitted(true);
     } catch (err) {
-      setApiError(err?.response?.data?.message || err.message || "Failed to submit. Please try again.");
+      setApiError(err?.response?.data?.message || err.message || t("createTicket.errSubmitFailed", "Failed to submit. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -172,14 +168,13 @@ export default function CreateTicket() {
     setAiSuggestion(null); setAiError(""); setAiApplied(false);
   };
 
-  // ── File validation ──
   const handleFile = (e) => {
     const incoming = Array.from(e.target.files);
     setFileError("");
 
     const availableSlots = MAX_FILES - attachments.length;
     if (availableSlots <= 0) {
-      setFileError(`You can only attach up to ${MAX_FILES} files.`);
+      setFileError(t("createTicket.errMaxFiles", "You can only attach up to {{n}} files.", { n: MAX_FILES }));
       e.target.value = "";
       return;
     }
@@ -189,11 +184,11 @@ export default function CreateTicket() {
 
     incoming.forEach((file) => {
       if (!ALLOWED_TYPES.includes(file.type)) {
-        rejected.push(`${file.name} — unsupported file type`);
+        rejected.push(`${file.name} — ${t("createTicket.errUnsupportedType", "unsupported file type")}`);
         return;
       }
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        rejected.push(`${file.name} — exceeds ${MAX_FILE_SIZE_MB}MB`);
+        rejected.push(`${file.name} — ${t("createTicket.errExceedsSize", "exceeds {{n}}MB", { n: MAX_FILE_SIZE_MB })}`);
         return;
       }
       accepted.push(file);
@@ -201,7 +196,9 @@ export default function CreateTicket() {
 
     const toAdd = accepted.slice(0, availableSlots);
     if (accepted.length > availableSlots) {
-      rejected.push(`Only ${availableSlots} more file(s) could be added (max ${MAX_FILES} total)`);
+      rejected.push(t("createTicket.errOnlyAddMore", "Only {{n}} more file(s) could be added (max {{max}} total)", {
+        n: availableSlots, max: MAX_FILES
+      }));
     }
 
     if (rejected.length > 0) {
@@ -230,17 +227,21 @@ export default function CreateTicket() {
         <div className="ct-success__icon">
           <i className="ti ti-circle-check" />
         </div>
-        <h2 className="ct-success__title">Ticket Submitted!</h2>
+        <h2 className="ct-success__title">{t("createTicket.successTitle", "Ticket Submitted!")}</h2>
         <p className="ct-success__text">
-          Your support request has been received. Our IT team will get back to you shortly.
+          {t("createTicket.successText", "Your support request has been received. Our IT team will get back to you shortly.")}
         </p>
         <div className="ct-success__ref">
-          <span className="ct-success__ref-label">Ticket Reference</span>
+          <span className="ct-success__ref-label">{t("createTicket.successRefLabel", "Ticket Reference")}</span>
           <span className="ct-success__ref-num">{ticketRef}</span>
         </div>
         <div className="ct-success__actions">
-          <button className="ct-btn ct-btn--outline" onClick={handleReset}>Create Another</button>
-          <button className="ct-btn ct-btn--primary" onClick={() => navigate("/employee/my-tickets")}>View My Tickets</button>
+          <button className="ct-btn ct-btn--outline" onClick={handleReset}>
+            {t("createTicket.createAnother", "Create Another")}
+          </button>
+          <button className="ct-btn ct-btn--primary" onClick={() => navigate("/employee/my-tickets")}>
+            {t("createTicket.viewMyTickets", "View My Tickets")}
+          </button>
         </div>
       </div>
     );
@@ -252,8 +253,8 @@ export default function CreateTicket() {
 
       <div className="ct-page__header">
         <div>
-          <h1 className="ct-page__title">Create New Ticket</h1>
-          <p className="ct-page__subtitle">Submit a new IT support request</p>
+          <h1 className="ct-page__title">{t("createTicket.title", "Create New Ticket")}</h1>
+          <p className="ct-page__subtitle">{t("createTicket.subtitle", "Submit a new IT support request")}</p>
         </div>
       </div>
 
@@ -269,17 +270,19 @@ export default function CreateTicket() {
         {/* Main Form */}
         <div className="ct-card">
           <div className="ct-card__header">
-            <h2 className="ct-card__title">Ticket Information</h2>
+            <h2 className="ct-card__title">{t("createTicket.sectionTitle", "Ticket Information")}</h2>
           </div>
           <div className="ct-card__body">
 
             {/* Title */}
             <div className={`ct-field ${errors.title ? "ct-field--error" : ""}`}>
-              <label className="ct-label">Title <span className="ct-required">*</span></label>
+              <label className="ct-label">
+                {t("createTicket.titleLabel", "Title")} <span className="ct-required">*</span>
+              </label>
               <input
                 type="text"
                 className="ct-input"
-                placeholder="e.g. Cannot connect to VPN"
+                placeholder={t("createTicket.titlePh", "e.g. Cannot connect to VPN")}
                 value={form.title}
                 onChange={update("title")}
               />
@@ -288,11 +291,13 @@ export default function CreateTicket() {
 
             {/* Description */}
             <div className={`ct-field ${errors.description ? "ct-field--error" : ""}`}>
-              <label className="ct-label">Description <span className="ct-required">*</span></label>
+              <label className="ct-label">
+                {t("createTicket.descriptionLabel", "Description")} <span className="ct-required">*</span>
+              </label>
               <textarea
                 className="ct-textarea"
                 rows={5}
-                placeholder="Describe your issue in detail. Include error messages, steps to reproduce, and what you've tried..."
+                placeholder={t("createTicket.descriptionPh", "Describe your issue in detail. Include error messages, steps to reproduce, and what you've tried...")}
                 value={form.description}
                 onChange={update("description")}
               />
@@ -301,26 +306,26 @@ export default function CreateTicket() {
                   ? <span className="ct-error-msg"><i className="ti ti-alert-circle" />{errors.description}</span>
                   : <span />
                 }
-                <span className="ct-char-count">{form.description.length} chars</span>
+                <span className="ct-char-count">{t("createTicket.charCount", "{{n}} chars", { n: form.description.length })}</span>
               </div>
             </div>
 
-            {/* ── AI suggestion panel ── */}
+            {/* AI suggestion panel */}
             <div className="ct-ai-box">
               <div className="ct-ai-box__header">
                 <span className="ct-ai-box__title">
-                  <i className="ti ti-sparkles" /> AI category &amp; priority suggestion
+                  <i className="ti ti-sparkles" /> {t("createTicket.aiTitle", "AI category & priority suggestion")}
                 </span>
                 <button
                   type="button"
                   className="ct-ai-box__btn"
                   onClick={requestAiSuggestion}
                   disabled={!canSuggest || aiLoading}
-                  title={!canSuggest ? "Add a title and at least 10 characters of description first" : ""}
+                  title={!canSuggest ? t("createTicket.aiBtnHint", "Add a title and at least 10 characters of description first") : ""}
                 >
                   {aiLoading
-                    ? <><span className="ct-spinner" /> Thinking…</>
-                    : <><i className="ti ti-wand" /> Suggest</>
+                    ? <><span className="ct-spinner" /> {t("createTicket.aiThinking", "Thinking…")}</>
+                    : <><i className="ti ti-wand" /> {t("createTicket.aiSuggest", "Suggest")}</>
                   }
                 </button>
               </div>
@@ -351,8 +356,8 @@ export default function CreateTicket() {
                     disabled={aiApplied}
                   >
                     {aiApplied
-                      ? <><i className="ti ti-check" /> Applied</>
-                      : "Use this suggestion"
+                      ? <><i className="ti ti-check" /> {t("createTicket.aiApplied", "Applied")}</>
+                      : t("createTicket.aiUseSuggestion", "Use this suggestion")
                     }
                   </button>
                 </div>
@@ -360,7 +365,7 @@ export default function CreateTicket() {
 
               {!aiSuggestion && !aiError && !aiLoading && (
                 <p className="ct-ai-box__hint">
-                  Fill in the title and description, then let AI suggest a category and priority for you.
+                  {t("createTicket.aiHint", "Fill in the title and description, then let AI suggest a category and priority for you.")}
                 </p>
               )}
             </div>
@@ -368,10 +373,12 @@ export default function CreateTicket() {
             {/* Category + Priority */}
             <div className="ct-row">
               <div className={`ct-field ${errors.category_id ? "ct-field--error" : ""}`}>
-                <label className="ct-label">Category <span className="ct-required">*</span></label>
+                <label className="ct-label">
+                  {t("createTicket.categoryLabel", "Category")} <span className="ct-required">*</span>
+                </label>
                 <div className="ct-select-wrap">
                   <select className="ct-select" value={form.category_id} onChange={update("category_id")}>
-                    <option value="">Select Category</option>
+                    <option value="">{t("createTicket.categoryPh", "Select Category")}</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <i className="ti ti-chevron-down ct-select-icon" />
@@ -380,10 +387,12 @@ export default function CreateTicket() {
               </div>
 
               <div className={`ct-field ${errors.priority_id ? "ct-field--error" : ""}`}>
-                <label className="ct-label">Priority <span className="ct-required">*</span></label>
+                <label className="ct-label">
+                  {t("createTicket.priorityLabel", "Priority")} <span className="ct-required">*</span>
+                </label>
                 <div className="ct-select-wrap">
                   <select className="ct-select" value={form.priority_id} onChange={update("priority_id")}>
-                    <option value="">Select Priority</option>
+                    <option value="">{t("createTicket.priorityPh", "Select Priority")}</option>
                     {priorities.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                   <i className="ti ti-chevron-down ct-select-icon" />
@@ -395,7 +404,7 @@ export default function CreateTicket() {
             {/* Priority preview */}
             {selectedPriority && (
               <div className="ct-priority-preview">
-                Selected priority:
+                {t("createTicket.selectedPriority", "Selected priority:")}
                 <span className={`priority-badge priority-badge--${selectedPriority.name.toLowerCase()}`}>
                   {selectedPriority.name}
                 </span>
@@ -412,7 +421,7 @@ export default function CreateTicket() {
           <div className="ct-card">
             <div className="ct-card__header">
               <h2 className="ct-card__title">
-                Attachments <span className="ct-optional">(optional)</span>
+                {t("createTicket.attachmentsTitle", "Attachments")} <span className="ct-optional">{t("createTicket.optional", "(optional)")}</span>
               </h2>
             </div>
             <div className="ct-card__body">
@@ -420,9 +429,11 @@ export default function CreateTicket() {
               {remainingSlots > 0 ? (
                 <label className="ct-upload">
                   <i className="ti ti-paperclip ct-upload__icon" />
-                  <span className="ct-upload__text">Click to attach files</span>
+                  <span className="ct-upload__text">{t("createTicket.uploadText", "Click to attach files")}</span>
                   <span className="ct-upload__sub">
-                    PNG, JPG, PDF — up to {MAX_FILE_SIZE_MB}MB each · {remainingSlots} of {MAX_FILES} slots left
+                    {t("createTicket.uploadSub", "PNG, JPG, PDF — up to {{n}}MB each · {{rem}} of {{max}} slots left", {
+                      n: MAX_FILE_SIZE_MB, rem: remainingSlots, max: MAX_FILES
+                    })}
                   </span>
                   <input
                     type="file"
@@ -435,8 +446,8 @@ export default function CreateTicket() {
               ) : (
                 <div className="ct-upload ct-upload--disabled">
                   <i className="ti ti-lock ct-upload__icon" />
-                  <span className="ct-upload__text">Maximum {MAX_FILES} files reached</span>
-                  <span className="ct-upload__sub">Remove a file to add another</span>
+                  <span className="ct-upload__text">{t("createTicket.uploadMaxReached", "Maximum {{n}} files reached", { n: MAX_FILES })}</span>
+                  <span className="ct-upload__sub">{t("createTicket.uploadRemoveFirst", "Remove a file to add another")}</span>
                 </div>
               )}
 
@@ -453,7 +464,9 @@ export default function CreateTicket() {
                     <div key={i} className="ct-file-item">
                       <i className="ti ti-file" />
                       <span className="ct-file-name">{f.name}</span>
-                      <span className="ct-file-size">({(f.size/1024/1024).toFixed(2)} MB)</span>
+                      <span className="ct-file-size">({(Math.round((f.size / 1024 / 1024) * 10) / 10).toFixed(1)} MB)</span>
+
+
                       <button className="ct-file-remove" onClick={() => removeFile(i)}>
                         <i className="ti ti-x" />
                       </button>
@@ -468,27 +481,29 @@ export default function CreateTicket() {
           <div className="ct-tips">
             <div className="ct-tips__icon"><i className="ti ti-info-circle" /></div>
             <div>
-              <p className="ct-tips__title">Tips for faster resolution</p>
+              <p className="ct-tips__title">{t("createTicket.tipsTitle", "Tips for faster resolution")}</p>
               <ul className="ct-tips__list">
-                <li>Be specific about the issue and when it started</li>
-                <li>Include any error messages you see</li>
-                <li>Mention what you've already tried</li>
-                <li>Attach screenshots if possible</li>
+                <li>{t("createTicket.tip1", "Be specific about the issue and when it started")}</li>
+                <li>{t("createTicket.tip2", "Include any error messages you see")}</li>
+                <li>{t("createTicket.tip3", "Mention what you've already tried")}</li>
+                <li>{t("createTicket.tip4", "Attach screenshots if possible")}</li>
               </ul>
             </div>
           </div>
 
           {/* Actions */}
           <div className="ct-actions">
-            <button className="ct-btn ct-btn--ghost" onClick={handleReset}>Clear Form</button>
+            <button className="ct-btn ct-btn--ghost" onClick={handleReset}>
+              {t("createTicket.clearForm", "Clear Form")}
+            </button>
             <button
               className="ct-btn ct-btn--primary"
               onClick={handleSubmit}
               disabled={loading}
             >
               {loading
-                ? <><span className="ct-spinner" /> Submitting...</>
-                : <><i className="ti ti-send" /> Submit Ticket</>
+                ? <><span className="ct-spinner" /> {t("createTicket.submitting", "Submitting...")}</>
+                : <><i className="ti ti-send" /> {t("createTicket.submitTicket", "Submit Ticket")}</>
               }
             </button>
           </div>

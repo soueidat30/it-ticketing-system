@@ -1,15 +1,16 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import en from "../translations/en.json";
-import ar from "../translations/ar.json";
+import { ar } from "../locales/ar";
+import { fr } from "../locales/fr";
 
-const TRANSLATIONS = { en, ar };
+const TRANSLATIONS = { ar, fr };
 
 export const SUPPORTED_LANGUAGES = [
   { code: "en", name: "English", flag: "🇬🇧" },
   { code: "ar", name: "العربية", flag: "🇸🇦" },
+  { code: "fr", name: "Français", flag: "🇫🇷" },
 ];
 
-const RTL_LANGUAGES = SUPPORTED_LANGUAGES.filter((l) => l.code === "ar").map((l) => l.code);
+const RTL_LANGUAGES = ["ar"];
 
 const getRoleLanguageKey = (role) => `language:${role}`;
 
@@ -38,18 +39,22 @@ export function RoleLanguageProvider({ role, children }) {
   }, [language, isRTL, role]);
 
   const setLanguage = (lang) => {
-    if (TRANSLATIONS[lang]) setLanguageState(lang);
+    if (lang === "en" || TRANSLATIONS[lang]) setLanguageState(lang);
   };
 
   const toggleLanguage = () => {
-    setLanguageState((prev) => (prev === "en" ? "ar" : "en"));
+    setLanguageState((prev) => (prev === "en" ? "ar" : prev === "ar" ? "fr" : "en"));
   };
 
   const t = useMemo(() => {
-    return (key, vars = {}) => {
-      let str = getNested(TRANSLATIONS[language], key);
-      if (str === undefined) str = getNested(TRANSLATIONS.en, key);
-      if (str === undefined) return key;
+    return (key, fallback = key, vars = {}) => {
+      let str;
+      if (language === "en") {
+        str = fallback;
+      } else {
+        str = getNested(TRANSLATIONS[language], key);
+        if (str === undefined) str = fallback;
+      }
 
       return Object.keys(vars).reduce(
         (acc, varKey) => acc.replace(`{{${varKey}}}`, vars[varKey]),
@@ -70,4 +75,3 @@ export function useLanguage() {
   if (!ctx) throw new Error("useLanguage must be used within a RoleLanguageProvider");
   return ctx;
 }
-

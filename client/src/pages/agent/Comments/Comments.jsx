@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./Comments.css";
 
 const Icon = ({ d, size = 16 }) => (
@@ -42,6 +43,7 @@ const BASE_URL = "http://127.0.0.1:8000/api";
 
 export default function Comments() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const token = localStorage.getItem("token");
 
   const user = (() => {
@@ -62,7 +64,7 @@ export default function Comments() {
 
   useEffect(() => {
     if (!token) {
-      setError("Unauthorized.");
+      setError(t("agent.comments.unauthorized", "Unauthorized."));
       setLoading(false);
       return;
     }
@@ -74,29 +76,30 @@ export default function Comments() {
         });
         const data = await res.json();
         if (!res.ok) {
-          setError(data.message || "Failed to load comments.");
+          setError(data.message || t("agent.comments.loadError", "Failed to load comments."));
           return;
         }
         setTickets(Array.isArray(data) ? data : []);
       } catch {
-        setError("Unable to load comments.");
+        setError(t("agent.comments.loadErrorGeneric", "Unable to load comments."));
       } finally {
         setLoading(false);
       }
     };
 
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   // Flatten every ticket's comments into a single feed, newest first.
   const allComments = useMemo(() => {
-    const flat = tickets.flatMap((t) =>
-      (t.comments ?? []).map((c) => ({
+    const flat = tickets.flatMap((tk) =>
+      (tk.comments ?? []).map((c) => ({
         id: c.id,
-        ticketId: t.id,
-        ticketNumber: t.ticket_number ?? t.id,
-        ticketTitle: t.title ?? "Untitled ticket",
-        author: c.user?.full_name ?? c.user?.username ?? "Unknown",
+        ticketId: tk.id,
+        ticketNumber: tk.ticket_number ?? tk.id,
+        ticketTitle: tk.title ?? "Untitled ticket",
+        author: c.user?.full_name ?? c.user?.username ?? t("common.unknown", "Unknown"),
         role: c.user?.role?.name ?? "employee",
         text: c.content,
         internal: !!c.internal,
@@ -104,6 +107,7 @@ export default function Comments() {
       }))
     );
     return flat.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickets]);
 
   const visible = useMemo(() => {
@@ -133,8 +137,8 @@ export default function Comments() {
     <div className="cm-page">
       <div className="agent-page-header">
         <div>
-          <h1 className="agent-page-title">Comments</h1>
-          <p className="agent-page-subtitle">All replies and notes across your tickets</p>
+          <h1 className="agent-page-title">{t("agent.comments.title", "Comments")}</h1>
+          <p className="agent-page-subtitle">{t("agent.comments.subtitle", "All replies and notes across your tickets")}</p>
         </div>
       </div>
 
@@ -144,20 +148,20 @@ export default function Comments() {
             className={`cm-tab${filter === "all" ? " active" : ""}`}
             onClick={() => setFilter("all")}
           >
-            All <span className="cm-tab-count">{allComments.length}</span>
+            {t("agent.comments.tabAll", "All")} <span className="cm-tab-count">{allComments.length}</span>
           </button>
           <button
             className={`cm-tab${filter === "public" ? " active" : ""}`}
             onClick={() => setFilter("public")}
           >
-            <Icon d={IC.comment} size={13} /> Public <span className="cm-tab-count">{publicCount}</span>
+            <Icon d={IC.comment} size={13} /> {t("agent.comments.tabPublic", "Public")} <span className="cm-tab-count">{publicCount}</span>
           </button>
           {canSeeInternal && (
             <button
               className={`cm-tab cm-tab--internal${filter === "internal" ? " active" : ""}`}
               onClick={() => setFilter("internal")}
             >
-              <Icon d={IC.lock} size={13} /> Internal <span className="cm-tab-count">{internalCount}</span>
+              <Icon d={IC.lock} size={13} /> {t("agent.comments.tabInternal", "Internal")} <span className="cm-tab-count">{internalCount}</span>
             </button>
           )}
         </div>
@@ -171,21 +175,21 @@ export default function Comments() {
             className="cm-search-input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search comments or tickets…"
+            placeholder={t("agent.comments.searchPlaceholder", "Search comments or tickets…")}
           />
         </div>
       </div>
 
       <div className="agent-card cm-feed-card">
         {loading ? (
-          <div className="cm-state">Loading comments…</div>
+          <div className="cm-state">{t("agent.comments.loading", "Loading comments…")}</div>
         ) : error ? (
           <div className="cm-state cm-state--error">{error}</div>
         ) : visible.length === 0 ? (
           <div className="cm-empty">
             <Icon d={IC.comment} size={28} />
-            <div className="cm-empty-title">No comments to show</div>
-            <p>Replies and notes from your tickets will appear here.</p>
+            <div className="cm-empty-title">{t("agent.comments.emptyTitle", "No comments to show")}</div>
+            <p>{t("agent.comments.emptyDesc", "Replies and notes from your tickets will appear here.")}</p>
           </div>
         ) : (
           <div className="cm-feed">
@@ -201,7 +205,7 @@ export default function Comments() {
                     <span className="cm-author">{c.author}</span>
                     {c.internal && (
                       <span className="cm-internal-badge">
-                        <Icon d={IC.lock} size={10} /> Internal
+                        <Icon d={IC.lock} size={10} /> {t("agent.comments.internalBadge", "Internal")}
                       </span>
                     )}
                     <span className="cm-time">{formatDate(c.createdAt)}</span>

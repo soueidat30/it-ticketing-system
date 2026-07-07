@@ -63,9 +63,11 @@ function ThemeToggle() {
   );
 }
 
+const IC_CHECK = "M20 6L9 17l-5-5";
+
 // EN/AR/FR dropdown — replaces the old 2-state EN/AR toggle pill.
 function LanguageDropdown() {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, t, isRTL } = useLanguage();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -77,67 +79,58 @@ function LanguageDropdown() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Close on Escape for keyboard users
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   const current = SUPPORTED_LANGUAGES.find((l) => l.code === language) ?? SUPPORTED_LANGUAGES[0];
 
   return (
-    <div className="agent-topbar__lang-wrap" ref={wrapRef} style={{ position: "relative" }}>
+    <div className="agent-lang" ref={wrapRef}>
       <button
         type="button"
-        className="agent-topbar__action-btn agent-topbar__lang-btn"
+        className={`agent-topbar__action-btn agent-lang__trigger${open ? " open" : ""}`}
         onClick={() => setOpen((o) => !o)}
         aria-label={t("topbar.toggleLanguage", "Change language")}
         title={t("topbar.toggleLanguage", "Change language")}
-        style={{ display: "flex", alignItems: "center", gap: 4 }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
-        <span>{current.flag}</span>
-        <span>{current.code.toUpperCase()}</span>
-        <Icon d={Icons.chevronDown} style={{ width: 11, height: 11 }} />
+        <span className="agent-lang__flag">{current.flag}</span>
+        <span className="agent-lang__code">{current.code.toUpperCase()}</span>
+        <Icon d={Icons.chevronDown} className="agent-lang__caret" />
       </button>
 
       {open && (
-        <div
-          className="agent-topbar__lang-menu"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            right: 0,
-            background: "var(--agent-surface)",
-            border: "1px solid var(--agent-border)",
-            borderRadius: "var(--radius-sm)",
-            boxShadow: "var(--agent-shadow)",
-            minWidth: 150,
-            padding: 6,
-            zIndex: 40,
-          }}
-        >
-          {SUPPORTED_LANGUAGES.map((l) => (
-            <button
-              key={l.code}
-              type="button"
-              onClick={() => {
-                setLanguage(l.code);
-                setOpen(false);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                width: "100%",
-                padding: "8px 10px",
-                background: l.code === language ? "var(--agent-bg)" : "transparent",
-                border: "none",
-                borderRadius: "var(--radius-sm)",
-                fontSize: 13,
-                fontWeight: l.code === language ? 700 : 500,
-                color: "var(--agent-text)",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              <span>{l.flag}</span>
-              <span>{l.name}</span>
-            </button>
-          ))}
+        <div className={`agent-lang__menu${isRTL ? " agent-lang__menu--rtl" : ""}`} role="listbox">
+          {SUPPORTED_LANGUAGES.map((l) => {
+            const active = l.code === language;
+            return (
+              <button
+                key={l.code}
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={`agent-lang__option${active ? " active" : ""}`}
+                onClick={() => {
+                  setLanguage(l.code);
+                  setOpen(false);
+                }}
+              >
+                <span className="agent-lang__option-flag">{l.flag}</span>
+                <span className="agent-lang__option-name">{l.name}</span>
+                {active && (
+                  <span className="agent-lang__option-check">
+                    <Icon d={IC_CHECK} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

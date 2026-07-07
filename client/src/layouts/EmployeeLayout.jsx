@@ -25,26 +25,25 @@ function EmployeeLayoutInner() {
 
   const NAV_ITEMS = [
     {
-      group: t("employee.nav.groupWorkspace"),
+      group: t("employee.nav.groupWorkspace", "Workspace"),
       items: [
-        { to: "/employee/dashboard",     icon: "ti-layout-dashboard", label: t("employee.nav.dashboard")     },
-        { to: "/employee/my-tickets",    icon: "ti-ticket",           label: t("employee.nav.myTickets")    },
-        { to: "/employee/create-ticket", icon: "ti-plus",         label: t("employee.nav.createTicket") },
-        { to: "/employee/my-assets", icon: "ti-archive", label: "My Assets" },
+        { to: "/employee/dashboard",     icon: "ti-layout-dashboard", label: t("employee.nav.dashboard", "Dashboard")     },
+        { to: "/employee/my-tickets",    icon: "ti-ticket",           label: t("employee.nav.myTickets", "My Tickets")    },
+        { to: "/employee/create-ticket", icon: "ti-plus",             label: t("employee.nav.createTicket", "Create Ticket") },
+        { to: "/employee/my-assets",     icon: "ti-archive",          label: t("employee.nav.myAssets", "My Assets") },
       ]
     },
     {
-      group: t("employee.nav.groupResources"),
+      group: t("employee.nav.groupResources", "Resources"),
       items: [
-        { to: "/employee/knowledge-base", icon: "ti-book",         label: t("employee.nav.knowledgeBase") },
-
+        { to: "/employee/knowledge-base", icon: "ti-book", label: t("employee.nav.knowledgeBase", "Knowledge Base") },
       ]
     },
     {
-      group: t("employee.nav.groupAccount"),
+      group: t("employee.nav.groupAccount", "Account"),
       items: [
-        { to: "/employee/profile",      icon: "ti-user", label: t("employee.nav.profile")      },
-        { to: "/employee/notification", icon: "ti-bell", label: t("employee.nav.notification") },
+        { to: "/employee/profile",      icon: "ti-user", label: t("employee.nav.profile", "Profile")      },
+        { to: "/employee/notification", icon: "ti-bell", label: t("employee.nav.notification", "Notifications") },
       ]
     }
   ];
@@ -83,7 +82,7 @@ function EmployeeLayoutInner() {
 
   const currentItem = NAV_ITEMS.flatMap(g => g.items)
     .find(i => location.pathname.startsWith(i.to));
-  const pageTitle = currentItem?.label ?? t("employee.role");
+  const pageTitle = currentItem?.label ?? t("employee.role", "Employee");
 
   return (
     <div className={`el ${sidebarOpen ? "el--open" : "el--collapsed"} ${darkMode ? "el--dark" : ""}`}>
@@ -102,7 +101,7 @@ function EmployeeLayoutInner() {
           {sidebarOpen && (
             <div className="el__logo-text">
               <span className="el__logo-name">TICKORA</span>
-              <span className="el__logo-sub">{t("employee.portalName")}</span>
+              <span className="el__logo-sub">{t("employee.portalName", "Employee Portal")}</span>
             </div>
           )}
         </div>
@@ -144,12 +143,12 @@ function EmployeeLayoutInner() {
           </div>
           {sidebarOpen && (
             <div className="el__user-info">
-              <span className="el__user-name">{user.full_name ?? t("employee.role")}</span>
-              <span className="el__user-role">{t("employee.role")}</span>
+              <span className="el__user-name">{user.full_name ?? t("employee.role", "Employee")}</span>
+              <span className="el__user-role">{t("employee.role", "Employee")}</span>
             </div>
           )}
           {sidebarOpen && (
-            <button className="el__logout-btn" onClick={handleLogout} title={t("employee.logout")}>
+            <button className="el__logout-btn" onClick={handleLogout} title={t("employee.logout", "Logout")}>
               <i className="ti ti-logout" />
             </button>
           )}
@@ -173,7 +172,7 @@ function EmployeeLayoutInner() {
               />
             </button>
             <div className="el__breadcrumb">
-              <span className="el__breadcrumb-root">{t("employee.breadcrumbRoot")}</span>
+              <span className="el__breadcrumb-root">{t("employee.breadcrumbRoot", "Employee")}</span>
               <i className="ti ti-chevron-right" />
               <span className="el__breadcrumb-current">{pageTitle}</span>
             </div>
@@ -184,7 +183,7 @@ function EmployeeLayoutInner() {
               <i className="ti ti-search" />
               <input
                 type="text"
-                placeholder={t("employee.searchPlaceholder")}
+                placeholder={t("employee.searchPlaceholder", "Search tickets...")}
                 className="el__search-input"
                 aria-label="Search"
               />
@@ -195,11 +194,11 @@ function EmployeeLayoutInner() {
               <button
                 className="el__lang-toggle"
                 onClick={() => setLangMenuOpen(v => !v)}
-                title={t("employee.language")}
-                aria-label={t("employee.language")}
+                title={t("employee.language", "Language")}
+                aria-label={t("employee.language", "Language")}
               >
                 <span className="el__lang-flag">{currentLang.flag}</span>
-                <span className="el__lang-code">{currentLang.label}</span>
+                <span className="el__lang-code">{currentLang.name ?? currentLang.label}</span>
               </button>
               {langMenuOpen && (
                 <div className="el__lang-dropdown">
@@ -222,7 +221,7 @@ function EmployeeLayoutInner() {
             <button
               className="el__dark-toggle"
               onClick={toggleDark}
-              title={darkMode ? t("employee.lightMode") : t("employee.darkMode")}
+              title={darkMode ? t("employee.lightMode", "Switch to light mode") : t("employee.darkMode", "Switch to dark mode")}
               aria-label="Toggle dark mode"
             >
               <i className={`ti ${darkMode ? "ti-sun" : "ti-moon"}`} />
@@ -244,8 +243,8 @@ function EmployeeLayoutInner() {
                 {(user.full_name?.[0] ?? "E").toUpperCase()}
               </div>
               <div className="el__topbar-user">
-                <span className="el__topbar-name">{user.full_name ?? t("employee.role")}</span>
-                <span className="el__topbar-dept">{user.department ?? t("employee.staff")}</span>
+                <span className="el__topbar-name">{user.full_name ?? t("employee.role", "Employee")}</span>
+                <span className="el__topbar-dept">{user.department ?? t("employee.staff", "Staff")}</span>
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./Dashboard.css";
 
 const Icon = ({ d }) => (
@@ -18,51 +18,29 @@ const ICONS = {
   eye:     "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 12a3 3 0 100-6 3 3 0 000 6z",
 };
 
-const STAT_CONFIG = [
-  { label: "Assigned to Me",  iconKey: "ticket",  iconClass: "blue",   statKey: "assigned"       },
-  { label: "In Progress",     iconKey: "clock",   iconClass: "purple", statKey: "in_progress"    },
-  { label: "Resolved Today",  iconKey: "check",   iconClass: "green",  statKey: "resolved_today" },
-  { label: "Overdue",  iconKey: "warning", iconClass: "orange", statKey: "pending_review" },
-];
-
 const BASE_URL = "http://127.0.0.1:8000/api";
 
 const normalizeStatus   = s => s?.toLowerCase().replace(/\s+/g, "-") ?? "open";
 const normalizePriority = p => p?.toLowerCase() ?? "low";
 
-const PriorityBadge = ({ p }) => (
-  <span className={`agent-badge agent-badge--${normalizePriority(p)}`}>{p}</span>
-);
-const StatusBadge = ({ s }) => (
-  <span className={`agent-badge agent-badge--${normalizeStatus(s)}`}>
-    {s?.replace("-", " ")}
-  </span>
-);
-
-const timeAgo = (dateStr) => {
+// ── Localized time-ago ──
+const buildTimeAgo = (t) => (dateStr) => {
   if (!dateStr) return "—";
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)   return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400)return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60)   return t("agent.dashboard.timeAgo.seconds", "{{n}}s ago", { n: diff });
+  if (diff < 3600) return t("agent.dashboard.timeAgo.minutes", "{{n}}m ago", { n: Math.floor(diff / 60) });
+  if (diff < 86400)return t("agent.dashboard.timeAgo.hours",   "{{n}}h ago", { n: Math.floor(diff / 3600) });
+  return t("agent.dashboard.timeAgo.days", "{{n}}d ago", { n: Math.floor(diff / 86400) });
 };
 
-const STATUS_COLORS = {
-  "open":         "#3b82f6",
-  "in-progress":  "#8b5cf6",
-  "pending":      "#f59e0b",
-  "resolved":     "#22c55e",
-  "closed":       "#64748b",
-};
-
-const STATUS_LABELS = {
-  "open":        "Open",
-  "in-progress": "In Progress",
-  "pending":     "Pending",
-  "resolved":    "Resolved",
-  "closed":      "Closed",
-};
+// ── Status chart config (translated) ──
+const buildStatusConfig = (t) => ({
+  "open":         { color: "#3b82f6", label: t("agent.status.open",        "Open")        },
+  "in-progress":  { color: "#8b5cf6", label: t("agent.status.in-progress", "In Progress") },
+  "pending":      { color: "#f59e0b", label: t("agent.status.pending",     "Pending")     },
+  "resolved":     { color: "#22c55e", label: t("agent.status.resolved",    "Resolved")    },
+  "closed":       { color: "#64748b", label: t("agent.status.closed",      "Closed")      },
+});
 
 const DonutChart = ({ data, size = 156, strokeWidth = 22 }) => {
   const total = data.reduce((sum, d) => sum + d.value, 0);
@@ -97,10 +75,22 @@ const DonutChart = ({ data, size = 156, strokeWidth = 22 }) => {
       </g>
       <text x="50%" y="46%" textAnchor="middle" className="agent-donut-total-num">{total}</text>
       <text x="50%" y="62%" textAnchor="middle" className="agent-donut-total-label">
-        {total === 1 ? "Ticket" : "Tickets"}
+        {total === 1
+          ? <DonutTicketLabel t={data.length} />
+          : <DonutTicketsLabel t={data.length} />}
       </text>
     </svg>
   );
+};
+
+// Inline helpers so the labels inside the SVG (text) can use t()
+const DonutTicketLabel = () => {
+  const { t } = useLanguage();
+  return <>{t("agent.dashboard.statusBreakdown.ticket", "Ticket")}</>;
+};
+const DonutTicketsLabel = () => {
+  const { t } = useLanguage();
+  return <>{t("agent.dashboard.statusBreakdown.tickets", "Tickets")}</>;
 };
 
 const WeeklyBarChart = ({ data }) => {
@@ -125,15 +115,27 @@ const WeeklyBarChart = ({ data }) => {
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
-  const token    = localStorage.getItem("token");
-  const user     = JSON.parse(localStorage.getItem("user") || "{}");
-  const name     = user.full_name?.split(" ")[0] || "Agent";
+  const { t } = useLanguage();
+  const token = localStorage.getItem("token");
+  const user  = JSON.parse(localStorage.getItem("user") || "{}");
+  const name  = user.full_name?.split(" ")[0] || t("common.unknown", "Agent");
+
+  // Localized helpers
+  const timeAgo = buildTimeAgo(t);
+  const STATUS_CFG = useMemo(() => buildStatusConfig(t), [t]);
 
   const [dashboard, setDashboard] = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
+  const [counts,    setCounts]    = useState([0, 0, 0, 0]);
 
-  const [counts, setCounts] = useState([0, 0, 0, 0]);
+  // ── KPI cards (label + stat key) — fully translated ──
+  const STAT_CONFIG = useMemo(() => [
+    { label: t("agent.dashboard.stats.assigned",      "Assigned to Me"), iconKey: "ticket",  iconClass: "blue",   statKey: "assigned"       },
+    { label: t("agent.dashboard.stats.inProgress",    "In Progress"),    iconKey: "clock",   iconClass: "purple", statKey: "in_progress"    },
+    { label: t("agent.dashboard.stats.resolvedToday", "Resolved Today"), iconKey: "check",   iconClass: "green",  statKey: "resolved_today" },
+    { label: t("agent.dashboard.stats.overdue",       "Overdue"),        iconKey: "warning", iconClass: "orange", statKey: "pending_review" },
+  ], [t]);
 
   useEffect(() => {
     const load = async () => {
@@ -145,31 +147,30 @@ export default function AgentDashboard() {
           navigate("/", { replace: true });
           return;
         }
-        if (!res.ok) throw new Error("Failed to load dashboard");
+        if (!res.ok) throw new Error(t("agent.dashboard.couldNotLoad", "Failed to load dashboard"));
 
         const data = await res.json();
-
         setDashboard({
           stats: {
-            assigned: data.assigned ?? 0,
-            in_progress: data.in_progress ?? 0,
-            resolved_today: data.resolved_today ?? data.resolved ?? 0,
-            pending_review: data.pending_review ?? data.pending ?? 0,
+            assigned:        data.assigned        ?? 0,
+            in_progress:     data.in_progress     ?? 0,
+            resolved_today:  data.resolved_today  ?? data.resolved ?? 0,
+            pending_review:  data.pending_review  ?? data.pending  ?? 0,
           },
-          recent_tickets: data.recent_tickets ?? [],
+          recent_tickets:     data.recent_tickets     ?? [],
           priority_breakdown: data.priority_breakdown ?? {},
         });
       } catch (err) {
         console.error(err);
-        setError("Could not load dashboard data.");
+        setError(t("agent.dashboard.couldNotLoad", "Could not load dashboard data."));
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [token, navigate]);
+  }, [token, navigate, t]);
 
-
+  // Counter animation
   useEffect(() => {
     if (!dashboard) return;
     const targets = STAT_CONFIG.map(c => Number(dashboard.stats?.[c.statKey] ?? 0));
@@ -189,22 +190,18 @@ export default function AgentDashboard() {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [dashboard]);
+  }, [dashboard, STAT_CONFIG]);
 
   const [recentTickets, setRecentTickets] = useState([]);
   const [allTickets,    setAllTickets]    = useState([]);
 
   useEffect(() => {
     let cancelled = false;
-
     const loadRecent = async () => {
       try {
         if (!token) return;
         const res = await fetch(`${BASE_URL}/agent/tickets`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
         if (!res.ok) return;
         const data = await res.json();
@@ -219,43 +216,37 @@ export default function AgentDashboard() {
 
         const shaped = sorted.slice(0, 5).map(t => ({
           dbId: t.id,
-          number: t.ticket_number ?? t.ticket_number,
+          number: t.ticket_number ?? t.id,
           title: t.title,
-          requester: t.user?.full_name ?? t.user?.username ?? "Unknown",
-          priority: t.priority?.priority_name ?? "Low",
-          status: t.status?.status_name ?? "Open",
+          requester: t.user?.full_name ?? t.user?.username ?? t("common.unknown", "Unknown"),
+          priority: t.priority?.priority_name ?? t("agent.priority.low", "Low"),
+          status: t.status?.status_name ?? t("agent.status.open", "Open"),
           age: timeAgo(t.created_at),
         }));
 
         setRecentTickets(shaped);
-      } catch {
-        // ignore
-      }
+      } catch {}
     };
-
     loadRecent();
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
+    return () => { cancelled = true; };
+  }, [token, t, timeAgo]);
 
   const breakdown = dashboard?.priority_breakdown ?? {};
   const maxBreakdown = Math.max(...Object.values(breakdown).map(Number), 1);
 
   const statusChartData = useMemo(() => {
     const counts = { open: 0, "in-progress": 0, pending: 0, resolved: 0, closed: 0 };
-    allTickets.forEach((t) => {
-      const key = normalizeStatus(t.status?.status_name);
+    allTickets.forEach((tk) => {
+      const key = normalizeStatus(tk.status?.status_name);
       if (counts[key] !== undefined) counts[key] += 1;
     });
     return Object.keys(counts).map((key) => ({
       key,
       value: counts[key],
-      label: STATUS_LABELS[key],
-      color: STATUS_COLORS[key],
+      label: STATUS_CFG[key]?.label ?? key,
+      color: STATUS_CFG[key]?.color ?? "#64748b",
     }));
-  }, [allTickets]);
+  }, [allTickets, STATUS_CFG]);
 
   const weeklyTrend = useMemo(() => {
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -264,13 +255,12 @@ export default function AgentDashboard() {
       d.setDate(d.getDate() - (6 - i));
       return d;
     });
-
     return days.map((day) => {
       const next = new Date(day);
       next.setDate(day.getDate() + 1);
-      const count = allTickets.filter((t) => {
-        if (!t.created_at) return false;
-        const c = new Date(t.created_at);
+      const count = allTickets.filter((tk) => {
+        if (!tk.created_at) return false;
+        const c = new Date(tk.created_at);
         return c >= day && c < next;
       }).length;
       return {
@@ -285,18 +275,22 @@ export default function AgentDashboard() {
 
       <div className="agent-page-header">
         <div>
-          <h1 className="agent-page-title">Good morning, {name} </h1>
-          <p className="agent-page-subtitle">Here's your ticket queue for today.</p>
+          <h1 className="agent-page-title">
+            {t("agent.dashboard.greeting", "Good morning, {{name}}", { name })}
+          </h1>
+          <p className="agent-page-subtitle">
+            {t("agent.dashboard.subtitle", "Here's your ticket queue for today.")}
+          </p>
         </div>
         <button className="agent-btn agent-btn--primary"
           onClick={() => navigate("/agent/assigned-tickets")}>
-          <Icon d={ICONS.ticket} /> View All Tickets
+          <Icon d={ICONS.ticket} />
+          {t("agent.dashboard.viewAllTickets", "View All Tickets")}
         </button>
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "#fee2e2", border: "1px solid #fca5a5",
-          borderRadius: 8, color: "#b91c1c", fontSize: 13, marginBottom: 16 }}>
+        <div className="agent-dashboard-error">
           {error}
         </div>
       )}
@@ -317,40 +311,65 @@ export default function AgentDashboard() {
 
       <div className="agent-dashboard-cols">
 
+        {/* Active tickets */}
         <div className="agent-card">
           <div className="agent-card-header">
-            <span className="agent-card-title">My Active Tickets</span>
+            <span className="agent-card-title">
+              {t("agent.dashboard.activeTickets.title", "My Active Tickets")}
+            </span>
             <button className="agent-btn agent-btn--ghost agent-btn--sm"
               onClick={() => navigate("/agent/assigned-tickets")}>
-              View All
+              {t("common.viewAll", "View All")}
             </button>
           </div>
           <table className="agent-tickets-table">
             <thead>
               <tr>
-                <th>ID</th><th>Subject</th><th>Requester</th>
-                <th>Priority</th><th>Status</th><th>Age</th><th></th>
+                <th>{t("agent.dashboard.activeTickets.colId",        "ID")}</th>
+                <th>{t("agent.dashboard.activeTickets.colSubject",  "Subject")}</th>
+                <th>{t("agent.dashboard.activeTickets.colRequester","Requester")}</th>
+                <th>{t("agent.dashboard.activeTickets.colPriority", "Priority")}</th>
+                <th>{t("agent.dashboard.activeTickets.colStatus",   "Status")}</th>
+                <th>{t("agent.dashboard.activeTickets.colAge",      "Age")}</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "#9ca3af" }}>Loading…</td></tr>
+                <tr>
+                  <td colSpan={7} className="agent-tickets-empty">
+                    {t("agent.dashboard.activeTickets.loading", "Loading…")}
+                  </td>
+                </tr>
               ) : recentTickets.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "#9ca3af" }}>No active tickets.</td></tr>
+                <tr>
+                  <td colSpan={7} className="agent-tickets-empty">
+                    {t("agent.dashboard.activeTickets.empty", "No active tickets.")}
+                  </td>
+                </tr>
               ) : (
-                recentTickets.map(t => (
-                  <tr key={t.dbId}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => navigate("/agent/ticket-details", { state: { ticketId: t.dbId } })}>
-                    <td><span className="agent-ticket-id">{t.number}</span></td>
-                    <td><span className="agent-ticket-subject">{t.title}</span></td>
-                    <td><span className="agent-ticket-requester">{t.requester}</span></td>
-                    <td><PriorityBadge p={t.priority} /></td>
-                    <td><StatusBadge   s={t.status}   /></td>
-                    <td><span className="agent-ticket-requester">{t.age}</span></td>
+                recentTickets.map(tk => (
+                  <tr key={tk.dbId}
+                    className="agent-tickets-row"
+                    onClick={() => navigate("/agent/ticket-details", { state: { ticketId: tk.dbId } })}>
+                    <td><span className="agent-ticket-id">{tk.number}</span></td>
+                    <td><span className="agent-ticket-subject">{tk.title}</span></td>
+                    <td><span className="agent-ticket-requester">{tk.requester}</span></td>
+                    <td>
+                      <span className={`agent-badge agent-badge--${normalizePriority(tk.priority)}`}>
+                        {t(`agent.priority.${normalizePriority(tk.priority)}`, tk.priority)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`agent-badge agent-badge--${normalizeStatus(tk.status)}`}>
+                        {t(`agent.status.${normalizeStatus(tk.status)}`, tk.status.replace("-", " "))}
+                      </span>
+                    </td>
+                    <td><span className="agent-ticket-requester">{tk.age}</span></td>
                     <td>
                       <button className="agent-btn agent-btn--ghost agent-btn--sm"
-                        onClick={e => { e.stopPropagation(); navigate("/agent/ticket-details", { state: { ticketId: t.dbId } }); }}>
+                        title={t("common.view", "View")}
+                        onClick={e => { e.stopPropagation(); navigate("/agent/ticket-details", { state: { ticketId: tk.dbId } }); }}>
                         <Icon d={ICONS.eye} />
                       </button>
                     </td>
@@ -361,9 +380,12 @@ export default function AgentDashboard() {
           </table>
         </div>
 
+        {/* Priority breakdown + SLA */}
         <div className="agent-card">
           <div className="agent-card-header">
-            <span className="agent-card-title">Priority Breakdown</span>
+            <span className="agent-card-title">
+              {t("agent.dashboard.priorityBreakdown.title", "Priority Breakdown")}
+            </span>
           </div>
           <div className="agent-card-body">
             <div className="agent-priority-list">
@@ -372,8 +394,12 @@ export default function AgentDashboard() {
                 return (
                   <div className="agent-priority-row" key={key}>
                     <div className="agent-priority-row-top">
-                      <span className="agent-priority-row-label" style={{ textTransform: "capitalize" }}>{key}</span>
-                      <span className="agent-priority-row-count">{loading ? "—" : count} tickets</span>
+                      <span className="agent-priority-row-label">
+                        {t(`agent.priority.${key}`, key)}
+                      </span>
+                      <span className="agent-priority-row-count">
+                        {loading ? "—" : count} {t("agent.dashboard.priorityBreakdown.tickets", "tickets")}
+                      </span>
                     </div>
                     <div className="agent-priority-bar-track">
                       <div
@@ -388,20 +414,26 @@ export default function AgentDashboard() {
           </div>
 
           <div className="agent-card-header" style={{ marginTop: 8 }}>
-            <span className="agent-card-title">SLA Compliance</span>
-            <span style={{ fontSize: 11, color: "#9ca3af" }}>Sample data</span>
+            <span className="agent-card-title">
+              {t("agent.dashboard.sla.title", "SLA Compliance")}
+            </span>
+            <span className="agent-sla-sample">
+              {t("agent.dashboard.sla.sampleData", "Sample data")}
+            </span>
           </div>
           <div className="agent-card-body">
             <div className="agent-sla-grid">
               {[
-                { pct: "91%", desc: "First Response SLA",  cls: "good"    },
-                { pct: "78%", desc: "Resolution SLA",      cls: "warning" },
-                { pct: "95%", desc: "Satisfaction Score",  cls: "good"    },
-                { pct: "62%", desc: "Escalation Rate",     cls: "danger"  },
+                { pct: "91%", descKey: "firstResponse",  cls: "good"    },
+                { pct: "78%", descKey: "resolution",    cls: "warning" },
+                { pct: "95%", descKey: "satisfaction",  cls: "good"    },
+                { pct: "62%", descKey: "escalation",    cls: "danger"  },
               ].map(s => (
-                <div className="agent-sla-item" key={s.desc}>
+                <div className="agent-sla-item" key={s.descKey}>
                   <div className={`agent-sla-pct agent-sla-pct--${s.cls}`}>{s.pct}</div>
-                  <div className="agent-sla-desc">{s.desc}</div>
+                  <div className="agent-sla-desc">
+                    {t(`agent.dashboard.sla.${s.descKey}`, s.descKey)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -411,13 +443,18 @@ export default function AgentDashboard() {
 
       <div className="agent-dashboard-bottom">
 
+        {/* Status donut */}
         <div className="agent-card">
           <div className="agent-card-header">
-            <span className="agent-card-title">Ticket Status Breakdown</span>
+            <span className="agent-card-title">
+              {t("agent.dashboard.statusBreakdown.title", "Ticket Status Breakdown")}
+            </span>
           </div>
           <div className="agent-card-body agent-chart-card-body">
             {loading ? (
-              <div style={{ fontSize: 13, color: "#9ca3af", padding: "12px 0" }}>Loading chart…</div>
+              <div className="agent-chart-loading">
+                {t("agent.dashboard.statusBreakdown.loading", "Loading chart…")}
+              </div>
             ) : (
               <>
                 <DonutChart data={statusChartData} />
@@ -435,14 +472,18 @@ export default function AgentDashboard() {
           </div>
         </div>
 
-        {/* Tickets created trend — bar chart, last 7 days */}
+        {/* Weekly bar chart */}
         <div className="agent-card">
           <div className="agent-card-header">
-            <span className="agent-card-title">Tickets Created — Last 7 Days</span>
+            <span className="agent-card-title">
+              {t("agent.dashboard.weeklyTrend.title", "Tickets Created — Last 7 Days")}
+            </span>
           </div>
           <div className="agent-card-body">
             {loading ? (
-              <div style={{ fontSize: 13, color: "#9ca3af", padding: "12px 0" }}>Loading chart…</div>
+              <div className="agent-chart-loading">
+                {t("agent.dashboard.weeklyTrend.loading", "Loading chart…")}
+              </div>
             ) : (
               <WeeklyBarChart data={weeklyTrend} />
             )}

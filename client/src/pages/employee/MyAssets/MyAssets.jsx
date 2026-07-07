@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import { useNavigate, Link } from "react-router-dom";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./MyAssets.css";
 
 const BASE_URL = "http://127.0.0.1:8000/api";
@@ -34,33 +36,27 @@ const computeBucket = (status) => {
   return "available";
 };
 
-const BUCKET_CLS = {
-  assigned:  "ma-status--assigned",
-  available: "ma-status--available",
-  repair:    "ma-status--repair",
-  retired:   "ma-status--retired",
-  lost:      "ma-status--lost",
-};
+const buildBucketLabel = (t) => ({
+  assigned:  t("myAssets.statusAssigned",  "Assigned"),
+  available: t("myAssets.statusAvailable", "Available"),
+  repair:    t("myAssets.statusRepair",    "In Repair"),
+  retired:   t("myAssets.statusRetired",   "Retired"),
+  lost:      t("myAssets.statusLost",      "Lost"),
+});
 
-const BUCKET_LABEL = {
-  assigned:  "Assigned",
-  available: "Available",
-  repair:    "In Repair",
-  retired:   "Retired",
-  lost:      "Lost",
-};
-
-const formatDate = (v) => {
+const formatDate = (v, locale) => {
   if (!v) return "—";
   const d = new Date(v);
-  return isNaN(d.getTime())
-    ? "—"
-    : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(locale === "ar" ? "ar-EG" : undefined, {
+    year: "numeric", month: "short", day: "numeric",
+  });
 };
 
 export default function MyAssets() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  const { t, language } = useLanguage();
 
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,22 +72,28 @@ export default function MyAssets() {
           },
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || "Failed to load assets");
+        if (!res.ok) throw new Error(data.message || t("myAssets.loadError"));
         setAssets(Array.isArray(data.assets) ? data.assets : []);
       } catch (e) {
-        setError(e.message || "Unable to load your assets");
+        setError(e.message || t("myAssets.loadErrorGeneric"));
       } finally {
         setLoading(false);
       }
     })();
-  }, [token]);
+  }, [token, t]);
+
+  // Localized status labels (rebuild on language change)
+  const BUCKET_LABEL = useMemo(
+    () => buildBucketLabel(t),
+    [t, language]
+  );
 
   // ── Loading ──
   if (loading) {
     return (
       <div className="ma-page ma-loading">
         <div className="ma-spinner" />
-        <p>Loading your assets…</p>
+        <p>{t("myAssets.loading")}</p>
       </div>
     );
   }
@@ -103,7 +105,7 @@ export default function MyAssets() {
         <div className="ma-error">
           <Icon d={IC.warning} size={20} />
           <div>
-            <strong>Unable to load assets</strong>
+            <strong>{t("myAssets.errorTitle")}</strong>
             <p style={{ margin: "4px 0 0" }}>{error}</p>
           </div>
         </div>
@@ -120,15 +122,18 @@ export default function MyAssets() {
             <Icon d={IC.laptop} size={20} />
           </div>
           <h2 className="ma-title">
-            My Assets
+            {t("myAssets.title")}
             <span className="ma-title-pill">{assets.length}</span>
           </h2>
         </div>
         <span className="ma-count">
           <Icon d={IC.box} size={13} />
           {assets.length === 0
-            ? "No assets yet"
-            : `${assets.length} assigned ${assets.length === 1 ? "asset" : "assets"}`}
+            ? t("myAssets.noneAssigned")
+            : t("myAssets.count_other", "{{count}} assigned {{unit}}", {
+                count: assets.length,
+                unit: t(assets.length === 1 ? "myAssets.asset_one" : "myAssets.asset_other", "assets"),
+              })}
         </span>
       </div>
 
@@ -139,14 +144,11 @@ export default function MyAssets() {
             <div className="ma-empty-icon">
               <Icon d={IC.box} size={32} />
             </div>
-            <h3 className="ma-empty-title">No assets assigned to you</h3>
-            <p className="ma-empty-text">
-              When an admin assigns hardware to you, it will show up here.
-              You can then scan its QR code or report issues directly.
-            </p>
+            <h3 className="ma-empty-title">{t("myAssets.emptyTitle")}</h3>
+            <p className="ma-empty-text">{t("myAssets.emptyText")}</p>
             <Link to="/create-ticket" className="ma-empty-cta">
               <Icon d={IC.ticket} size={14} />
-              Report a general issue
+              {t("myAssets.emptyCta")}
             </Link>
           </div>
         </div>
@@ -159,17 +161,17 @@ export default function MyAssets() {
                 <button
                   key={a.id}
                   className="ma-asset"
-onClick={() => navigate(`/employee/my-assets/${a.id}`)}
+                  onClick={() => navigate(`/employee/my-assets/${a.id}`)}
                   type="button"
                 >
                   {/* Top: name + tag */}
                   <div className="ma-asset-top">
                     <div className="ma-asset-id">
                       <div className="ma-asset-name">
-                        {a.asset_name ?? a.name ?? "Unnamed Asset"}
+                        {a.asset_name ?? a.name ?? t("common.unnamed", "Unnamed Asset")}
                       </div>
                       <div className="ma-asset-sub">
-                        {a.brand ? a.brand : "Generic"}
+                        {a.brand ? a.brand : t("myAssets.generic")}
                         {a.model ? ` · ${a.model}` : ""}
                       </div>
                     </div>
@@ -179,22 +181,22 @@ onClick={() => navigate(`/employee/my-assets/${a.id}`)}
                   </div>
 
                   {/* Status badge */}
-                  <span className={`ma-asset-status ${BUCKET_CLS[bucket] ?? "ma-status--available"}`}>
+                  <span className={`ma-asset-status ma-status--${bucket}`}>
                     {BUCKET_LABEL[bucket]}
                   </span>
 
                   {/* Info list */}
                   <div className="ma-asset-info">
                     <div className="ma-asset-info-row">
-                      <strong>Serial</strong>
+                      <strong>{t("myAssets.labelSerial")}</strong>
                       <span>{a.serial_number ?? "—"}</span>
                     </div>
                     <div className="ma-asset-info-row">
-                      <strong>Warranty</strong>
-                      <span>{formatDate(a.warranty_expiry)}</span>
+                      <strong>{t("myAssets.labelWarranty")}</strong>
+                      <span>{formatDate(a.warranty_expiry, language)}</span>
                     </div>
                     <div className="ma-asset-info-row">
-                      <strong>Location</strong>
+                      <strong>{t("myAssets.labelLocation")}</strong>
                       <span>{a.location ?? "—"}</span>
                     </div>
                   </div>
@@ -205,11 +207,11 @@ onClick={() => navigate(`/employee/my-assets/${a.id}`)}
                       className="ma-action"
                       onClick={(e) => {
                         e.stopPropagation();
-navigate(`/employee/my-assets/${a.id}`);
+                        navigate(`/employee/my-assets/${a.id}`);
                       }}
                     >
                       <Icon d={IC.external} size={13} />
-                      View Details
+                      {t("myAssets.viewDetails")}
                     </span>
                     <div className="ma-action-divider" />
                     <span
@@ -220,7 +222,7 @@ navigate(`/employee/my-assets/${a.id}`);
                       }}
                     >
                       <Icon d={IC.warning} size={13} />
-                      Report Issue
+                      {t("myAssets.reportIssue")}
                     </span>
                   </div>
                 </button>

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./UpdateStatus.css";
 
 // ── Icon helper ───────────────────────────────────────────────────────────────
@@ -24,50 +25,22 @@ const IC = {
   spin:    "M21 12a9 9 0 11-6.219-8.56",
 };
 
-// ── Static config ─────────────────────────────────────────────────────────────
-// Maps the DB status_name (lowercase-normalised) to display config.
-const STATUSES = [
-  {
-    key:   "open",
-    label: "Open",
-    desc:  "Ticket is awaiting agent pickup or has been re-opened.",
-    dot:   "#3b82f6",
-    icon:  { bg: "#dbeafe", color: "#1d4ed8",
-      path: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2 M9 5a2 2 0 002 2h2a2 2 0 002-2 M9 5a2 2 0 012-2h2a2 2 0 012 2" },
-  },
-  {
-    key:   "in-progress",
-    label: "In Progress",
-    desc:  "You are actively working on diagnosing or fixing this issue.",
-    dot:   "#8b5cf6",
-    icon:  { bg: "#ede9fe", color: "#6d28d9",
-      path: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 6v6l4 2" },
-  },
-  {
-    key:   "pending",
-    label: "Pending",
-    desc:  "Waiting on the requester or a third party before proceeding.",
-    dot:   "#f59e0b",
-    icon:  { bg: "#fef9c3", color: "#854d0e",
-      path: "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z M12 9v4 M12 17h.01" },
-  },
-  {
-    key:   "resolved",
-    label: "Resolved",
-    desc:  "Issue has been fixed. Requester will be asked to confirm.",
-    dot:   "#22c55e",
-    icon:  { bg: "#dcfce7", color: "#15803d",
-      path: "M22 11.08V12a10 10 0 11-5.93-9.14 M22 4L12 14.01l-3-3" },
-  },
-  {
-    key:   "closed",
-    label: "Closed",
-    desc:  "Ticket is permanently closed. No further action needed.",
-    dot:   "#64748b",
-    icon:  { bg: "#f1f5f9", color: "#475569",
-      path: "M18 6L6 18 M6 6l12 12" },
-  },
-];
+// Static (language-independent) config: keys, colors, icons, allowed transitions.
+const STATUS_ICONS = {
+  open: { bg: "#dbeafe", color: "#1d4ed8",
+    path: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2 M9 5a2 2 0 002 2h2a2 2 0 002-2 M9 5a2 2 0 012-2h2a2 2 0 012 2" },
+  "in-progress": { bg: "#ede9fe", color: "#6d28d9",
+    path: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 6v6l4 2" },
+  pending: { bg: "#fef9c3", color: "#854d0e",
+    path: "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z M12 9v4 M12 17h.01" },
+  resolved: { bg: "#dcfce7", color: "#15803d",
+    path: "M22 11.08V12a10 10 0 11-5.93-9.14 M22 4L12 14.01l-3-3" },
+  closed: { bg: "#f1f5f9", color: "#475569",
+    path: "M18 6L6 18 M6 6l12 12" },
+};
+const STATUS_DOT = {
+  open: "#3b82f6", "in-progress": "#8b5cf6", pending: "#f59e0b", resolved: "#22c55e", closed: "#64748b",
+};
 
 const ALLOWED_FROM = {
   "open":        ["in-progress", "pending", "closed"],
@@ -77,7 +50,9 @@ const ALLOWED_FROM = {
   "closed":      ["open"],
 };
 
-const REASONS = {
+// English fallback reason lists (used as the `fallback` array when language === "en";
+// ar/fr equivalents live under agent.updateStatus.reasons.<status> in ar.js / fr.js)
+const REASONS_EN = {
   "open":        ["Re-opened by requester", "Re-opened by agent", "Previous resolution failed", "Other"],
   "in-progress": ["Started investigating", "Reproduced the issue", "Working on fix", "Other"],
   "pending":     ["Awaiting requester info", "Awaiting vendor response", "Awaiting hardware", "Scheduled maintenance", "Other"],
@@ -93,20 +68,54 @@ const BASE_URL = "http://127.0.0.1:8000/api";
 const normalizeStatus   = (s) => s?.toLowerCase().replace(" ", "-") ?? "open";
 const normalizePriority = (p) => p?.toLowerCase() ?? "low";
 
-const PriorityBadge = ({ p }) => (
-  <span className={`agent-badge agent-badge--${normalizePriority(p)}`}>{p}</span>
-);
-const StatusBadge = ({ s }) => (
-  <span className={`agent-badge agent-badge--${normalizeStatus(s)}`}>
-    {s?.replace("-", " ")}
-  </span>
-);
-
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function UpdateStatus() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, language } = useLanguage();
   const ticketId = location.state?.ticketId; // may be ticket_number (TCK-....) or numeric id
+
+  // Translated status labels/descriptions — rebuilt whenever language changes.
+  const STATUSES = useMemo(() => ([
+    { key: "open", label: t("agent.updateStatus.statuses.open.label", "Open"),
+      desc: t("agent.updateStatus.statuses.open.desc", "Ticket is awaiting agent pickup or has been re-opened."),
+      dot: STATUS_DOT.open, icon: STATUS_ICONS.open },
+    { key: "in-progress", label: t("agent.updateStatus.statuses.in-progress.label", "In Progress"),
+      desc: t("agent.updateStatus.statuses.in-progress.desc", "You are actively working on diagnosing or fixing this issue."),
+      dot: STATUS_DOT["in-progress"], icon: STATUS_ICONS["in-progress"] },
+    { key: "pending", label: t("agent.updateStatus.statuses.pending.label", "Pending"),
+      desc: t("agent.updateStatus.statuses.pending.desc", "Waiting on the requester or a third party before proceeding."),
+      dot: STATUS_DOT.pending, icon: STATUS_ICONS.pending },
+    { key: "resolved", label: t("agent.updateStatus.statuses.resolved.label", "Resolved"),
+      desc: t("agent.updateStatus.statuses.resolved.desc", "Issue has been fixed. Requester will be asked to confirm."),
+      dot: STATUS_DOT.resolved, icon: STATUS_ICONS.resolved },
+    { key: "closed", label: t("agent.updateStatus.statuses.closed.label", "Closed"),
+      desc: t("agent.updateStatus.statuses.closed.desc", "Ticket is permanently closed. No further action needed."),
+      dot: STATUS_DOT.closed, icon: STATUS_ICONS.closed },
+  ]), [language, t]);
+
+  const REASONS = useMemo(() => {
+    const out = {};
+    Object.keys(REASONS_EN).forEach((key) => {
+      out[key] = language === "en"
+        ? REASONS_EN[key]
+        : (t(`agent.updateStatus.reasons.${key}`, null) || REASONS_EN[key]);
+    });
+    return out;
+  }, [language, t]);
+
+  const PriorityBadge = ({ p }) => {
+    const key = normalizePriority(p);
+    return <span className={`agent-badge agent-badge--${key}`}>{t(`agent.priority.${key}`, p)}</span>;
+  };
+  const StatusBadge = ({ s }) => {
+    const key = normalizeStatus(s);
+    return (
+      <span className={`agent-badge agent-badge--${key}`}>
+        {t(`agent.status.${key}`, s?.replace("-", " "))}
+      </span>
+    );
+  };
 
   // ── Ticket state ──────────────────────────────────────────────────────────
   const [ticket,      setTicket]      = useState(null);
@@ -135,7 +144,7 @@ export default function UpdateStatus() {
   // ── Load ticket + lookups ─────────────────────────────────────────────────
   useEffect(() => {
     if (!ticketId) {
-      setLoadError("No ticket selected. Go back and click a ticket first.");
+      setLoadError(t("agent.updateStatus.noTicketSelected", "No ticket selected. Go back and click a ticket first."));
       setLoadingData(false);
       return;
     }
@@ -162,7 +171,7 @@ export default function UpdateStatus() {
 
         if (!ticketRes.ok) {
           const err = await ticketRes.json();
-          setLoadError(err.message || "Failed to load ticket.");
+          setLoadError(err.message || t("agent.updateStatus.updateFailed", "Failed to load ticket."));
           return;
         }
 
@@ -170,23 +179,24 @@ export default function UpdateStatus() {
         const statusesData  = await statusesRes.json();
         const prioritiesData = await prioritiesRes.json();
 
-        const t = ticketData.ticket ?? ticketData;
-        setTicket(t);
+        const tk = ticketData.ticket ?? ticketData;
+        setTicket(tk);
         // Set priority dropdown default to the current ticket priority
-        setPriorityId(String(t.priority_id ?? ""));
+        setPriorityId(String(tk.priority_id ?? ""));
 
         setHistory(ticketData.history ?? []);
         setStatuses(Array.isArray(statusesData) ? statusesData : []);
         setPriorities(Array.isArray(prioritiesData) ? prioritiesData : []);
       } catch (err) {
         console.error(err);
-        setLoadError("Unable to load data. Check your connection.");
+        setLoadError(t("common.networkError", "Unable to load data. Check your connection."));
       } finally {
         setLoadingData(false);
       }
     };
 
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId, token, navigate]);
 
   // Auto-check notify manager when resolving/closing
@@ -201,7 +211,10 @@ export default function UpdateStatus() {
   const allowed           = ALLOWED_FROM[currentStatusName] ?? [];
   const reasonList        = selectedStatus ? REASONS[selectedStatus] : [];
   const canSubmit         = selectedStatus && reason &&
-                            (reason !== "Other" || customReason.trim());
+                            (reason !== reasonList?.[reasonList.length - 1] || customReason.trim());
+
+  // "Other" is always the last entry in each reason list, in every language.
+  const isOtherReason = reasonList && reason === reasonList[reasonList.length - 1];
 
   // Find the status_id for the selected key by matching status_name
   const selectedStatusId = statuses.find(
@@ -220,7 +233,7 @@ export default function UpdateStatus() {
       const body = {
         status_id: selectedStatusId,
         note:      note.trim() || null,
-        reason:    reason === "Other" ? customReason.trim() : reason,
+        reason:    isOtherReason ? customReason.trim() : reason,
       };
 
       // Only send priority_id if the agent actually changed it
@@ -229,7 +242,6 @@ export default function UpdateStatus() {
       }
 
       const res = await fetch(`${BASE_URL}/tickets/${ticket?.id ?? ticketId}/status`, {
-
         method:  "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -254,7 +266,7 @@ export default function UpdateStatus() {
 
         const data2 = await res2.json().catch(() => ({}));
         if (!res2.ok) {
-          setSubmitError(data2.message || "Failed to update status.");
+          setSubmitError(data2.message || t("agent.updateStatus.updateFailed", "Failed to update status."));
           return;
         }
 
@@ -264,16 +276,17 @@ export default function UpdateStatus() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setSubmitError(data.message || "Failed to update status.");
+        setSubmitError(data.message || t("agent.updateStatus.updateFailed", "Failed to update status."));
         return;
       }
 
       setSuccess(true);
-
-      // Keep the current layout stable while success overlay is visible
-      // (prevents awkward 
+    } catch (err) {
+      // NOTE: this was previously unreachable dead code sitting *after* setSuccess(true)
+      // with no enclosing catch, causing a ReferenceError on every successful submit.
+      // It's now a proper catch block, only runs on real network failures.
       console.error(err);
-      setSubmitError("Network error — could not update status.");
+      setSubmitError(t("common.networkError", "Network error — could not update status."));
     } finally {
       setSubmitting(false);
     }
@@ -285,8 +298,8 @@ export default function UpdateStatus() {
       <div className="update-status">
         <div className="agent-page-header">
           <div>
-            <h1 className="agent-page-title">Update Ticket Status</h1>
-            <p className="agent-page-subtitle">Loading ticket…</p>
+            <h1 className="agent-page-title">{t("agent.updateStatus.title", "Update Ticket Status")}</h1>
+            <p className="agent-page-subtitle">{t("agent.updateStatus.loadingSubtitle", "Loading ticket…")}</p>
           </div>
         </div>
       </div>
@@ -298,11 +311,11 @@ export default function UpdateStatus() {
       <div className="update-status">
         <div className="agent-page-header">
           <div>
-            <h1 className="agent-page-title">Update Ticket Status</h1>
+            <h1 className="agent-page-title">{t("agent.updateStatus.title", "Update Ticket Status")}</h1>
             <p className="agent-page-subtitle" style={{ color: "var(--agent-danger)" }}>{loadError}</p>
           </div>
           <button className="agent-btn agent-btn--ghost" onClick={() => navigate(-1)}>
-            <Icon d={IC.back} /> Back
+            <Icon d={IC.back} /> {t("common.back", "Back")}
           </button>
         </div>
       </div>
@@ -312,11 +325,11 @@ export default function UpdateStatus() {
   // ── Ticket field accessors ────────────────────────────────────────────────
   const ticketNumber   = ticket?.ticket_number ?? ticket?.id ?? "—";
   const ticketTitle    = ticket?.title         ?? "Untitled";
-  const requesterName  = ticket?.user?.full_name ?? ticket?.user?.username ?? "Unknown";
-  const requesterDept  = ticket?.user?.department ?? "N/A";
+  const requesterName  = ticket?.user?.full_name ?? ticket?.user?.username ?? t("common.unknown", "Unknown");
+  const requesterDept  = ticket?.user?.department ?? t("common.na", "N/A");
   const priorityName   = ticket?.priority?.priority_name ?? "Low";
   const categoryName   = ticket?.category?.category_name ?? "General";
-  const assigneeName   = ticket?.assignee?.full_name ?? "Unassigned";
+  const assigneeName   = ticket?.assignee?.full_name ?? t("common.unassigned", "Unassigned");
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -324,22 +337,22 @@ export default function UpdateStatus() {
 
       <div className="agent-page-header">
         <div>
-          <h1 className="agent-page-title">Update Ticket Status</h1>
+          <h1 className="agent-page-title">{t("agent.updateStatus.title", "Update Ticket Status")}</h1>
           <p className="agent-page-subtitle">
-            Change the workflow status of ticket #{ticketNumber}
+            {t("agent.updateStatus.subtitle", "Change the workflow status of ticket #{{id}}", { id: ticketNumber })}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="agent-btn agent-btn--ghost" onClick={() => navigate(-1)}>
-            <Icon d={IC.back} /> Back
+            <Icon d={IC.back} /> {t("common.back", "Back")}
           </button>
           <button className="agent-btn agent-btn--ghost"
             onClick={() => navigate("/agent/ticket-details", { state: { ticketId } })}>
-            <Icon d={IC.eye} /> View Ticket
+            <Icon d={IC.eye} /> {t("agent.updateStatus.viewTicket", "View Ticket")}
           </button>
           <button className="agent-btn agent-btn--accent"
             onClick={() => navigate("/agent/resolve-ticket", { state: { ticketId } })}>
-            <Icon d={IC.resolve} /> Resolve
+            <Icon d={IC.resolve} /> {t("agent.updateStatus.resolve", "Resolve")}
           </button>
         </div>
       </div>
@@ -360,13 +373,13 @@ export default function UpdateStatus() {
 
       {/* ── Transition preview ── */}
       <div className="us-transition-row">
-        <span className="us-transition-label">Current</span>
+        <span className="us-transition-label">{t("agent.updateStatus.current", "Current")}</span>
         <StatusBadge s={ticket?.status?.status_name ?? "Open"} />
         <div className="us-transition-arrow"><Icon d={IC.arrow} size={18} /></div>
-        <span className="us-transition-label">New</span>
+        <span className="us-transition-label">{t("agent.updateStatus.new", "New")}</span>
         {selObj
           ? <span className={`agent-badge agent-badge--${selectedStatus}`}>{selObj.label}</span>
-          : <span className="us-new-status-preview">Select a status below…</span>
+          : <span className="us-new-status-preview">{t("agent.updateStatus.selectStatusBelow", "Select a status below…")}</span>
         }
       </div>
 
@@ -377,7 +390,7 @@ export default function UpdateStatus() {
           <div className="us-form-card">
             <div className="us-form-header">
               <Icon d={IC.update} size={16} />
-              Select New Status <span style={{ color: "var(--agent-danger)", marginLeft: 2 }}>*</span>
+              {t("agent.updateStatus.selectNewStatus", "Select New Status")} <span style={{ color: "var(--agent-danger)", marginLeft: 2 }}>*</span>
             </div>
             <div style={{ padding: "20px" }}>
               <div className="us-status-grid">
@@ -413,8 +426,8 @@ export default function UpdateStatus() {
                       </div>
                       <div className="us-status-name">{s.label}</div>
                       <div className="us-status-desc">{s.desc}</div>
-                      {isCurrent  && <span className="us-current-tag">Current status</span>}
-                      {!isCurrent && !isAllowed && <span className="us-current-tag">Not allowed</span>}
+                      {isCurrent  && <span className="us-current-tag">{t("agent.updateStatus.currentStatusTag", "Current status")}</span>}
+                      {!isCurrent && !isAllowed && <span className="us-current-tag">{t("agent.updateStatus.notAllowed", "Not allowed")}</span>}
                     </button>
                   );
                 })}
@@ -428,9 +441,9 @@ export default function UpdateStatus() {
               }}>
                 <Icon d={IC.info} size={13} />
                 <span>
-                  From <strong style={{ color: "var(--agent-text)" }}>
-                    {currentStatusName.replace("-", " ")}
-                  </strong>, you can move to:{" "}
+                  {t("agent.updateStatus.moveFromTo", "From {{from}}, you can move to:", {
+                    from: STATUSES.find(s => s.key === currentStatusName)?.label ?? currentStatusName,
+                  })}{" "}
                   {allowed.map((a, i) => (
                     <span key={a}>
                       <strong style={{ color: "var(--agent-primary)" }}>
@@ -448,51 +461,53 @@ export default function UpdateStatus() {
           <div className="us-form-card">
             <div className="us-form-header">
               <Icon d={IC.info} size={16} />
-              Reason &amp; Notes
+              {t("agent.updateStatus.reasonNotes", "Reason & Notes")}
             </div>
             <div className="us-form-body">
 
               <div className="us-field">
                 <label className="us-label">
-                  Reason for Change <span className="us-label-req">*</span>
+                  {t("agent.updateStatus.reasonForChange", "Reason for Change")} <span className="us-label-req">*</span>
                 </label>
                 <select className="us-select" value={reason}
                   onChange={e => { setReason(e.target.value); setCustomReason(""); }}
                   disabled={!selectedStatus}>
                   <option value="">
-                    {selectedStatus ? "Select a reason…" : "Select a status first…"}
+                    {selectedStatus
+                      ? t("agent.updateStatus.selectReason", "Select a reason…")
+                      : t("agent.updateStatus.selectStatusFirst", "Select a status first…")}
                   </option>
                   {reasonList.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
 
-              {reason === "Other" && (
+              {isOtherReason && (
                 <div className="us-field">
                   <label className="us-label">
-                    Specify Reason <span className="us-label-req">*</span>
+                    {t("agent.updateStatus.specifyReason", "Specify Reason")} <span className="us-label-req">*</span>
                   </label>
                   <input type="text" className="us-input"
-                    placeholder="Describe the reason…"
+                    placeholder={t("agent.updateStatus.specifyReasonPh", "Describe the reason…")}
                     value={customReason}
                     onChange={e => setCustomReason(e.target.value)} />
                 </div>
               )}
 
               <div className="us-field">
-                <label className="us-label">Internal Note</label>
+                <label className="us-label">{t("agent.updateStatus.internalNote", "Internal Note")}</label>
                 <textarea className="us-textarea" rows={4}
-                  placeholder="Add context for your team (optional, not visible to requester)…"
+                  placeholder={t("agent.updateStatus.internalNotePh", "Add context for your team (optional, not visible to requester)…")}
                   value={note}
                   onChange={e => setNote(e.target.value)} />
-                <span className="us-hint">Internal notes are only visible to agents and managers.</span>
+                <span className="us-hint">{t("agent.updateStatus.internalNoteHint", "Internal notes are only visible to agents and managers.")}</span>
               </div>
 
               {/* ── Priority override — uses real priorities from API ── */}
               <div className="us-field">
-                <label className="us-label">Adjust Priority</label>
+                <label className="us-label">{t("agent.updateStatus.adjustPriority", "Adjust Priority")}</label>
                 <div className="us-priority-row">
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: "var(--agent-muted)" }}>Current:</span>
+                    <span style={{ fontSize: 12, color: "var(--agent-muted)" }}>{t("agent.updateStatus.currentLabel", "Current:")}</span>
                     <PriorityBadge p={priorityName} />
                   </div>
                   <select className="us-select" value={priorityId}
@@ -504,7 +519,7 @@ export default function UpdateStatus() {
                     ))}
                   </select>
                 </div>
-                <span className="us-hint">Leave unchanged if priority hasn't shifted.</span>
+                <span className="us-hint">{t("agent.updateStatus.priorityHint", "Leave unchanged if priority hasn't shifted.")}</span>
               </div>
 
 
@@ -517,10 +532,10 @@ export default function UpdateStatus() {
                 }}>
                   <Icon d={IC.warning} size={14} />
                   {!reason
-                    ? "Please select a reason for this status change."
-                    : reason === "Other" && !customReason.trim()
-                    ? "Please specify the reason in the text field above."
-                    : "Please fill in all required fields."}
+                    ? t("agent.updateStatus.pleaseSelectReason", "Please select a reason for this status change.")
+                    : isOtherReason && !customReason.trim()
+                    ? t("agent.updateStatus.pleaseSpecifyReason", "Please specify the reason in the text field above.")
+                    : t("agent.updateStatus.pleaseFillRequired", "Please fill in all required fields.")}
                 </div>
               )}
 
@@ -539,7 +554,7 @@ export default function UpdateStatus() {
 
             <div className="us-form-actions">
               <button className="agent-btn agent-btn--ghost" onClick={() => navigate(-1)}>
-                Cancel
+                {t("agent.updateStatus.cancel", "Cancel")}
               </button>
               <button className="us-btn-submit"
                 onClick={handleSubmit}
@@ -551,10 +566,10 @@ export default function UpdateStatus() {
                       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d={IC.spin} />
                     </svg>
-                    Updating…
+                    {t("agent.updateStatus.updating", "Updating…")}
                   </>
                 ) : (
-                  <><Icon d={IC.update} size={16} /> Update Status</>
+                  <><Icon d={IC.update} size={16} /> {t("agent.updateStatus.updateStatusBtn", "Update Status")}</>
                 )}
               </button>
             </div>
@@ -565,14 +580,14 @@ export default function UpdateStatus() {
         <div className="us-sidebar">
 
           <div className="us-side-card">
-            <div className="us-side-header">Ticket Info</div>
+            <div className="us-side-header">{t("agent.updateStatus.ticketInfo", "Ticket Info")}</div>
             <div className="us-side-body">
               {[
-                { key: "ID",       val: `#${ticketNumber}` },
-                { key: "Priority", val: <PriorityBadge p={priorityName} /> },
-                { key: "Status",   val: <StatusBadge s={ticket?.status?.status_name ?? "Open"} /> },
-                { key: "Category", val: categoryName },
-                { key: "Assignee", val: assigneeName },
+                { key: t("agent.updateStatus.colId", "ID"),       val: `#${ticketNumber}` },
+                { key: t("agent.updateStatus.colPriority", "Priority"), val: <PriorityBadge p={priorityName} /> },
+                { key: t("agent.updateStatus.colStatus", "Status"),   val: <StatusBadge s={ticket?.status?.status_name ?? "Open"} /> },
+                { key: t("agent.updateStatus.colCategory", "Category"), val: categoryName },
+                { key: t("agent.updateStatus.colAssignee", "Assignee"), val: assigneeName },
               ].map(r => (
                 <div className="us-side-row" key={r.key}>
                   <span className="us-side-key">{r.key}</span>
@@ -583,7 +598,7 @@ export default function UpdateStatus() {
           </div>
 
           <div className="us-side-card">
-            <div className="us-side-header">Workflow</div>
+            <div className="us-side-header">{t("agent.updateStatus.workflow", "Workflow")}</div>
             <div className="us-flow">
               {FLOW_STEPS.map((step, i) => {
                 const s          = STATUSES.find(x => x.key === step);
@@ -603,14 +618,14 @@ export default function UpdateStatus() {
                       {isCurrent && (
                         <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700,
                           background: "rgba(3,54,61,0.1)", padding: "1px 6px", borderRadius: 8 }}>
-                          NOW
+                          {t("agent.updateStatus.now", "NOW")}
                         </span>
                       )}
                       {isSelected && !isCurrent && (
                         <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700,
                           background: s.icon.bg, color: s.icon.color,
                           padding: "1px 6px", borderRadius: 8 }}>
-                          NEW
+                          {t("agent.updateStatus.newTag", "NEW")}
                         </span>
                       )}
                     </div>
@@ -623,10 +638,10 @@ export default function UpdateStatus() {
 
           {/* ── Real status history from API ── */}
           <div className="us-side-card">
-            <div className="us-side-header">Status History</div>
+            <div className="us-side-header">{t("agent.updateStatus.statusHistory", "Status History")}</div>
             <div className="us-side-body" style={{ gap: 0 }}>
               {history.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--agent-muted)" }}>No history yet.</p>
+                <p style={{ fontSize: 12, color: "var(--agent-muted)" }}>{t("agent.updateStatus.noHistoryYet", "No history yet.")}</p>
               ) : (
                 history.map((h, i) => (
                   <div key={h.id ?? i} style={{
@@ -654,14 +669,17 @@ export default function UpdateStatus() {
           </div>
 
           <div className="us-side-card">
-            <div className="us-side-header">💡 Tips</div>
+            <div className="us-side-header">{t("agent.updateStatus.tips", "💡 Tips")}</div>
             <div className="us-side-body" style={{ gap: 8 }}>
-              {[
-                "Use \"Pending\" when waiting for user info or a vendor reply.",
-                "Always add a note when moving to Resolved — it's sent to the user.",
-                "Only close after the requester confirms the fix.",
-                "Changing priority triggers a manager notification.",
-              ].map((tip, i) => (
+              {(language === "en"
+                ? [
+                    "Use \"Pending\" when waiting for user info or a vendor reply.",
+                    "Always add a note when moving to Resolved — it's sent to the user.",
+                    "Only close after the requester confirms the fix.",
+                    "Changing priority triggers a manager notification.",
+                  ]
+                : (t("agent.updateStatus.tipList", null) || [])
+              ).map((tip, i) => (
                 <div key={i} style={{ display: "flex", gap: 7, fontSize: 12,
                   color: "var(--agent-muted)", lineHeight: 1.5 }}>
                   <span style={{ color: "var(--agent-accent)", fontWeight: 700, flexShrink: 0 }}>→</span>
@@ -680,20 +698,20 @@ export default function UpdateStatus() {
             <div className="us-success-icon">
               <Icon d={IC.check} size={32} />
             </div>
-            <div className="us-success-title">Status Updated!</div>
+            <div className="us-success-title">{t("agent.updateStatus.statusUpdated", "Status Updated!")}</div>
             <div className="us-success-desc">
-              Ticket <strong>#{ticketNumber}</strong> is now{" "}
+              {t("agent.updateStatus.nowStatus", "Ticket #{{id}} is now", { id: ticketNumber })}{" "}
               <strong style={{ color: selObj?.icon.color }}>{selObj?.label}</strong>.
-              {notifyUser && " The requester has been notified."}
+              {notifyUser && " " + t("agent.updateStatus.requesterNotified", "The requester has been notified.")}
             </div>
             <div className="us-success-actions">
               <button className="agent-btn agent-btn--ghost"
                 onClick={() => navigate("/agent/assigned-tickets")}>
-                <Icon d={IC.ticket} /> Assigned Tickets
+                <Icon d={IC.ticket} /> {t("agent.updateStatus.assignedTicketsBtn", "Assigned Tickets")}
               </button>
               <button className="agent-btn agent-btn--primary"
                 onClick={() => navigate("/agent/ticket-details", { state: { ticketId } })}>
-                <Icon d={IC.eye} /> View Ticket
+                <Icon d={IC.eye} /> {t("agent.updateStatus.viewTicketBtn", "View Ticket")}
               </button>
             </div>
           </div>

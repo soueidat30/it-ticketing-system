@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./AssetDetails.css";
-
 
 const BASE_URL = "http://127.0.0.1:8000/api";
 
@@ -37,14 +37,19 @@ const IC = {
   external:   "M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6 M15 3h6v6 M10 14L21 3",
 };
 
+const QR_SERVER = "https://api.qrserver.com/v1/create-qr-code";
+const qrUrlFromValue = (value, size = 300) =>
+  `${QR_SERVER}/?size=${size}x${size}&data=${encodeURIComponent(value)}&color=03363d&bgcolor=d4f265&qzone=1`;
+
 export default function AssetDetails() {
   const { id } = useParams();
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
+  const { t, language } = useLanguage();
 
   const [asset, setAsset] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [activeTab, setActiveTab] = useState("overview");
   const [toast, setToast] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,15 +58,12 @@ export default function AssetDetails() {
   const [form, setForm] = useState({
     title: "",
     description: "",
-
     category_id: "",
     priority_id: "",
-
     priority: "medium",
   });
   const [creating, setCreating] = useState(false);
   const [formErr, setFormErr] = useState(null);
-
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
@@ -70,85 +72,60 @@ export default function AssetDetails() {
       if (categories.length > 0) return;
       try {
         const res = await fetch(`${BASE_URL}/categories`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
         const data = await res.json().catch(() => []);
         if (!res.ok) return;
         const list = Array.isArray(data) ? data : data?.data ?? [];
         setCategories(list);
       } catch {
-        // ignore; dropdown will stay empty/disabled
+        // ignore
       }
     };
-
     void run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportOpen]);
-
-
-
-  const fetchAssetDetails = async (isRefresh = false) => {
-
-    isRefresh ? setRefreshing(true) : setLoading(true);
-
-
-
-    setError("");
-    try {
-      const res = await fetch(`${BASE_URL}/assets/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
-      if (!res.ok) throw new Error("Failed to load asset details or access denied.");
-      const data = await res.json();
-      console.log("AssetDetails API response:", data);
-
-      const payload = data?.data ?? data?.asset ?? (Array.isArray(data?.assets) ? data.assets[0] : null) ?? data;
-
-      setAsset(payload);
-
-      if (isRefresh) {
-
-        setToast({ message: "Asset details refreshed.", type: "success" });
-        setTimeout(() => setToast(null), 4000);
-      }
-
-
-    } catch (err) {
-      setError(err.message || "Unable to load asset details");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      void fetchAssetDetails();
-    }, 0);
-
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
 
   const showToast = (message, type = "info") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
+  const fetchAssetDetails = useCallback(async (isRefresh = false) => {
+    isRefresh ? setRefreshing(true) : setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${BASE_URL}/assets/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(t("assetDetails.loadError", "Failed to load asset details or access denied."));
+      const data = await res.json();
+      const payload = data?.data ?? data?.asset ?? (Array.isArray(data?.assets) ? data.assets[0] : null) ?? data;
+      setAsset(payload);
+      if (isRefresh) {
+        showToast(t("assetDetails.toast.refreshed", "Asset details refreshed."), "success");
+      }
+    } catch (err) {
+      setError(err.message || t("assetDetails.loadErrorGeneric", "Unable to load asset details"));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, token, t]);
+
+  useEffect(() => {
+    const t = setTimeout(() => { void fetchAssetDetails(); }, 0);
+    return () => clearTimeout(t);
+  }, [fetchAssetDetails]);
+
+  // Localized helpers
   const formatDate = (v) => {
     if (!v) return "—";
     const d = new Date(v);
     if (isNaN(d.getTime())) return "—";
-    return d.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+    return d.toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", {
+      year: "numeric", month: "short", day: "numeric",
     });
   };
 
@@ -156,12 +133,9 @@ export default function AssetDetails() {
     if (!v) return "—";
     const d = new Date(v);
     if (isNaN(d.getTime())) return "—";
-    return d.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    return d.toLocaleString(language === "ar" ? "ar-EG" : "en-US", {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit",
     });
   };
 
@@ -175,9 +149,9 @@ export default function AssetDetails() {
   const warrantyStatus = (warrantyExpiry) => {
     const days = daysUntil(warrantyExpiry);
     if (days === null) return null;
-    if (days < 0)   return { cls: "expired",  label: "Expired" };
-    if (days <= 30) return { cls: "expiring", label: `${days}d left` };
-    return { cls: "valid", label: "Active" };
+    if (days < 0)   return { cls: "expired",  label: t("assetDetails.warrantyExpired", "Expired") };
+    if (days <= 30) return { cls: "expiring", label: t("assetDetails.warrantyDaysLeft", "{{n}}d left", { n: days }) };
+    return { cls: "valid", label: t("assetDetails.warrantyActive", "Active") };
   };
 
   const normalizeStatus = (status) => {
@@ -190,50 +164,37 @@ export default function AssetDetails() {
     return "unassigned";
   };
 
-const handleDownloadQr = async () => {
+  // Localized status labels
+  const STATUS_LABEL = {
+    assigned:  t("assetDetails.statusAssigned",  "Assigned"),
+    unassigned: t("assetDetails.statusAvailable", "Available"),
+    available: t("assetDetails.statusAvailable", "Available"),
+    in_repair: t("assetDetails.statusRepair",    "In Repair"),
+    retired:   t("assetDetails.statusRetired",   "Retired"),
+    lost:      t("assetDetails.statusLost",      "Lost"),
+  };
+
+  const handleDownloadQr = async () => {
     try {
       const assetTag = asset?.asset_tag || asset?.asset_code || "asset";
-
-      let res = await fetch(`${BASE_URL}/assets/${id}/qr/download`, {
+      const res = await fetch(`${BASE_URL}/assets/${id}/qr/download`, {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "image/png",
-        },
+        headers: { Authorization: `Bearer ${token}`, Accept: "image/png" },
       });
-
-      const ct = res.headers.get("content-type") || "";
-      if (!res.ok && ct.includes("text/html")) {
-        const txt = await res.text().catch(() => "");
-        console.error("QR download returned HTML:", txt);
-      }
-
-      if (!res.ok) {
-        try {
-          const txt = await res.text();
-          console.error("QR download error response:", txt);
-        } catch (e) {
-          console.error("QR download error read failed:", e);
-        }
-        throw new Error("QR download failed");
-      }
-
+      if (!res.ok) throw new Error(t("assetDetails.qrDownloadFailed", "QR download failed"));
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-
       const a = document.createElement("a");
       a.href = url;
       a.download = `${assetTag}-qr.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-
       setTimeout(() => URL.revokeObjectURL(url), 1500);
-
-      showToast("QR Code downloaded successfully.", "success");
+      showToast(t("assetDetails.toast.qrDownloaded", "QR Code downloaded successfully."), "success");
     } catch {
-      // Fallback: direct storage image if backend download endpoint fails.
+      // Fallback: direct storage image
       try {
         if (asset?.qr_code_path) {
           const assetTag = asset.asset_tag || asset.asset_code || "asset";
@@ -244,49 +205,29 @@ const handleDownloadQr = async () => {
           document.body.appendChild(a);
           a.click();
           a.remove();
-          showToast("QR Code downloaded.", "success");
+          showToast(t("assetDetails.toast.qrDownloaded", "QR Code downloaded."), "success");
           return;
         }
-      } catch {
-        // ignore fallback failures
-      }
-
-      try {
-        if (qrImageUrl) {
-          const a = document.createElement("a");
-          a.href = qrImageUrl;
-          a.download = `${(asset?.asset_tag || asset?.asset_code || 'asset')}-qr.png`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          showToast("QR downloaded (fallback).", "success");
-          return;
-        }
-      } catch (e) {
-        // ignore
-      }
-
-      showToast("QR download failed. Please try again.", "error");
+      } catch { /* ignore */ }
+      showToast(t("assetDetails.toast.qrDownloadFailed", "QR download failed. Please try again."), "error");
     }
   };
 
-const handlePrintQr = async () => {
+  const handlePrintQr = async () => {
     try {
       const win = window.open("", "_blank");
       if (!win) {
-        showToast("Popup blocked. Please allow popups to print.", "error");
+        showToast(t("assetDetails.toast.popupBlocked", "Popup blocked. Please allow popups to print."), "error");
         return;
       }
-
       const res = await fetch(`${BASE_URL}/assets/${id}/qr/download`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}`, Accept: "image/png" },
       });
-      if (!res.ok) throw new Error("QR download failed");
+      if (!res.ok) throw new Error(t("assetDetails.qrPrintFailed", "QR print failed"));
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-
       const assetCode = asset?.asset_code || asset?.asset_tag || "asset";
       const assetTag = asset?.asset_tag || asset?.asset_code || "";
       const assetName = asset?.asset_name || "";
@@ -337,14 +278,12 @@ const handlePrintQr = async () => {
               <div class="meta">${meta}</div>
               <div class="qr-wrap"><img id="qr-img" src="${url}" /></div>
             </div>
-
             <script>
               (function () {
                 const img = document.getElementById('qr-img');
                 const cleanup = function () {
                   try { URL.revokeObjectURL('${url}'); } catch (e) {}
                 };
-
                 const doPrint = function () {
                   try { window.focus(); } catch (e) {}
                   window.print();
@@ -353,29 +292,20 @@ const handlePrintQr = async () => {
                     cleanup();
                   }, 600);
                 };
-
-                img.onload = function () {
-                  doPrint();
-                };
-
-                img.onerror = function () {
-                  // Still print the label without QR (or with broken QR) rather than doing nothing.
-                  doPrint();
-                };
-
-                // Fallback: if onload never fires, still allow printing after a short delay.
+                img.onload = function () { doPrint(); };
+                img.onerror = function () { doPrint(); };
                 setTimeout(doPrint, 1200);
               })();
             </script>
           </body>
         </html>
       `);
-
       win.document.close();
     } catch {
-      showToast("QR print failed. Please try again.", "error");
+      showToast(t("assetDetails.toast.qrPrintFailed", "QR print failed. Please try again."), "error");
     }
   };
+
   const openReportModal = () => {
     setForm({
       title: "",
@@ -390,29 +320,17 @@ const handlePrintQr = async () => {
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
-
     if (!form.title.trim()) {
-      setFormErr("Please provide a title for the issue.");
+      setFormErr(t("assetDetails.reportForm.titleRequired", "Please provide a title for the issue."));
       return;
     }
-    const priorityMap = {
-      low: 1,
-      medium: 2,
-      high: 3,
-      urgent: 4,
-    };
+    const priorityMap = { low: 1, medium: 2, high: 3, urgent: 4 };
     const mappedPriorityId = priorityMap[form.priority] || "";
-
-    const resolved = {
-      ...form,
-      priority_id: form.priority_id || mappedPriorityId,
-    };
-
+    const resolved = { ...form, priority_id: form.priority_id || mappedPriorityId };
     if (!resolved.category_id || !resolved.priority_id) {
-      setFormErr("Please select Issue Category and Priority.");
+      setFormErr(t("assetDetails.reportForm.categoryPriorityRequired", "Please select Issue Category and Priority."));
       return;
     }
-
     setCreating(true);
     setFormErr(null);
     try {
@@ -423,7 +341,7 @@ const handlePrintQr = async () => {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-body: JSON.stringify({
+        body: JSON.stringify({
           title: form.title.trim(),
           description: form.description.trim(),
           category_id: resolved.category_id,
@@ -432,13 +350,12 @@ body: JSON.stringify({
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Ticket creation failed");
-
+      if (!res.ok) throw new Error(data.message || t("assetDetails.reportForm.createFailed", "Ticket creation failed"));
       setReportOpen(false);
-      showToast("Issue report submitted successfully!", "success");
+      showToast(t("assetDetails.toast.reportSubmitted", "Issue report submitted successfully!"), "success");
       fetchAssetDetails(true);
     } catch (e) {
-      setFormErr(e.message || "Failed to submit ticket.");
+      setFormErr(e.message || t("assetDetails.toast.reportFailed", "Failed to submit ticket."));
     } finally {
       setCreating(false);
     }
@@ -448,7 +365,7 @@ body: JSON.stringify({
     return (
       <div className="ad-page ad-loading-state">
         <div className="ad-spinner" />
-        <p>Loading asset details…</p>
+        <p>{t("assetDetails.loading", "Loading asset details…")}</p>
       </div>
     );
   }
@@ -458,11 +375,11 @@ body: JSON.stringify({
       <div className="ad-page">
         <div className="ad-error-card">
           <div className="ad-error-icon"><Icon d={IC.warning} size={32} /></div>
-          <h2>Asset Not Found</h2>
-          <p>{error || "You do not have access to view this asset."}</p>
-<Link to="/employee/my-assets" className="ad-btn ad-btn--primary">
+          <h2>{t("assetDetails.notFound", "Asset Not Found")}</h2>
+          <p>{error || t("assetDetails.noAccess", "You do not have access to view this asset.")}</p>
+          <Link to="/employee/my-assets" className="ad-btn ad-btn--primary">
             <Icon d={IC.arrowLeft} size={14} />
-            Return to My Assets
+            {t("assetDetails.returnToAssets", "Return to My Assets")}
           </Link>
         </div>
       </div>
@@ -476,11 +393,7 @@ body: JSON.stringify({
     return bd - ad;
   });
 
-const QR_SERVER = "https://api.qrserver.com/v1/create-qr-code";
-  const qrUrlFromValue = (value, size = 300) =>
-    `${QR_SERVER}/?size=${size}x${size}&data=${encodeURIComponent(value)}&color=03363d&bgcolor=d4f265&qzone=1`;
-
-const qrImageUrl = asset.qr_code_url
+  const qrImageUrl = asset.qr_code_url
     ? asset.qr_code_url
     : asset.qr_code_path
       ? `http://127.0.0.1:8000/storage/${asset.qr_code_path}`
@@ -490,10 +403,7 @@ const qrImageUrl = asset.qr_code_url
           ? qrUrlFromValue(`TICKORA:ASSET:${asset.asset_tag}`, 300)
           : null;
 
-
-
   const status = normalizeStatus(asset.status);
-
   const warranty = warrantyStatus(asset.warranty_expiry);
 
   const currentAssignee = asset.assigned_user?.name
@@ -502,11 +412,10 @@ const qrImageUrl = asset.qr_code_url
     ?? asset.assigned_to_name
     ?? null;
 
-
   const TABS = [
-    { key: "overview", label: "Device Information", icon: IC.laptop },
-    { key: "history",  label: "Assignment History", icon: IC.clock, count: historyForTimeline.length },
-    { key: "tickets",  label: "Related Tickets",    icon: IC.ticket, count: asset.tickets?.length || 0 },
+    { key: "overview", label: t("assetDetails.tabOverview", "Device Information"), icon: IC.laptop },
+    { key: "history",  label: t("assetDetails.tabHistory",  "Assignment History"), icon: IC.clock, count: historyForTimeline.length },
+    { key: "tickets",  label: t("assetDetails.tabTickets",  "Related Tickets"),    icon: IC.ticket, count: asset.tickets?.length || 0 },
   ];
 
   return (
@@ -521,19 +430,18 @@ const qrImageUrl = asset.qr_code_url
       )}
 
       <div className="ad-topbar">
-<Link to="/employee/my-assets" className="ad-back-link">
+        <Link to="/employee/my-assets" className="ad-back-link">
           <Icon d={IC.arrowLeft} size={14} />
-          Back to My Assets
+          {t("assetDetails.backToAssets", "Back to My Assets")}
         </Link>
         <div className="ad-topbar-actions">
           <button className="ad-btn ad-btn--ghost ad-btn--sm" onClick={() => fetchAssetDetails(true)} disabled={refreshing}>
             <Icon d={IC.refresh} size={14} />
-            {refreshing ? "Refreshing…" : "Refresh"}
+            {refreshing ? t("assetDetails.refreshing", "Refreshing…") : t("common.refresh", "Refresh")}
           </button>
-          
           <button className="ad-btn ad-btn--danger ad-btn--sm" onClick={openReportModal}>
             <Icon d={IC.warning} size={14} />
-            Report Issue
+            {t("assetDetails.reportIssue", "Report Issue")}
           </button>
         </div>
       </div>
@@ -544,28 +452,27 @@ const qrImageUrl = asset.qr_code_url
             <span className="ad-tag-pill">{asset.asset_tag || asset.asset_code || "N/A"}</span>
             <span className={`ad-status-badge ad-status--${status}`}>
               <span className="ad-status-dot" />
-              {asset.status || "Unassigned"}
+              {STATUS_LABEL[status] || asset.status || t("common.unknown", "Unknown")}
             </span>
             {warranty && (
               <span className={`ad-warranty-pill ad-warranty--${warranty.cls}`}>
                 <Icon d={IC.shield} size={12} />
-                Warranty: {warranty.label}
+                {t("assetDetails.warrantyLabel", "Warranty: {{label}}", { label: warranty.label })}
               </span>
             )}
           </div>
           <h1 className="ad-hero-title">{asset.asset_name}</h1>
           <div className="ad-hero-meta">
-            <span><Icon d={IC.tag} size={13} /> {asset.manufacturer || asset.brand || "Generic"}</span>
+            <span><Icon d={IC.tag} size={13} /> {asset.manufacturer || asset.brand || t("common.unknown", "Generic")}</span>
             {asset.model && <><span className="ad-meta-sep">·</span><span>{asset.model}</span></>}
             {asset.serial_number && <><span className="ad-meta-sep">·</span><span className="ad-mono">SN {asset.serial_number}</span></>}
           </div>
         </div>
-        
       </div>
 
       <div className="ad-qr-section">
         <div className="ad-section-header">
-          <h2><Icon d={IC.qr} size={15} /> Asset QR Code</h2>
+          <h2><Icon d={IC.qr} size={15} /> {t("assetDetails.qrSectionTitle", "Asset QR Code")}</h2>
           <span className="ad-section-count">{asset.asset_tag || asset.asset_code || "N/A"}</span>
         </div>
 
@@ -584,9 +491,8 @@ const qrImageUrl = asset.qr_code_url
           <div className="ad-qr-card-actions">
             <button className="ad-btn ad-btn--ghost" onClick={handleDownloadQr}>
               <Icon d={IC.download} size={14} />
-              Download QR
+              {t("assetDetails.downloadQR", "Download QR")}
             </button>
-            
           </div>
         </div>
       </div>
@@ -595,43 +501,43 @@ const qrImageUrl = asset.qr_code_url
         <div className="ad-quick-card">
           <div className="ad-quick-icon ad-quick-icon--blue"><Icon d={IC.user} size={18} /></div>
           <div className="ad-quick-body">
-            <div className="ad-quick-label">Assigned To</div>
+            <div className="ad-quick-label">{t("assetDetails.quickAssignedTo", "Assigned To")}</div>
             <div className="ad-quick-value">{currentAssignee || "—"}</div>
           </div>
         </div>
         <div className="ad-quick-card">
           <div className="ad-quick-icon ad-quick-icon--purple"><Icon d={IC.building} size={18} /></div>
           <div className="ad-quick-body">
-            <div className="ad-quick-label">Department</div>
+            <div className="ad-quick-label">{t("assetDetails.quickDepartment", "Department")}</div>
             <div className="ad-quick-value">{asset.department || asset.employee?.department || "—"}</div>
           </div>
         </div>
         <div className="ad-quick-card">
           <div className="ad-quick-icon ad-quick-icon--green"><Icon d={IC.mapPin} size={18} /></div>
           <div className="ad-quick-body">
-            <div className="ad-quick-label">Location</div>
+            <div className="ad-quick-label">{t("assetDetails.quickLocation", "Location")}</div>
             <div className="ad-quick-value">{asset.location || "—"}</div>
           </div>
         </div>
         <div className="ad-quick-card">
           <div className="ad-quick-icon ad-quick-icon--teal"><Icon d={IC.calendar} size={18} /></div>
           <div className="ad-quick-body">
-            <div className="ad-quick-label">Assigned Date</div>
+            <div className="ad-quick-label">{t("assetDetails.quickAssignedDate", "Assigned Date")}</div>
             <div className="ad-quick-value">{formatDate(asset.assigned_at)}</div>
           </div>
         </div>
       </div>
 
       <div className="ad-tabs">
-        {TABS.map(t => (
+        {TABS.map(tab => (
           <button
-            key={t.key}
-            className={`ad-tab ${activeTab === t.key ? "ad-tab--active" : ""}`}
-            onClick={() => setActiveTab(t.key)}
+            key={tab.key}
+            className={`ad-tab ${activeTab === tab.key ? "ad-tab--active" : ""}`}
+            onClick={() => setActiveTab(tab.key)}
           >
-            <Icon d={t.icon} size={14} />
-            <span>{t.label}</span>
-            {t.count !== undefined && <span className="ad-tab-count">{t.count}</span>}
+            <Icon d={tab.icon} size={14} />
+            <span>{tab.label}</span>
+            {tab.count !== undefined && <span className="ad-tab-count">{tab.count}</span>}
           </button>
         ))}
       </div>
@@ -639,31 +545,29 @@ const qrImageUrl = asset.qr_code_url
       {activeTab === "overview" && (
         <div className="ad-tab-panel">
           <div className="ad-section-header">
-            <h2><Icon d={IC.info} size={15} /> Device Information</h2>
+            <h2><Icon d={IC.info} size={15} /> {t("assetDetails.deviceInfoTitle", "Device Information")}</h2>
           </div>
           <div className="ad-info-grid">
             {[
-              { icon: IC.laptop,   label: "Asset Name",     val: asset.asset_name },
-              { icon: IC.tag,      label: "Asset Tag",      val: asset.asset_tag || asset.asset_code, mono: true },
-              { icon: IC.hash,     label: "Serial Number",  val: asset.serial_number, mono: true },
-              { icon: IC.building, label: "Brand",          val: asset.manufacturer || asset.brand },
-              { icon: IC.laptop,   label: "Model",          val: asset.model },
-              { icon: IC.tag,      label: "Category",       val: asset.category?.name || asset.category || asset.type || "—" },
-              { icon: IC.mapPin,   label: "Location",       val: asset.location },
-              { icon: IC.building, label: "Department",     val: asset.department || asset.employee?.department },
-              { icon: IC.user,     label: "Assigned To",    val: currentAssignee },
-              { icon: IC.calendar, label: "Assigned Date",  val: formatDate(asset.assigned_at) },
-              { icon: IC.calendar, label: "Purchase Date",  val: formatDate(asset.purchase_date) },
-              { icon: IC.shield,   label: "Warranty Expiry",val: formatDate(asset.warranty_expiry), extra: warranty },
+              { icon: IC.laptop,   labelKey: "assetDetails.labelAssetName",  val: asset.asset_name },
+              { icon: IC.tag,      labelKey: "assetDetails.labelAssetTag",   val: asset.asset_tag || asset.asset_code, mono: true },
+              { icon: IC.hash,     labelKey: "assetDetails.labelSerial",     val: asset.serial_number, mono: true },
+              { icon: IC.building, labelKey: "assetDetails.labelBrand",      val: asset.manufacturer || asset.brand },
+              { icon: IC.laptop,   labelKey: "assetDetails.labelModel",      val: asset.model },
+              { icon: IC.tag,      labelKey: "assetDetails.labelCategory",   val: asset.category?.name || asset.category || asset.type || "—" },
+              { icon: IC.mapPin,   labelKey: "assetDetails.labelLocation",   val: asset.location },
+              { icon: IC.building, labelKey: "assetDetails.labelDepartment", val: asset.department || asset.employee?.department },
+              { icon: IC.user,     labelKey: "assetDetails.labelAssignedTo",val: currentAssignee },
+              { icon: IC.calendar, labelKey: "assetDetails.labelAssignedDate",val: formatDate(asset.assigned_at) },
+              { icon: IC.calendar, labelKey: "assetDetails.labelPurchaseDate",val: formatDate(asset.purchase_date) },
+              { icon: IC.shield,   labelKey: "assetDetails.labelWarranty",   val: formatDate(asset.warranty_expiry), extra: warranty },
             ].map((r) => (
-              <div className="ad-info-cell" key={r.label}>
+              <div className="ad-info-cell" key={r.labelKey}>
                 <div className="ad-info-cell-icon"><Icon d={r.icon} size={15} /></div>
                 <div className="ad-info-cell-body">
-                  <div className="ad-info-cell-label">{r.label}</div>
+                  <div className="ad-info-cell-label">{t(r.labelKey, r.labelKey.split(".").pop())}</div>
                   <div className={`ad-info-cell-value ${r.mono ? "ad-mono" : ""}`}>{r.val !== undefined && r.val !== null && r.val !== "" ? r.val : "—"}</div>
-
                   {r.extra && <div className={`ad-info-cell-extra ad-warranty--${r.extra.cls}`}>{r.extra.label}</div>}
-
                 </div>
               </div>
             ))}
@@ -671,7 +575,7 @@ const qrImageUrl = asset.qr_code_url
               <div className="ad-info-cell ad-info-cell--full">
                 <div className="ad-info-cell-icon"><Icon d={IC.info} size={15} /></div>
                 <div className="ad-info-cell-body">
-                  <div className="ad-info-cell-label">Notes</div>
+                  <div className="ad-info-cell-label">{t("assetDetails.labelNotes", "Notes")}</div>
                   <div className="ad-info-cell-value ad-notes-text">{asset.notes}</div>
                 </div>
               </div>
@@ -683,18 +587,20 @@ const qrImageUrl = asset.qr_code_url
       {activeTab === "history" && (
         <div className="ad-tab-panel">
           <div className="ad-section-header">
-            <h2><Icon d={IC.clock} size={15} /> Assignment History</h2>
-            <span className="ad-section-count">{historyForTimeline.length} record{historyForTimeline.length === 1 ? "" : "s"}</span>
+            <h2><Icon d={IC.clock} size={15} /> {t("assetDetails.historyTitle", "Assignment History")}</h2>
+            <span className="ad-section-count">
+              {historyForTimeline.length} {t("assetDetails.recordCount", "{{count}} record", { count: historyForTimeline.length })}
+            </span>
           </div>
           {historyForTimeline.length > 0 ? (
             <div className="ad-table-wrap">
               <table className="ad-table">
                 <thead>
                   <tr>
-                    <th>Assigned To</th>
-                    <th>Assigned Date</th>
-                    <th>Returned Date</th>
-                    <th>Status</th>
+                    <th>{t("assetDetails.colAssignedTo", "Assigned To")}</th>
+                    <th>{t("assetDetails.colAssignedDate", "Assigned Date")}</th>
+                    <th>{t("assetDetails.colReturnedDate", "Returned Date")}</th>
+                    <th>{t("assetDetails.colStatus", "Status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -714,11 +620,11 @@ const qrImageUrl = asset.qr_code_url
                         <td>
                           {returned
                             ? formatDateTime(item.returned_at)
-                            : <span className="ad-pill ad-pill--success">Present</span>}
+                            : <span className="ad-pill ad-pill--success">{t("assetDetails.present", "Present")}</span>}
                         </td>
                         <td>
                           <span className={`ad-pill ad-pill--${returned ? "neutral" : "active"}`}>
-                            {item.status || (returned ? "Returned" : "Active")}
+                            {item.status || (returned ? t("assetDetails.returned", "Returned") : t("assetDetails.active", "Active"))}
                           </span>
                         </td>
                       </tr>
@@ -730,7 +636,7 @@ const qrImageUrl = asset.qr_code_url
           ) : (
             <div className="ad-empty">
               <div className="ad-empty-icon"><Icon d={IC.clock} size={28} /></div>
-              <p>No assignment history records found for this asset.</p>
+              <p>{t("assetDetails.historyEmpty", "No assignment history records found for this asset.")}</p>
             </div>
           )}
         </div>
@@ -739,10 +645,10 @@ const qrImageUrl = asset.qr_code_url
       {activeTab === "tickets" && (
         <div className="ad-tab-panel">
           <div className="ad-section-header">
-            <h2><Icon d={IC.ticket} size={15} /> Related Tickets</h2>
+            <h2><Icon d={IC.ticket} size={15} /> {t("assetDetails.ticketsTitle", "Related Tickets")}</h2>
             <button className="ad-btn ad-btn--danger ad-btn--sm" onClick={openReportModal}>
               <Icon d={IC.plus} size={13} />
-              New Report
+              {t("assetDetails.newReport", "New Report")}
             </button>
           </div>
           {asset.tickets && asset.tickets.length > 0 ? (
@@ -750,32 +656,32 @@ const qrImageUrl = asset.qr_code_url
               <table className="ad-table">
                 <thead>
                   <tr>
-                    <th>Ticket #</th>
-                    <th>Title</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Created</th>
+                    <th>{t("assetDetails.colTicketNum", "Ticket #")}</th>
+                    <th>{t("assetDetails.colTitle", "Title")}</th>
+                    <th>{t("assetDetails.colPriority", "Priority")}</th>
+                    <th>{t("assetDetails.colStatus", "Status")}</th>
+                    <th>{t("assetDetails.colCreated", "Created")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {asset.tickets.map((t) => {
-                    const priority = String(t.priority || "medium").toLowerCase();
-                    const tStatus = String(t.status?.status_name ?? t.status ?? "open").toLowerCase().replace(/\s+/g, "-");
+                  {asset.tickets.map((tk) => {
+                    const priority = String(tk.priority || "medium").toLowerCase();
+                    const tStatus = String(tk.status?.status_name ?? tk.status ?? "open").toLowerCase().replace(/\s+/g, "-");
                     return (
-                      <tr key={t.id}>
-                        <td className="ad-mono">{t.ticket_number || `#TK-${t.id}`}</td>
-                        <td className="ad-fw-600">{t.title}</td>
+                      <tr key={tk.id}>
+                        <td className="ad-mono">{tk.ticket_number || `#TK-${tk.id}`}</td>
+                        <td className="ad-fw-600">{tk.title}</td>
                         <td>
                           <span className={`ad-pill ad-pill--priority-${priority}`}>
-                            {t.priority || "Medium"}
+                            {tk.priority || t("agent.priority.medium", "Medium")}
                           </span>
                         </td>
                         <td>
                           <span className={`ad-pill ad-pill--status-${tStatus}`}>
-                            {t.status?.status_name ?? t.status ?? "Open"}
+                            {tk.status?.status_name ?? tk.status ?? t("agent.status.open", "Open")}
                           </span>
                         </td>
-                        <td className="ad-muted">{formatDate(t.created_at)}</td>
+                        <td className="ad-muted">{formatDate(tk.created_at)}</td>
                       </tr>
                     );
                   })}
@@ -785,10 +691,10 @@ const qrImageUrl = asset.qr_code_url
           ) : (
             <div className="ad-empty">
               <div className="ad-empty-icon"><Icon d={IC.ticket} size={28} /></div>
-              <p>No tickets or issue reports filed for this asset.</p>
+              <p>{t("assetDetails.ticketsEmpty", "No tickets or issue reports filed for this asset.")}</p>
               <button className="ad-btn ad-btn--primary ad-btn--sm" onClick={openReportModal}>
                 <Icon d={IC.plus} size={13} />
-                File First Report
+                {t("assetDetails.fileFirstReport", "File First Report")}
               </button>
             </div>
           )}
@@ -800,8 +706,8 @@ const qrImageUrl = asset.qr_code_url
           <div className="ad-modal" onClick={(e) => e.stopPropagation()}>
             <div className="ad-modal-header">
               <div>
-                <div className="ad-modal-title">Report an Issue</div>
-                <div className="ad-modal-sub">A new ticket will be created and linked to this asset</div>
+                <div className="ad-modal-title">{t("assetDetails.reportModalTitle", "Report an Issue")}</div>
+                <div className="ad-modal-sub">{t("assetDetails.reportModalSub", "A new ticket will be created and linked to this asset")}</div>
               </div>
               <button className="ad-modal-close" onClick={() => setReportOpen(false)}>
                 <Icon d={IC.close} size={18} />
@@ -819,7 +725,7 @@ const qrImageUrl = asset.qr_code_url
                 <div className="ad-autofill">
                   <div className="ad-autofill-icon"><Icon d={IC.tag} size={16} /></div>
                   <div className="ad-autofill-body">
-                    <div className="ad-autofill-label">Target Asset</div>
+                    <div className="ad-autofill-label">{t("assetDetails.targetAsset", "Target Asset")}</div>
                     <div className="ad-autofill-value">
                       <strong>{asset.asset_name}</strong>
                       <span className="ad-autofill-tag">{asset.asset_tag || asset.asset_code}</span>
@@ -828,11 +734,11 @@ const qrImageUrl = asset.qr_code_url
                 </div>
 
                 <div className="ad-form-group">
-                  <label className="ad-label">Issue Title <span className="ad-req">*</span></label>
+                  <label className="ad-label">{t("assetDetails.reportForm.titleLabel", "Issue Title")} <span className="ad-req">*</span></label>
                   <input
                     type="text"
                     className="ad-input"
-                    placeholder="e.g., Screen flickering, Battery swelling"
+                    placeholder={t("assetDetails.reportForm.titlePh", "e.g., Screen flickering, Battery swelling")}
                     value={form.title}
                     onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
                     autoFocus
@@ -840,13 +746,13 @@ const qrImageUrl = asset.qr_code_url
                 </div>
 
                 <div className="ad-form-group">
-                  <label className="ad-label">Priority Level</label>
+                  <label className="ad-label">{t("assetDetails.reportForm.priorityLabel", "Priority Level")}</label>
                   <div className="ad-priority-grid">
-                    {[ 
-                      { v: "low",    label: "Low",    desc: "Minor problem" },
-                      { v: "medium", label: "Medium", desc: "Normal issue" },
-                      { v: "high",   label: "High",   desc: "Impairs work" },
-                      { v: "urgent", label: "Urgent", desc: "Hard failure" },
+                    {[
+                      { v: "low",    labelKey: "assetDetails.reportForm.priorityLow",      descKey: "assetDetails.reportForm.priorityLowDesc"      },
+                      { v: "medium", labelKey: "assetDetails.reportForm.priorityMedium",   descKey: "assetDetails.reportForm.priorityMediumDesc"   },
+                      { v: "high",   labelKey: "assetDetails.reportForm.priorityHigh",     descKey: "assetDetails.reportForm.priorityHighDesc"     },
+                      { v: "urgent", labelKey: "assetDetails.reportForm.priorityUrgent",   descKey: "assetDetails.reportForm.priorityUrgentDesc"   },
                     ].map(p => (
                       <label key={p.v} className={`ad-priority-option ad-priority-option--${p.v} ${form.priority === p.v ? "is-active" : ""}`}>
                         <input
@@ -856,27 +762,23 @@ const qrImageUrl = asset.qr_code_url
                           checked={form.priority === p.v}
                           onChange={() => setForm(f => ({ ...f, priority: p.v }))}
                         />
-                        <span className="ad-priority-name">{p.label}</span>
-                        <span className="ad-priority-desc">{p.desc}</span>
+                        <span className="ad-priority-name">{t(p.labelKey, p.v)}</span>
+                        <span className="ad-priority-desc">{t(p.descKey, "")}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
                 <div className="ad-form-group">
-                  <label className="ad-label">
-                    Issue Category <span className="ad-req">*</span>
-                  </label>
+                  <label className="ad-label">{t("assetDetails.reportForm.categoryLabel", "Issue Category")} <span className="ad-req">*</span></label>
                   <select
                     className="ad-input"
                     value={form.category_id}
-                    onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
+                    onChange={(e) => setForm(f => ({ ...f, category_id: e.target.value }))}
                     disabled={categories.length === 0}
-
                   >
-                    <option value="">Select category</option>
-
-                    {categories.map((c) => (
+                    <option value="">{t("assetDetails.reportForm.categoryPh", "Select category")}</option>
+                    {categories.map(c => (
                       <option key={c.id} value={c.id}>
                         {c.category_name || c.name || c.category || `Category ${c.id}`}
                       </option>
@@ -884,13 +786,12 @@ const qrImageUrl = asset.qr_code_url
                   </select>
                 </div>
 
-
                 <div className="ad-form-group">
-                  <label className="ad-label">Description of Issue</label>
+                  <label className="ad-label">{t("assetDetails.reportForm.descriptionLabel", "Description of Issue")}</label>
                   <textarea
                     className="ad-input ad-textarea"
                     rows={4}
-                    placeholder="Please describe what happened, steps to reproduce, or any damage details..."
+                    placeholder={t("assetDetails.reportForm.descriptionPh", "Please describe what happened, steps to reproduce, or any damage details...")}
                     value={form.description}
                     onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
                   />
@@ -899,10 +800,10 @@ const qrImageUrl = asset.qr_code_url
 
               <div className="ad-modal-footer">
                 <button type="button" className="ad-btn ad-btn--ghost" onClick={() => setReportOpen(false)}>
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button type="submit" className="ad-btn ad-btn--danger" disabled={creating}>
-                  {creating ? "Submitting…" : "Submit Ticket"}
+                  {creating ? t("assetDetails.reportForm.submitting", "Submitting…") : t("assetDetails.reportForm.submit", "Submit Ticket")}
                 </button>
               </div>
             </form>

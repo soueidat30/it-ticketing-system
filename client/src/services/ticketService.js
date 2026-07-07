@@ -8,10 +8,15 @@ const headers = (token) => ({
 });
  
 export const getCategories = (token) =>
-  fetch(`${BASE}/categories`, { headers: headers(token) }).then((r) => r.json());
- 
+  fetchWithAutoRefresh(`${BASE}/categories`, {
+    headers: headers(token),
+  }).then((r) => r.json());
+
 export const getPriorities = (token) =>
-  fetch(`${BASE}/priorities`, { headers: headers(token) }).then((r) => r.json());
+  fetchWithAutoRefresh(`${BASE}/priorities`, {
+    headers: headers(token),
+  }).then((r) => r.json());
+
  
 export const getStatuses = (token) =>
   fetch(`${BASE}/statuses`, { headers: headers(token) }).then((r) => r.json());
@@ -114,8 +119,11 @@ const fetchWithAutoRefresh = async (url, options = {}, { retry = true } = {}) =>
         headers: {
           Authorization: `Bearer ${currentToken}`,
           Accept: "application/json",
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({}),
       });
+
 
       const refreshData = await refreshRes.json().catch(() => ({}));
       const newToken = refreshData?.access_token;

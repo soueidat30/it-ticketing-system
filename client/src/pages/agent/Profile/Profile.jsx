@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./Profile.css";
 
-// ── Icon helper ───────────────────────────────────────────
 const Icon = ({ d, size = 15 }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
@@ -21,7 +21,6 @@ const IC = {
   eyeOff:  "M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94 M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19 M1 1l22 22",
   check:   "M20 6L9 17l-5-5",
   edit:    "M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7 M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",
-  ticket:  "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2 M9 5a2 2 0 002 2h2a2 2 0 002-2 M9 5a2 2 0 012-2h2a2 2 0 012 2",
   warning: "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z M12 9v4 M12 17h.01",
   logout:  "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
 };
@@ -31,8 +30,7 @@ const BASE_URL = "http://127.0.0.1:8000/api";
 const initials = (name = "") =>
   name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 
-// Password strength scorer
-const scorePassword = (pw) => {
+const scorePassword = (pw, t) => {
   if (!pw) return { score: 0, label: "", cls: "" };
   let s = 0;
   if (pw.length >= 8)  s++;
@@ -41,33 +39,34 @@ const scorePassword = (pw) => {
   if (/[0-9]/.test(pw)) s++;
   if (/[^A-Za-z0-9]/.test(pw)) s++;
   const map = [
-    { label: "",        cls: "",        pct: 0   },
-    { label: "Weak",    cls: "weak",    pct: 20  },
-    { label: "Fair",    cls: "fair",    pct: 45  },
-    { label: "Good",    cls: "good",    pct: 70  },
-    { label: "Strong",  cls: "strong",  pct: 90  },
-    { label: "Strong",  cls: "strong",  pct: 100 },
+    { label: "",                  cls: "",       pct: 0   },
+    { label: t("agent.profile.pwWeak",   "Weak"),    cls: "weak",   pct: 20  },
+    { label: t("agent.profile.pwFair",   "Fair"),    cls: "fair",   pct: 45  },
+    { label: t("agent.profile.pwGood",   "Good"),    cls: "good",   pct: 70  },
+    { label: t("agent.profile.pwStrong", "Strong"),  cls: "strong", pct: 90  },
+    { label: t("agent.profile.pwStrong", "Strong"),  cls: "strong", pct: 100 },
   ];
   return map[s] ?? map[0];
 };
 
-const formatJoined = (dateStr) => {
+const formatJoined = (dateStr, locale, t) => {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  return new Date(dateStr).toLocaleDateString(locale === "ar" ? "ar-EG" : undefined, { month: "long", year: "numeric" });
 };
 
-const timeAgo = (dateStr) => {
+const timeAgo = (dateStr, t) => {
   if (!dateStr) return "—";
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 60)    return `${diff}s ago`;
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60)    return t("agent.dashboard.timeAgo.seconds", "{{n}}s ago", { n: diff });
+  if (diff < 3600)  return t("agent.dashboard.timeAgo.minutes", "{{n}}m ago", { n: Math.floor(diff / 60) });
+  if (diff < 86400) return t("agent.dashboard.timeAgo.hours",   "{{n}}h ago", { n: Math.floor(diff / 3600) });
+  return t("agent.dashboard.timeAgo.days", "{{n}}d ago", { n: Math.floor(diff / 86400) });
 };
 
 export default function Profile() {
   const navigate = useNavigate();
   const token    = localStorage.getItem("token");
+  const { t, language } = useLanguage();
 
   // ── User data ───────────────────────────────────────────
   const [user,      setUser]      = useState(() => {
@@ -106,7 +105,6 @@ export default function Profile() {
 
     const loadStats = async () => {
       try {
-        // Agent gets assigned/resolved stats from dashboard endpoint
         if (role === "agent" || role === "manager" || role === "admin") {
           const res  = await fetch(`${BASE_URL}/agent/dashboard/stats`, {
             headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
@@ -119,16 +117,14 @@ export default function Profile() {
               pending:  data.stats?.pending_review ?? 0,
               progress: data.stats?.in_progress    ?? 0,
             });
-            // Build simple activity feed from recent tickets
             const recent = data.recent_tickets ?? [];
             setActivity(recent.map(t => ({
-              text: `Ticket ${t.ticket_number} — ${t.title}`,
-              time: timeAgo(t.updated_at ?? t.created_at),
+              text: `${t("agent.profile.activityTicket", "Ticket")} ${t.ticket_number} — ${t.title}`,
+              time: timeAgo(t.updated_at ?? t.created_at, t),
               type: (t.status?.status_name ?? "open").toLowerCase().replace(/\s+/g, "-"),
             })));
           }
         } else {
-          // Employee gets their own ticket counts
           const res = await fetch(`${BASE_URL}/my-tickets`, {
             headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
           });
@@ -142,8 +138,8 @@ export default function Profile() {
               open:     list.filter(t => t.status?.status_name === "Open").length,
             });
             setActivity(list.slice(0, 5).map(t => ({
-              text: `Ticket ${t.ticket_number} — ${t.title}`,
-              time: timeAgo(t.updated_at ?? t.created_at),
+              text: `${t("agent.profile.activityTicket", "Ticket")} ${t.ticket_number} — ${t.title}`,
+              time: timeAgo(t.updated_at ?? t.created_at, t),
               type: (t.status?.status_name ?? "open").toLowerCase().replace(/\s+/g, "-"),
             })));
           }
@@ -156,19 +152,21 @@ export default function Profile() {
     };
 
     loadStats();
-  }, [token, user.role, navigate]);
+  }, [token, user.role, navigate, language, t]);
 
-  // Initialise edit form whenever user changes
   useEffect(() => {
     setForm({ full_name: user.full_name ?? "", department: user.department ?? "" });
   }, [user]);
 
-  const strength = useMemo(() => scorePassword(pwForm.next), [pwForm.next]);
+  const strength = useMemo(() => scorePassword(pwForm.next, t), [pwForm.next, t, language]);
   const role     = user.role ?? "employee";
 
   // ── Save profile ────────────────────────────────────────
   const handleSave = async () => {
-    if (!form.full_name.trim()) { setFormError("Full name is required."); return; }
+    if (!form.full_name.trim()) {
+      setFormError(t("agent.profile.fullNameRequired", "Full name is required."));
+      return;
+    }
     setSaving(true);
     setFormError("");
     try {
@@ -185,15 +183,15 @@ export default function Profile() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setFormError(data.message || "Failed to save."); return; }
+      if (!res.ok) { setFormError(data.message || t("agent.profile.saveFailed", "Failed to save.")); return; }
 
       const updated = { ...user, full_name: form.full_name.trim(), department: form.department.trim() };
       setUser(updated);
       localStorage.setItem("user", JSON.stringify(updated));
       setEditing(false);
-      showToast("Profile updated ✓");
+      showToast(t("agent.profile.profileUpdated", "Profile updated ✓"));
     } catch {
-      setFormError("Network error — could not save.");
+      setFormError(t("common.networkError", "Network error — could not save."));
     } finally {
       setSaving(false);
     }
@@ -201,9 +199,18 @@ export default function Profile() {
 
   // ── Change password ─────────────────────────────────────
   const handlePasswordChange = async () => {
-    if (!pwForm.current.trim()) { setPwError("Enter your current password."); return; }
-    if (pwForm.next.length < 8) { setPwError("New password must be at least 8 characters."); return; }
-    if (pwForm.next !== pwForm.confirm) { setPwError("New passwords don't match."); return; }
+    if (!pwForm.current.trim()) {
+      setPwError(t("agent.profile.enterCurrentPassword", "Enter your current password."));
+      return;
+    }
+    if (pwForm.next.length < 8) {
+      setPwError(t("agent.profile.newPasswordTooShort", "New password must be at least 8 characters."));
+      return;
+    }
+    if (pwForm.next !== pwForm.confirm) {
+      setPwError(t("agent.profile.passwordMismatch", "New passwords don't match."));
+      return;
+    }
 
     setPwSaving(true);
     setPwError("");
@@ -222,12 +229,12 @@ export default function Profile() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setPwError(data.message || "Failed to change password."); return; }
+      if (!res.ok) { setPwError(data.message || t("agent.profile.passwordChangeFailed", "Failed to change password.")); return; }
 
       setPwForm({ current: "", next: "", confirm: "" });
-      showToast("Password changed ✓");
+      showToast(t("agent.profile.passwordChanged", "Password changed ✓"));
     } catch {
-      setPwError("Network error — could not change password.");
+      setPwError(t("common.networkError", "Network error — could not change password."));
     } finally {
       setPwSaving(false);
     }
@@ -249,19 +256,20 @@ export default function Profile() {
     navigate("/", { replace: true });
   };
 
+  // ── Stat labels (localized based on role) ────────────────
   const statItems = stats
     ? role === "agent" || role === "manager" || role === "admin"
       ? [
-          { num: stats.total,    lbl: "Assigned"  },
-          { num: stats.progress, lbl: "In Progress" },
-          { num: stats.resolved, lbl: "Resolved"  },
-          { num: stats.pending,  lbl: "Pending"   },
+          { num: stats.total,    lbl: t("agent.profile.statAssigned",  "Assigned")     },
+          { num: stats.progress, lbl: t("agent.profile.statInProgress", "In Progress") },
+          { num: stats.resolved, lbl: t("agent.profile.statResolved",  "Resolved")    },
+          { num: stats.pending,  lbl: t("agent.profile.statPending",   "Pending")     },
         ]
       : [
-          { num: stats.total,    lbl: "Total"    },
-          { num: stats.open,     lbl: "Open"     },
-          { num: stats.resolved, lbl: "Resolved" },
-          { num: stats.pending,  lbl: "Pending"  },
+          { num: stats.total,    lbl: t("agent.profile.statTotal", "Total")    },
+          { num: stats.open,     lbl: t("agent.profile.statOpen",  "Open")     },
+          { num: stats.resolved, lbl: t("agent.profile.statResolved", "Resolved") },
+          { num: stats.pending,  lbl: t("agent.profile.statPending",  "Pending")  },
         ]
     : [];
 
@@ -270,8 +278,10 @@ export default function Profile() {
     <div className="profile-page">
       <div className="agent-page-header">
         <div>
-          <h1 className="agent-page-title">My Profile</h1>
-          <p className="agent-page-subtitle">Manage your account information and security settings.</p>
+          <h1 className="agent-page-title">{t("agent.profile.title", "My Profile")}</h1>
+          <p className="agent-page-subtitle">
+            {t("agent.profile.subtitle", "Manage your account information and security settings.")}
+          </p>
         </div>
       </div>
 
@@ -290,14 +300,14 @@ export default function Profile() {
             <div className="profile-id-username">@{user.username ?? "—"}</div>
             <div className="profile-id-role">
               <Icon d={IC.user} size={11} />
-              {role.charAt(0).toUpperCase() + role.slice(1)}
+              {t(`agent.profile.role${role.charAt(0).toUpperCase() + role.slice(1)}`, role.charAt(0).toUpperCase() + role.slice(1))}
             </div>
             {user.department && (
               <div className="profile-id-dept">{user.department}</div>
             )}
             <div className="profile-id-status">
               <span className="profile-id-status-dot" />
-              Active
+              {t("agent.profile.active", "Active")}
             </div>
           </div>
 
@@ -317,12 +327,11 @@ export default function Profile() {
             <div className="profile-id-meta-row">
               <Icon d={IC.clock} />
               <span className="profile-id-meta-val">
-                Joined {formatJoined(user.created_at)}
+                {t("agent.profile.joined", "Joined")} {formatJoined(user.created_at, language, t)}
               </span>
             </div>
           </div>
 
-          {/* Stats strip */}
           {!loadingStats && stats && (
             <div className="profile-stats-strip">
               {statItems.map(s => (
@@ -341,16 +350,18 @@ export default function Profile() {
           {/* Personal information */}
           <div className="profile-section">
             <div className="profile-section-header">
-              <span className="profile-section-title">Personal Information</span>
+              <span className="profile-section-title">
+                {t("agent.profile.personalInfo", "Personal Information")}
+              </span>
               {!editing ? (
                 <button className="agent-btn agent-btn--ghost agent-btn--sm"
                   onClick={() => { setEditing(true); setFormError(""); }}>
-                  <Icon d={IC.edit} /> Edit
+                  <Icon d={IC.edit} /> {t("common.edit", "Edit")}
                 </button>
               ) : (
                 <button className="agent-btn agent-btn--ghost agent-btn--sm"
                   onClick={() => { setEditing(false); setFormError(""); setForm({ full_name: user.full_name ?? "", department: user.department ?? "" }); }}>
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
               )}
             </div>
@@ -359,74 +370,74 @@ export default function Profile() {
               <div className="profile-field-grid">
 
                 <div className="profile-field">
-                  <label className="profile-label">Full Name</label>
+                  <label className="profile-label">{t("agent.profile.fullName", "Full Name")}</label>
                   {editing ? (
                     <input className="profile-input"
                       value={form.full_name}
                       onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-                      placeholder="Your full name" />
+                      placeholder={t("agent.profile.fullNamePh", "Your full name")} />
                   ) : (
                     <div className="profile-readonly">{user.full_name || "—"}</div>
                   )}
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Username</label>
-                  {/* Username is immutable — shown as read-only always */}
-                  <div className="profile-readonly" style={{ color: "var(--agent-muted)" }}>
+                  <label className="profile-label">{t("agent.profile.username", "Username")}</label>
+                  <div className="profile-readonly profile-readonly--muted">
                     @{user.username || "—"}
                   </div>
                   {editing && (
-                    <span className="profile-input-hint">Username cannot be changed.</span>
+                    <span className="profile-input-hint">
+                      {t("agent.profile.usernameHint", "Username cannot be changed.")}
+                    </span>
                   )}
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Email Address</label>
-                  {/* Email is read-only — changing it requires identity verification */}
-                  <div className="profile-readonly" style={{ color: "var(--agent-muted)" }}>
+                  <label className="profile-label">{t("agent.profile.email", "Email Address")}</label>
+                  <div className="profile-readonly profile-readonly--muted">
                     {user.email || "—"}
                   </div>
                   {editing && (
-                    <span className="profile-input-hint">Contact your administrator to update your email.</span>
+                    <span className="profile-input-hint">
+                      {t("agent.profile.emailHint", "Contact your administrator to update your email.")}
+                    </span>
                   )}
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Department</label>
+                  <label className="profile-label">{t("agent.profile.department", "Department")}</label>
                   {editing ? (
                     <input className="profile-input"
                       value={form.department}
                       onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
-                      placeholder="e.g. Sales, Engineering" />
+                      placeholder={t("agent.profile.departmentPh", "e.g. Sales, Engineering")} />
                   ) : (
-                    <div className="profile-readonly">{user.department || "Not specified"}</div>
+                    <div className="profile-readonly">
+                      {user.department || t("agent.profile.departmentNone", "Not specified")}
+                    </div>
                   )}
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Role</label>
-                  <div className="profile-readonly" style={{ color: "var(--agent-muted)" }}>
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                  <label className="profile-label">{t("agent.profile.role", "Role")}</label>
+                  <div className="profile-readonly profile-readonly--muted">
+                    {t(`agent.profile.role${role.charAt(0).toUpperCase() + role.slice(1)}`, role.charAt(0).toUpperCase() + role.slice(1))}
                   </div>
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Account Status</label>
+                  <label className="profile-label">{t("agent.profile.accountStatus", "Account Status")}</label>
                   <div className="profile-readonly">
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                      Active
-                    </span>
+                    <span className="profile-status-dot-inline" />
+                    {t("agent.profile.active", "Active")}
                   </div>
                 </div>
 
               </div>
 
               {formError && (
-                <div style={{ marginTop: 14, padding: "9px 14px", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, color: "#b91c1c" }}>
-                  {formError}
-                </div>
+                <div className="profile-error-box">{formError}</div>
               )}
             </div>
 
@@ -434,12 +445,12 @@ export default function Profile() {
               <div className="profile-section-footer">
                 <button className="agent-btn agent-btn--ghost"
                   onClick={() => { setEditing(false); setFormError(""); }}>
-                  Cancel
+                  {t("common.cancel", "Cancel")}
                 </button>
                 <button className="agent-btn agent-btn--primary"
                   onClick={handleSave}
                   disabled={saving}>
-                  {saving ? "Saving…" : <><Icon d={IC.check} /> Save Changes</>}
+                  {saving ? t("agent.profile.saving", "Saving…") : <><Icon d={IC.check} /> {t("agent.profile.saveChanges", "Save Changes")}</>}
                 </button>
               </div>
             )}
@@ -448,39 +459,41 @@ export default function Profile() {
           {/* Change password */}
           <div className="profile-section">
             <div className="profile-section-header">
-              <span className="profile-section-title">Change Password</span>
+              <span className="profile-section-title">
+                {t("agent.profile.changePassword", "Change Password")}
+              </span>
             </div>
 
             <div className="profile-section-body">
               <div className="profile-password-grid">
 
                 <div className="profile-field">
-                  <label className="profile-label">Current Password</label>
+                  <label className="profile-label">{t("agent.profile.currentPassword", "Current Password")}</label>
                   <div className="profile-pw-wrap">
                     <input
                       type={pwShow.current ? "text" : "password"}
                       className="profile-input profile-pw-input"
-                      placeholder="Enter current password"
+                      placeholder={t("agent.profile.currentPasswordPh", "Enter current password")}
                       value={pwForm.current}
                       onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
                     />
-                    <button className="profile-pw-toggle" onClick={() => togglePw("current")}>
+                    <button className="profile-pw-toggle" onClick={() => togglePw("current")} type="button">
                       <Icon d={pwShow.current ? IC.eyeOff : IC.eye} />
                     </button>
                   </div>
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">New Password</label>
+                  <label className="profile-label">{t("agent.profile.newPassword", "New Password")}</label>
                   <div className="profile-pw-wrap">
                     <input
                       type={pwShow.next ? "text" : "password"}
                       className="profile-input profile-pw-input"
-                      placeholder="Minimum 8 characters"
+                      placeholder={t("agent.profile.newPasswordPh", "Minimum 8 characters")}
                       value={pwForm.next}
                       onChange={e => setPwForm(f => ({ ...f, next: e.target.value }))}
                     />
-                    <button className="profile-pw-toggle" onClick={() => togglePw("next")}>
+                    <button className="profile-pw-toggle" onClick={() => togglePw("next")} type="button">
                       <Icon d={pwShow.next ? IC.eyeOff : IC.eye} />
                     </button>
                   </div>
@@ -498,22 +511,24 @@ export default function Profile() {
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Confirm New Password</label>
+                  <label className="profile-label">{t("agent.profile.confirmPassword", "Confirm New Password")}</label>
                   <div className="profile-pw-wrap">
                     <input
                       type={pwShow.confirm ? "text" : "password"}
                       className="profile-input profile-pw-input"
-                      placeholder="Repeat new password"
+                      placeholder={t("agent.profile.confirmPasswordPh", "Repeat new password")}
                       value={pwForm.confirm}
                       onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
                     />
-                    <button className="profile-pw-toggle" onClick={() => togglePw("confirm")}>
+                    <button className="profile-pw-toggle" onClick={() => togglePw("confirm")} type="button">
                       <Icon d={pwShow.confirm ? IC.eyeOff : IC.eye} />
                     </button>
                   </div>
                   {pwForm.confirm && pwForm.next && (
-                    <span className="profile-input-hint" style={{ color: pwForm.next === pwForm.confirm ? "#15803d" : "#ef4444" }}>
-                      {pwForm.next === pwForm.confirm ? "✓ Passwords match" : "✗ Passwords don't match"}
+                    <span className={`profile-input-hint profile-input-hint--${pwForm.next === pwForm.confirm ? "good" : "bad"}`}>
+                      {pwForm.next === pwForm.confirm
+                        ? t("agent.profile.passwordsMatch", "✓ Passwords match")
+                        : t("agent.profile.passwordsNoMatch", "✗ Passwords don't match")}
                     </span>
                   )}
                 </div>
@@ -521,9 +536,7 @@ export default function Profile() {
               </div>
 
               {pwError && (
-                <div style={{ marginTop: 14, padding: "9px 14px", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, color: "#b91c1c" }}>
-                  {pwError}
-                </div>
+                <div className="profile-error-box">{pwError}</div>
               )}
             </div>
 
@@ -531,7 +544,9 @@ export default function Profile() {
               <button className="agent-btn agent-btn--primary"
                 onClick={handlePasswordChange}
                 disabled={pwSaving || !pwForm.current || !pwForm.next || !pwForm.confirm}>
-                {pwSaving ? "Updating…" : <><Icon d={IC.lock} /> Update Password</>}
+                {pwSaving
+                  ? t("agent.profile.updating", "Updating…")
+                  : <><Icon d={IC.lock} /> {t("agent.profile.updatePassword", "Update Password")}</>}
               </button>
             </div>
           </div>
@@ -539,17 +554,15 @@ export default function Profile() {
           {/* Recent activity */}
           <div className="profile-section">
             <div className="profile-section-header">
-              <span className="profile-section-title">Recent Activity</span>
+              <span className="profile-section-title">
+                {t("agent.profile.recentActivity", "Recent Activity")}
+              </span>
             </div>
-            <div className="profile-section-body" style={{ padding: "0 20px" }}>
+            <div className="profile-section-body profile-section-body--flush">
               {loadingStats ? (
-                <div style={{ padding: "24px 0", textAlign: "center", color: "var(--agent-muted)", fontSize: 13 }}>
-                  Loading activity…
-                </div>
+                <div className="profile-empty">{t("agent.profile.loadingActivity", "Loading activity…")}</div>
               ) : activity.length === 0 ? (
-                <div style={{ padding: "24px 0", textAlign: "center", color: "var(--agent-muted)", fontSize: 13 }}>
-                  No recent activity yet.
-                </div>
+                <div className="profile-empty">{t("agent.profile.noActivity", "No recent activity yet.")}</div>
               ) : (
                 <div className="profile-activity-list">
                   {activity.map((a, i) => (
@@ -570,23 +583,22 @@ export default function Profile() {
           <div className="profile-section profile-danger-zone">
             <div className="profile-section-header">
               <span className="profile-section-title">
-                <Icon d={IC.warning} size={14} /> Danger Zone
+                <Icon d={IC.warning} size={14} /> {t("agent.profile.dangerZone", "Danger Zone")}
               </span>
             </div>
             <div className="profile-section-body">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+              <div className="profile-danger-row">
                 <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--agent-text)", marginBottom: 3 }}>
-                    Sign out of your account
+                  <div className="profile-danger-title">
+                    {t("agent.profile.signOut", "Sign out of your account")}
                   </div>
-                  <div style={{ fontSize: 12.5, color: "var(--agent-muted)" }}>
-                    You'll need to log in again to access the portal.
+                  <div className="profile-danger-desc">
+                    {t("agent.profile.signOutDesc", "You'll need to log in again to access the portal.")}
                   </div>
                 </div>
-                <button className="agent-btn"
-                  style={{ background: "#fee2e2", color: "#b91c1c", border: "1px solid #fecaca", fontWeight: 700 }}
+                <button className="agent-btn agent-btn--danger-outline"
                   onClick={handleLogout}>
-                  <Icon d={IC.logout} /> Sign Out
+                  <Icon d={IC.logout} /> {t("agent.profile.signOut", "Sign Out")}
                 </button>
               </div>
             </div>
@@ -595,7 +607,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Toast */}
       {toast && (
         <div className="profile-toast">
           <Icon d={IC.check} size={17} /> {toast}

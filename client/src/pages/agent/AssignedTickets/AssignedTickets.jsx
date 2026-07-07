@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./AssignedTickets.css";
 
 const IC = {
@@ -20,21 +21,14 @@ const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const STATUS_ORDER   = { open: 0, "in-progress": 1, pending: 2, resolved: 3, closed: 4 };
 
 const SUMMARY_CHIPS = [
-  { label: "Total",       color: "#03363d", filter: "all"         },
-  { label: "Open",        color: "#1d4ed8", filter: "open"        },
-  { label: "In Progress", color: "#6d28d9", filter: "in-progress" },
-  { label: "Pending",     color: "#d97706", filter: "pending"     },
+  { key: "total",       color: "#03363d", filter: "all"         },
+  { key: "open",        color: "#1d4ed8", filter: "open"        },
+  { key: "inProgress",  color: "#6d28d9", filter: "in-progress" },
+  { key: "pending",     color: "#d97706", filter: "pending"     },
 ];
 
 const initials = (name) =>
   name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-
-const PriorityBadge = ({ p }) => (
-  <span className={`agent-badge agent-badge--${p}`}>{p}</span>
-);
-const StatusBadge = ({ s }) => (
-  <span className={`agent-badge agent-badge--${s}`}>{s.replace("-", " ")}</span>
-);
 
 const formatCreatedAt = (rawDate) => {
   if (!rawDate) return "—";
@@ -73,6 +67,14 @@ const normalizeTicketStatus = (statusName) =>
 
 export default function AssignedTickets() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const PriorityBadge = ({ p }) => (
+    <span className={`agent-badge agent-badge--${p}`}>{t(`agent.priority.${p}`, p)}</span>
+  );
+  const StatusBadge = ({ s }) => (
+    <span className={`agent-badge agent-badge--${s}`}>{t(`agent.status.${s}`, s.replace("-", " "))}</span>
+  );
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +92,7 @@ export default function AssignedTickets() {
     const loadTickets = async () => {
       const token = localStorage.getItem("token");
       if (!token) {
-        setError("Unauthorized access. Please log in.");
+        setError(t("agent.assignedTickets.unauthorized", "Unauthorized access. Please log in."));
         setTickets([]);
         setLoading(false);
         navigate("/", { replace: true });
@@ -109,14 +111,14 @@ export default function AssignedTickets() {
         if (res.status === 401) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
-          setError(data.message || "Unauthorized. Please log in again.");
+          setError(data.message || t("agent.assignedTickets.unauthorizedReload", "Unauthorized. Please log in again."));
           setTickets([]);
           navigate("/", { replace: true });
           return;
         }
 
         if (!res.ok) {
-          setError(data.message || "Failed to load tickets.");
+          setError(data.message || t("agent.assignedTickets.loadError", "Failed to load tickets."));
           setTickets([]);
           return;
         }
@@ -131,7 +133,7 @@ export default function AssignedTickets() {
         setError(null);
       } catch (fetchError) {
         console.error("Error fetching tickets:", fetchError);
-        setError("Unable to load tickets. Please try again.");
+        setError(t("agent.assignedTickets.loadErrorGeneric", "Unable to load tickets. Please try again."));
         setTickets([]);
       } finally {
         setLoading(false);
@@ -139,6 +141,7 @@ export default function AssignedTickets() {
     };
 
     loadTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const ticketsArray = useMemo(
@@ -148,47 +151,47 @@ export default function AssignedTickets() {
   const [now] = useState(() => Date.now());
   const categories = [...new Set(
     ticketsArray
-      .map(t => t.category?.category_name)
+      .map(t2 => t2.category?.category_name)
       .filter(Boolean)
   )];
   const PER_PAGE = 8;
 
   const filtered = useMemo(() => {
-    let list = ticketsArray.map(t => {
-      const createdDate = t.created_at ? new Date(t.created_at) : null;
+    let list = ticketsArray.map(tk => {
+      const createdDate = tk.created_at ? new Date(tk.created_at) : null;
       const hoursAgo = (!createdDate || Number.isNaN(createdDate.getTime()) || createdDate.getFullYear() < 2000)
         ? null
         : Math.floor((now - createdDate.getTime()) / (1000 * 60 * 60));
-      const priority = t.priority?.priority_name?.toLowerCase() ?? "low";
-      const status = normalizeTicketStatus(t.status?.status_name);
+      const priorityKey = tk.priority?.priority_name?.toLowerCase() ?? "low";
+      const statusKey = normalizeTicketStatus(tk.status?.status_name);
 
       return {
-        id: t.ticket_number,
-        subject: t.title,
-        desc: t.description,
-        requester: t.user?.full_name ?? t.user?.username ?? "Unknown",
-        dept: t.user?.department || "No department",
-        priority,
-        status,
-        category: t.category?.category_name ?? "General",
-        createdAt: t.created_at,
-        createdAtLabel: formatCreatedAt(t.created_at),
+        id: tk.ticket_number,
+        subject: tk.title,
+        desc: tk.description,
+        requester: tk.user?.full_name ?? tk.user?.username ?? t("common.unknown", "Unknown"),
+        dept: tk.user?.department || t("common.notSpecified", "No department"),
+        priority: priorityKey,
+        status: statusKey,
+        category: tk.category?.category_name ?? "General",
+        createdAt: tk.created_at,
+        createdAtLabel: formatCreatedAt(tk.created_at),
         age: hoursAgo !== null ? `${hoursAgo}h` : "—",
-        overdue: isTicketOverdue(status, priority, hoursAgo),
+        overdue: isTicketOverdue(statusKey, priorityKey, hoursAgo),
       };
     });
 
-    if (chipFilter === "overdue")     list = list.filter(t => t.overdue);
-    else if (chipFilter !== "all")    list = list.filter(t => t.status === chipFilter);
+    if (chipFilter === "overdue")     list = list.filter(tk => tk.overdue);
+    else if (chipFilter !== "all")    list = list.filter(tk => tk.status === chipFilter);
 
-    if (search)    list = list.filter(t =>
-      t.subject.toLowerCase().includes(search.toLowerCase()) ||
-      t.requester.toLowerCase().includes(search.toLowerCase()) ||
-      String(t.id).toLowerCase().includes(search.toLowerCase())
+    if (search)    list = list.filter(tk =>
+      tk.subject.toLowerCase().includes(search.toLowerCase()) ||
+      tk.requester.toLowerCase().includes(search.toLowerCase()) ||
+      String(tk.id).toLowerCase().includes(search.toLowerCase())
     );
-    if (priority !== "all") list = list.filter(t => t.priority === priority);
-    if (status   !== "all") list = list.filter(t => t.status   === status);
-    if (category !== "all") list = list.filter(t => t.category === category);
+    if (priority !== "all") list = list.filter(tk => tk.priority === priority);
+    if (status   !== "all") list = list.filter(tk => tk.status   === status);
+    if (category !== "all") list = list.filter(tk => tk.category === category);
 
     list.sort((a, b) => {
       if (sortKey === "priority") return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
@@ -202,6 +205,7 @@ export default function AssignedTickets() {
     });
 
     return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketsArray, now, search, priority, status, category, sortKey, chipFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -211,10 +215,10 @@ export default function AssignedTickets() {
 
   const chipCounts = {
     all:           filtered.length,
-    open:          filtered.filter(t => t.status === "open").length,
-    "in-progress":filtered.filter(t => t.status === "in-progress").length,
-    pending:       filtered.filter(t => t.status === "pending").length,
-    overdue:       filtered.filter(t => t.overdue).length,
+    open:          filtered.filter(tk => tk.status === "open").length,
+    "in-progress":filtered.filter(tk => tk.status === "in-progress").length,
+    pending:       filtered.filter(tk => tk.status === "pending").length,
+    overdue:       filtered.filter(tk => tk.overdue).length,
   };
 
 
@@ -223,8 +227,8 @@ export default function AssignedTickets() {
       <div className="assigned-tickets">
         <div className="agent-page-header">
           <div>
-            <h1 className="agent-page-title">Assigned Tickets</h1>
-            <p className="agent-page-subtitle">Loading tickets...</p>
+            <h1 className="agent-page-title">{t("agent.assignedTickets.title", "Assigned Tickets")}</h1>
+            <p className="agent-page-subtitle">{t("agent.assignedTickets.loading", "Loading tickets...")}</p>
           </div>
         </div>
       </div>
@@ -235,9 +239,11 @@ export default function AssignedTickets() {
     <div className="assigned-tickets">
       <div className="agent-page-header">
         <div>
-          <h1 className="agent-page-title">Assigned Tickets</h1>
+          <h1 className="agent-page-title">{t("agent.assignedTickets.title", "Assigned Tickets")}</h1>
           <p className="agent-page-subtitle">
-            {filtered.length} ticket{filtered.length !== 1 ? "s" : ""} in your queue
+            {filtered.length === 1
+              ? t("agent.assignedTickets.subtitle_one", "1 ticket in your queue")
+              : t("agent.assignedTickets.subtitle_other", "{{count}} tickets in your queue", { count: filtered.length })}
           </p>
         </div>
       </div>
@@ -268,7 +274,7 @@ export default function AssignedTickets() {
           >
             <span className="at-summary-chip-dot" style={{ background: chip.color }} />
             <span className="at-summary-chip-val">{chipCounts[chip.filter]}</span>
-            {chip.label}
+            {t(`agent.assignedTickets.chips.${chip.key}`, chip.key)}
           </button>
         ))}
       </div>
@@ -282,30 +288,30 @@ export default function AssignedTickets() {
           <input
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search tickets, requesters…"
+            placeholder={t("agent.assignedTickets.searchPlaceholder", "Search tickets, requesters…")}
           />
         </div>
 
         <select className="at-filter-select" value={priority}
           onChange={e => { setPriority(e.target.value); setPage(1); }}>
-          <option value="all">All Priorities</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
+          <option value="all">{t("agent.assignedTickets.filters.allPriorities", "All Priorities")}</option>
+          <option value="critical">{t("agent.priority.critical", "Critical")}</option>
+          <option value="high">{t("agent.priority.high", "High")}</option>
+          <option value="medium">{t("agent.priority.medium", "Medium")}</option>
+          <option value="low">{t("agent.priority.low", "Low")}</option>
         </select>
 
         <select className="at-filter-select" value={status}
           onChange={e => { setStatus(e.target.value); setPage(1); }}>
-          <option value="all">All Statuses</option>
-          <option value="open">Open</option>
-          <option value="in-progress">In Progress</option>
-          <option value="pending">Pending</option>
+          <option value="all">{t("agent.assignedTickets.filters.allStatuses", "All Statuses")}</option>
+          <option value="open">{t("agent.status.open", "Open")}</option>
+          <option value="in-progress">{t("agent.status.in-progress", "In Progress")}</option>
+          <option value="pending">{t("agent.status.pending", "Pending")}</option>
         </select>
 
         <select className="at-filter-select" value={category}
           onChange={e => { setCategory(e.target.value); setPage(1); }}>
-          <option value="all">All Categories</option>
+          <option value="all">{t("agent.assignedTickets.filters.allCategories", "All Categories")}</option>
           {categories.map(cat => (
             <option key={cat} value={cat}>{cat}</option>
           ))}
@@ -313,9 +319,9 @@ export default function AssignedTickets() {
 
         <select className="at-filter-select" value={sortKey}
           onChange={e => setSortKey(e.target.value)}>
-          <option value="priority">Sort: Priority</option>
-          <option value="status">Sort: Status</option>
-          <option value="age">Sort: Newest</option>
+          <option value="priority">{t("agent.assignedTickets.filters.sortPriority", "Sort: Priority")}</option>
+          <option value="status">{t("agent.assignedTickets.filters.sortStatus", "Sort: Status")}</option>
+          <option value="age">{t("agent.assignedTickets.filters.sortNewest", "Sort: Newest")}</option>
         </select>
 
         <div className="at-toolbar-right">
@@ -326,7 +332,7 @@ export default function AssignedTickets() {
                 strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
                 <path d={IC.table} />
               </svg>
-              Table
+              {t("agent.assignedTickets.view.table", "Table")}
             </button>
             <button className={`at-view-btn${view === "cards" ? " active" : ""}`}
               onClick={() => setView("cards")}>
@@ -334,7 +340,7 @@ export default function AssignedTickets() {
                 strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
                 <path d={IC.grid} />
               </svg>
-              Cards
+              {t("agent.assignedTickets.view.cards", "Cards")}
             </button>
           </div>
         </div>
@@ -350,55 +356,55 @@ export default function AssignedTickets() {
                   <path d={IC.ticket} />
                 </svg>
               </div>
-              <div className="at-empty-title">No tickets found</div>
-              <div className="at-empty-desc">Try adjusting your filters or search query.</div>
+              <div className="at-empty-title">{t("agent.assignedTickets.empty.title", "No tickets found")}</div>
+              <div className="at-empty-desc">{t("agent.assignedTickets.empty.desc", "Try adjusting your filters or search query.")}</div>
             </div>
           ) : (
             <table className="at-table">
               <thead>
                 <tr>
-                  <th onClick={() => setSortKey("age")}>ID</th>
-                  <th>Subject</th>
-                  <th>Requester</th>
-                  <th onClick={() => setSortKey("priority")}>Priority</th>
-                  <th onClick={() => setSortKey("status")}>Status</th>
-                  <th>Category</th>
-                  <th>Created At</th>
-                  <th>Actions</th>
+                  <th onClick={() => setSortKey("age")}>{t("agent.assignedTickets.table.colId", "ID")}</th>
+                  <th>{t("agent.assignedTickets.table.colSubject", "Subject")}</th>
+                  <th>{t("agent.assignedTickets.table.colRequester", "Requester")}</th>
+                  <th onClick={() => setSortKey("priority")}>{t("agent.assignedTickets.table.colPriority", "Priority")}</th>
+                  <th onClick={() => setSortKey("status")}>{t("agent.assignedTickets.table.colStatus", "Status")}</th>
+                  <th>{t("agent.assignedTickets.table.colCategory", "Category")}</th>
+                  <th>{t("agent.assignedTickets.table.colCreated", "Created At")}</th>
+                  <th>{t("agent.assignedTickets.table.colActions", "Actions")}</th>
                 </tr>
               </thead>
               <tbody>
-                {paginated.map(t => (
-                  <tr key={t.id} onClick={() => go("/agent/ticket-details", t.id)}>
+                {paginated.map(tk => (
+                  <tr key={tk.id} onClick={() => go("/agent/ticket-details", tk.id)}>
                     <td>
-                      <span className="at-ticket-id">#{t.id}</span>
-                      
+                      <span className="at-ticket-id">#{tk.id}</span>
+
                     </td>
                     <td>
-                      <div className="at-ticket-subject">{t.subject}</div>
-                      <div className="at-ticket-desc">{t.desc}</div>
+                      <div className="at-ticket-subject">{tk.subject}</div>
+                      <div className="at-ticket-desc">{tk.desc}</div>
                     </td>
                     <td>
                       <div className="at-user-cell">
-                        <div className="at-user-avatar">{initials(t.requester)}</div>
+                        <div className="at-user-avatar">{initials(tk.requester)}</div>
                         <div>
-                          <div className="at-user-name">{t.requester}</div>
+                          <div className="at-user-name">{tk.requester}</div>
                         </div>
                       </div>
                     </td>
-                    <td><PriorityBadge p={t.priority} /></td>
-                    <td><StatusBadge s={t.status} /></td>
-                    <td><span className="agent-badge" style={{ background: "#f1f5f9", color: "#475569" }}>{t.category}</span></td>
+                    <td><PriorityBadge p={tk.priority} /></td>
+                    <td><StatusBadge s={tk.status} /></td>
+                    <td><span className="agent-badge" style={{ background: "#f1f5f9", color: "#475569" }}>{tk.category}</span></td>
                     <td>
                       <span>
-                        {t.createdAtLabel}
+                        {tk.createdAtLabel}
                       </span>
                     </td>
                     <td onClick={e => e.stopPropagation()}>
                       <div className="at-actions-cell">
                         <button className="agent-btn agent-btn--ghost agent-btn--sm"
-                          title="View Details"
-                          onClick={() => go("/agent/ticket-details", t.id)}>
+                          title={t("agent.assignedTickets.actions.view", "View Details")}
+                          onClick={() => go("/agent/ticket-details", tk.id)}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
                             style={{ width: 13, height: 13 }}>
@@ -406,8 +412,8 @@ export default function AssignedTickets() {
                           </svg>
                         </button>
                         <button className="agent-btn agent-btn--ghost agent-btn--sm"
-                          title="Update Status"
-                          onClick={() => go("/agent/update-status", t.id)}>
+                          title={t("agent.assignedTickets.actions.updateStatus", "Update Status")}
+                          onClick={() => go("/agent/update-status", tk.id)}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
                             style={{ width: 13, height: 13 }}>
@@ -415,8 +421,8 @@ export default function AssignedTickets() {
                           </svg>
                         </button>
                         <button className="agent-btn agent-btn--accent agent-btn--sm"
-                          title="Resolve"
-                          onClick={() => go("/agent/resolve-ticket", t.id)}>
+                          title={t("agent.assignedTickets.actions.resolve", "Resolve")}
+                          onClick={() => go("/agent/resolve-ticket", tk.id)}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
                             style={{ width: 13, height: 13 }}>
@@ -434,8 +440,11 @@ export default function AssignedTickets() {
           {paginated.length > 0 && (
             <div className="at-pagination">
               <span>
-                Showing {Math.min((page - 1) * PER_PAGE + 1, filtered.length)}–
-                {Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
+                {t("agent.assignedTickets.pagination.showing", "Showing {{from}}–{{to}} of {{total}}", {
+                  from: Math.min((page - 1) * PER_PAGE + 1, filtered.length),
+                  to: Math.min(page * PER_PAGE, filtered.length),
+                  total: filtered.length,
+                })}
               </span>
               <div className="at-pagination-pages">
                 <button className="at-page-btn" disabled={page === 1}
@@ -476,49 +485,49 @@ export default function AssignedTickets() {
                   <path d={IC.ticket} />
                 </svg>
               </div>
-              <div className="at-empty-title">No tickets found</div>
-              <div className="at-empty-desc">Try adjusting your filters.</div>
+              <div className="at-empty-title">{t("agent.assignedTickets.empty.title", "No tickets found")}</div>
+              <div className="at-empty-desc">{t("agent.assignedTickets.empty.desc", "Try adjusting your filters.")}</div>
             </div>
           ) : (
             <div className="at-cards-grid">
-              {paginated.map(t => (
-                <div className="at-card" key={t.id}
-                  onClick={() => go("/agent/ticket-details", t.id)}>
+              {paginated.map(tk => (
+                <div className="at-card" key={tk.id}
+                  onClick={() => go("/agent/ticket-details", tk.id)}>
                   <div className="at-card-top">
-                    <span className="at-card-id">#{t.id}</span>
+                    <span className="at-card-id">#{tk.id}</span>
                     <div className="at-card-badges">
-                      {t.overdue && (
+                      {tk.overdue && (
                         <span style={{ fontSize: 10, fontWeight: 700, color: "var(--agent-danger)",
                           background: "#fee2e2", padding: "2px 7px", borderRadius: 10 }}>
-                          OVERDUE
+                          {t("agent.assignedTickets.overdue", "OVERDUE")}
                         </span>
                       )}
-                      <PriorityBadge p={t.priority} />
-                      <StatusBadge s={t.status} />
+                      <PriorityBadge p={tk.priority} />
+                      <StatusBadge s={tk.status} />
                     </div>
                   </div>
 
-                  <div className="at-card-subject">{t.subject}</div>
-                  <div className="at-card-desc">{t.desc}</div>
+                  <div className="at-card-subject">{tk.subject}</div>
+                  <div className="at-card-desc">{tk.desc}</div>
 
                   <div className="at-card-meta">
                     <div className="at-card-meta-user">
                       <div className="at-user-avatar" style={{ width: 24, height: 24, fontSize: 9 }}>
-                        {initials(t.requester)}
+                        {initials(tk.requester)}
                       </div>
-                      {t.requester}
+                      {tk.requester}
                     </div>
-                    <span style={{ fontSize: 11.5 }}>{t.category} · {t.createdAtLabel}</span>
+                    <span style={{ fontSize: 11.5 }}>{tk.category} · {tk.createdAtLabel}</span>
                   </div>
 
                   <div className="at-card-actions" onClick={e => e.stopPropagation()}>
                     <button className="agent-btn agent-btn--ghost agent-btn--sm"
-                      onClick={() => go("/agent/update-status", t.id)}>
-                      Update Status
+                      onClick={() => go("/agent/update-status", tk.id)}>
+                      {t("agent.assignedTickets.actions.updateStatus", "Update Status")}
                     </button>
                     <button className="agent-btn agent-btn--accent agent-btn--sm"
-                      onClick={() => go("/agent/resolve-ticket", t.id)}>
-                      Resolve
+                      onClick={() => go("/agent/resolve-ticket", tk.id)}>
+                      {t("agent.assignedTickets.actions.resolve", "Resolve")}
                     </button>
                   </div>
                 </div>
