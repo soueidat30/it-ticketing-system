@@ -20,6 +20,8 @@ use App\Http\Controllers\Admin\PriorityManagementController;
 use App\Http\Controllers\Api\KnowledgeBaseController;
 use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\AiTicketAssistController;
+use App\Http\Controllers\Admin\AssetController;
+use App\Http\Controllers\Api\EmployeeAssetController;
 
 
 
@@ -88,6 +90,17 @@ Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function (
 
     Route::get('/category-design-options', [\App\Http\Controllers\Admin\CategoryDesignOptionsController::class, 'index']);
 
+    // Assets (Admin)
+    Route::get('/assets', [AssetController::class, 'index']);
+    Route::post('/assets', [AssetController::class, 'store']);
+    Route::get('/assets/{asset}', [AssetController::class, 'show']);
+    Route::put('/assets/{asset}', [AssetController::class, 'update']);
+    Route::delete('/assets/{asset}', [AssetController::class, 'destroy']);
+    Route::post('/assets/{asset}/assign', [AssetController::class, 'assign']);
+    Route::get('/assets/{asset}/qr/download', [AssetController::class, 'downloadQr']);
+
+    Route::post('/assets/{asset}/qr/regenerate', [AssetController::class, 'regenerateQr']);
+
     // Priorities (Admin)
     Route::prefix('admin')->group(function () {
         Route::get('/priorities', [PriorityManagementController::class, 'index']);
@@ -108,6 +121,10 @@ Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function (
 Route::middleware('auth:api')->group(function () {
 
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // Employee-safe asset listing (assigned assets)
+    Route::get('/my-assets', [EmployeeAssetController::class, 'index']);
+
     Route::put('auth/me', [AuthController::class, 'updateMe']);
 
     Route::post('auth/logout', [AuthController::class, 'logout']);
@@ -132,6 +149,14 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/my-tickets', [TicketController::class, 'myTickets']);
     Route::post('/tickets', [TicketController::class, 'store']);
     Route::get('/tickets/{id}', [TicketController::class, 'show']);
+    // Employee-safe asset details (used by employee AssetDetails.jsx)
+    Route::get('/assets/{asset}', [\App\Http\Controllers\Api\EmployeeAssetController::class, 'show']);
+
+    // Employee QR download
+    // Use dedicated API controller to avoid any route/middleware mismatch.
+    Route::get('/assets/{asset}/qr/download', [\App\Http\Controllers\Api\AssetQrController::class, 'downloadQr']);
+
+
 
     Route::put('/tickets/{id}', [TicketController::class, 'update']);
     Route::delete('/tickets/{id}', [TicketController::class, 'destroy']);

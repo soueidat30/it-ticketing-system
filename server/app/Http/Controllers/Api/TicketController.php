@@ -474,7 +474,19 @@ class TicketController extends Controller
                 'assigned' => Ticket::where('assigned_to', $agentId)->count(),
                 'resolved_today' => $resolvedCount,
                 'pending_review' => Ticket::where('assigned_to', $agentId)
-                    ->whereHas('status', fn($q) => $q->where('status_name', 'Pending'))
+                    ->where(function ($q) {
+
+                        $q->where(function ($q2) {
+                            $q2->whereNotNull('response_due_at')
+                               ->where('response_due_at', '<', now())
+                               ->whereHas('status', fn($s) => $s->whereNotIn('status_name', ['Resolved', 'Closed']));
+                        })
+                        ->orWhere(function ($q3) {
+                            $q3->whereNotNull('resolution_due_at')
+                               ->where('resolution_due_at', '<', now())
+                               ->whereHas('status', fn($s) => $s->whereNotIn('status_name', ['Resolved', 'Closed']));
+                        });
+                    })
                     ->count(),
                 'in_progress' => $inProgressCount,
             ],
@@ -492,14 +504,12 @@ class TicketController extends Controller
             'content'  => 'required|string|max:5000',
             'internal' => 'boolean',
 
-            // frontend sends `visibility` but this endpoint historically uses `mode`
             'visibility' => 'nullable|string|in:employee,agent,all,internal',
             'mode'       => 'nullable|string|in:employee,agent,all,internal',
 
             'notify_user_id' => 'nullable|integer|exists:users,id',
         ]);
 
-        // Accept both `mode` and `visibility` from the client.
         $mode = $request->input('mode') ?: $request->input('visibility', 'employee');
 
         // Internal notes must be stored as internal=true.
@@ -608,8 +618,7 @@ class TicketController extends Controller
             ]);
 
             foreach ($recipientIds as $notifyUserId) {
-                // Do not use notify_user_id from request for scoping.
-                // We compute recipients based strictly on ticket + mode above.
+      
                 Notification::notify(
                     user_id:      (int) $notifyUserId,
                     ticket_id:    $ticket->id,
@@ -844,11 +853,6 @@ class TicketController extends Controller
     $ticket->update(['status_id' => $request->status_id]);
     $ticket->refresh()->load('status');
 
-    if (!$ticket->first_response_at) {
-
-        $ticket->first_response_at = now();
-        $ticket->save();
-    }
     \DB::table('ticket_status_histories')->insert([
         'ticket_id'  => $ticket->id,
         'status_id'  => $request->status_id,
@@ -934,10 +938,51 @@ class TicketController extends Controller
         $resolvedStatus = \DB::table('statuses')->where('status_name', 'Resolved')->first();
         $resolvedStatusId = $resolvedStatus ? $resolvedStatus->id : $ticket->status_id;
 
+        // SLA breach on resolution
+        $resolutionBreached = false;
+        if (!empty($ticket->resolution_due_at)) {
+            $resolutionBreached = now()->greaterThan(
+                $ticket->resolution_due_at instanceof \Carbon\Carbon
+                    ? $ticket->resolution_due_at
+                    : \Carbon\Carbon::parse($ticket->resolution_due_at)
+            );
+        }
+
         $ticket->update([
-            'status_id'   => $resolvedStatusId,
-            'resolved_at' => now(),
+            'status_id'            => $resolvedStatusId,
+            'resolved_at'          => now(),
+            'resolution_breached'  => $resolutionBreached,
         ]);
+
+        // Notify managers/admins if resolution SLA breached
+        if ($resolutionBreached === true) {
+            $managerRoleId = \App\Models\Role::where('name', 'manager')->value('id');
+            $adminRoleId   = \App\Models\Role::where('name', 'admin')->value('id');
+
+            $recipientIds = collect();
+            if (!empty($managerRoleId)) {
+                $recipientIds = $recipientIds->merge(\App\Models\User::where('role_id', $managerRoleId)->pluck('id'));
+            }
+            if (!empty($adminRoleId)) {
+                $recipientIds = $recipientIds->merge(\App\Models\User::where('role_id', $adminRoleId)->pluck('id'));
+            }
+
+            $recipientIds = $recipientIds
+                ->filter(fn($uid) => !empty($uid))
+                ->unique()
+                ->values();
+
+            foreach ($recipientIds as $rid) {
+                Notification::notify(
+                    user_id: (int) $rid,
+                    ticket_id: (int) $ticket->id,
+                    triggered_by: (int) $user->id,
+                    type: 'sla_breached',
+                    title: 'SLA Breached',
+                    message: "Ticket {$ticket->ticket_number} is overdue for resolution (SLA breached)."
+                );
+            }
+        }
 
         \DB::table('ticket_status_histories')->insert([
             'ticket_id'  => $ticket->id,
@@ -1011,6 +1056,7 @@ class TicketController extends Controller
             'priority_id'   => $request->priority_id,
             'status_id'     => $openStatus ? $openStatus->id : 1,
             'user_id'       => Auth::id(),
+            'asset_id'      => $request->asset_id,
         ]);
 
         // SLA driven by Priority (minutes)

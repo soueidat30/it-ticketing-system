@@ -26,6 +26,7 @@ import History from "./pages/agent/History/History";
 import EmployeeDashboard from "./pages/employee/Dashboard/Dashboard";
 import AdminLayout    from "./layouts/AdminLayout";
 
+
 import ManagerLayout  from "./layouts/ManagerLayout";
 import AgentLayout    from "./layouts/AgentLayout";
 import EmployeeLayout from "./layouts/EmployeeLayout";
@@ -41,6 +42,12 @@ import TeamTicketDetail from "./pages/manager/Tickets/TeamTicketDetail";
 import Notification from "./pages/employee/Notification/Notification";
 import KnowledgeBase from "./pages/employee/KnowledgeBase/KnowledgeBase";
 import EmployeeProfile from "./pages/employee/EmployeeProfile/EmployeeProfile";
+import AssetDetails from "./pages/employee/AssetDetails/AssetDetails";
+import AssetManagement from "./pages/admin/assets/AssetManagement";
+import AssetDetail from "./pages/admin/assets/AssetDetail";
+import MyAssets from "./pages/employee/MyAssets/MyAssets";
+
+
 
 function App() {
   return (
@@ -67,6 +74,8 @@ function App() {
           <Route path="activity-logs" element={<ActivityLogs />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="tickets" element={<Tickets />} />
+          <Route path="assets" element={<AssetManagement />} />
+          <Route path="assets/:id" element={<AssetDetail />} />
 
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
@@ -123,10 +132,13 @@ function App() {
           <Route path="dashboard" element={<EmployeeDashboard />} />
           <Route path="create-ticket" element={<CreateTicket />} />
           <Route path="my-tickets" element={<MyTickets />} />
+<Route path="my-assets" element={<MyAssets />} />
+          <Route path="my-assets/:id" element={<AssetDetails />} />
           <Route path="notification" element={<Notification />} />
           <Route path="knowledge-base" element={<KnowledgeBase />} />
           <Route path="profile" element={<EmployeeProfile />} />
         </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
         
 

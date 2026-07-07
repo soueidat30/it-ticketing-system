@@ -22,7 +22,7 @@ const STAT_CONFIG = [
   { label: "Assigned to Me",  iconKey: "ticket",  iconClass: "blue",   statKey: "assigned"       },
   { label: "In Progress",     iconKey: "clock",   iconClass: "purple", statKey: "in_progress"    },
   { label: "Resolved Today",  iconKey: "check",   iconClass: "green",  statKey: "resolved_today" },
-  { label: "Pending Review",  iconKey: "warning", iconClass: "orange", statKey: "pending_review" },
+  { label: "Overdue",  iconKey: "warning", iconClass: "orange", statKey: "pending_review" },
 ];
 
 const BASE_URL = "http://127.0.0.1:8000/api";

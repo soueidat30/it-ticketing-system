@@ -29,14 +29,15 @@ function EmployeeLayoutInner() {
       items: [
         { to: "/employee/dashboard",     icon: "ti-layout-dashboard", label: t("employee.nav.dashboard")     },
         { to: "/employee/my-tickets",    icon: "ti-ticket",           label: t("employee.nav.myTickets")    },
-        { to: "/employee/create-ticket", icon: "ti-plus",             label: t("employee.nav.createTicket") },
+        { to: "/employee/create-ticket", icon: "ti-plus",         label: t("employee.nav.createTicket") },
+        { to: "/employee/my-assets", icon: "ti-archive", label: "My Assets" },
       ]
     },
     {
       group: t("employee.nav.groupResources"),
       items: [
         { to: "/employee/knowledge-base", icon: "ti-book",         label: t("employee.nav.knowledgeBase") },
-    
+
       ]
     },
     {
@@ -59,10 +60,6 @@ function EmployeeLayoutInner() {
 
   const toggleDark = () => setDarkMode(v => !v);
 
-  // ── Language dropdown ────────────────────────────────────────────────────
-  // Direction/lang attributes on <html> are already handled globally by
-  // LanguageProvider (see context/LanguageContext.jsx), so this layout only
-  // needs to render the picker and call setLang on selection.
   useEffect(() => {
     const close = (e) => {
       if (langMenuRef.current && !langMenuRef.current.contains(e.target)) {

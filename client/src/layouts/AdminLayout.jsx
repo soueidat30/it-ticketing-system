@@ -5,7 +5,6 @@ import "./AdminLayout.css";
 import { useTheme } from "../context/ThemeContext";
 import "../context/theme.css";
 
-
 const NAV_ITEMS = [
   {
     group: "Overview",
@@ -18,6 +17,12 @@ const NAV_ITEMS = [
         icon: "ti-history",
         label: "Activity Logs",
       },
+    ],
+  },
+  {
+    group: "Assets",
+    items: [
+      { to: "/admin/assets", icon: "ti-package", label: "Asset Management" },
     ],
   },
   {
@@ -198,8 +203,6 @@ const AdminLayoutInner = () => {
               type="button"
             >
               {theme === "dark" ? "🌙" : "☀️"}
-
-
             </button>
 
             <NavLink
@@ -231,5 +234,4 @@ const AdminLayoutInner = () => {
       </div>
     </div>
   );
-}
-
+};

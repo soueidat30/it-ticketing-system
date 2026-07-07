@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
-import { useLanguage, RoleLanguageProvider } from "../contexts/RoleScopedLanguageContext";
+import { useLanguage, RoleLanguageProvider, SUPPORTED_LANGUAGES } from "../contexts/RoleScopedLanguageContext";
 
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
@@ -39,6 +39,7 @@ const Icons = {
   logout: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
   chevronL: "M15 18l-6-6 6-6",
   chevronR: "M9 18l6-6-6-6",
+  chevronDown: "M6 9l6 6 6-6",
   support: "M3 18v-6a9 9 0 0118 0v6 M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3v5z M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3v5z",
   profile: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z",
 };
@@ -54,29 +55,92 @@ function ThemeToggle() {
       type="button"
       className="agent-topbar__action-btn"
       onClick={toggleTheme}
-      aria-label={t("topbar.toggleTheme")}
-      title={t("topbar.toggleTheme")}
+      aria-label={t("topbar.toggleTheme", "Toggle theme")}
+      title={t("topbar.toggleTheme", "Toggle theme")}
     >
       {theme === "dark" ? "🌙" : "☀️"}
     </button>
   );
 }
 
-// Simple EN/AR toggle pill — matches the visual weight of ThemeToggle
-// so the two sit naturally side by side in the topbar.
-function LanguageToggle() {
-  const { language, toggleLanguage, t } = useLanguage();
+// EN/AR/FR dropdown — replaces the old 2-state EN/AR toggle pill.
+function LanguageDropdown() {
+  const { language, setLanguage, t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const current = SUPPORTED_LANGUAGES.find((l) => l.code === language) ?? SUPPORTED_LANGUAGES[0];
 
   return (
-    <button
-      type="button"
-      className="agent-topbar__action-btn agent-topbar__lang-btn"
-      onClick={toggleLanguage}
-      aria-label={t("topbar.toggleLanguage")}
-      title={t("topbar.toggleLanguage")}
-    >
-      {language === "en" ? "EN" : "AR"}
-    </button>
+    <div className="agent-topbar__lang-wrap" ref={wrapRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        className="agent-topbar__action-btn agent-topbar__lang-btn"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={t("topbar.toggleLanguage", "Change language")}
+        title={t("topbar.toggleLanguage", "Change language")}
+        style={{ display: "flex", alignItems: "center", gap: 4 }}
+      >
+        <span>{current.flag}</span>
+        <span>{current.code.toUpperCase()}</span>
+        <Icon d={Icons.chevronDown} style={{ width: 11, height: 11 }} />
+      </button>
+
+      {open && (
+        <div
+          className="agent-topbar__lang-menu"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            right: 0,
+            background: "var(--agent-surface)",
+            border: "1px solid var(--agent-border)",
+            borderRadius: "var(--radius-sm)",
+            boxShadow: "var(--agent-shadow)",
+            minWidth: 150,
+            padding: 6,
+            zIndex: 40,
+          }}
+        >
+          {SUPPORTED_LANGUAGES.map((l) => (
+            <button
+              key={l.code}
+              type="button"
+              onClick={() => {
+                setLanguage(l.code);
+                setOpen(false);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                padding: "8px 10px",
+                background: l.code === language ? "var(--agent-bg)" : "transparent",
+                border: "none",
+                borderRadius: "var(--radius-sm)",
+                fontSize: 13,
+                fontWeight: l.code === language ? 700 : 500,
+                color: "var(--agent-text)",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <span>{l.flag}</span>
+              <span>{l.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -158,14 +222,14 @@ function AgentLayoutInner() {
             <Icon d={Icons.support} />
           </div>
           <div className="agent-sidebar__brand-text">
-            <span className="agent-sidebar__brand-name">{t("sidebar.brandName")}</span>
-            <span className="agent-sidebar__brand-role">{t("sidebar.agentPortal")}</span>
+            <span className="agent-sidebar__brand-name">{t("sidebar.brandName", "Tickora")}</span>
+            <span className="agent-sidebar__brand-role">{t("sidebar.agentPortal", "Agent Portal")}</span>
           </div>
         </a>
 
         <nav className="agent-sidebar__nav">
           <div className="agent-sidebar__nav-group">
-            <div className="agent-sidebar__nav-label">{t("sidebar.overview")}</div>
+            <div className="agent-sidebar__nav-label">{t("sidebar.overview", "Overview")}</div>
             <NavLink
               to="/agent/dashboard"
               className={({ isActive }) =>
@@ -175,12 +239,12 @@ function AgentLayoutInner() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.dashboard} />
               </span>
-              <span className="agent-nav-label">{t("sidebar.dashboard")}</span>
+              <span className="agent-nav-label">{t("sidebar.dashboard", "Dashboard")}</span>
             </NavLink>
           </div>
 
           <div className="agent-sidebar__nav-group">
-            <div className="agent-sidebar__nav-label">{t("sidebar.tickets")}</div>
+            <div className="agent-sidebar__nav-label">{t("sidebar.tickets", "Tickets")}</div>
 
             <NavLink
               to="/agent/assigned-tickets"
@@ -191,7 +255,7 @@ function AgentLayoutInner() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.assigned} />
               </span>
-              <span className="agent-nav-label">{t("sidebar.assignedTickets")}</span>
+              <span className="agent-nav-label">{t("sidebar.assignedTickets", "Assigned Tickets")}</span>
               <span className="agent-nav-badge">{assignedCount}</span>
             </NavLink>
 
@@ -204,7 +268,7 @@ function AgentLayoutInner() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.ticket} />
               </span>
-              <span className="agent-nav-label">{t("sidebar.ticketDetails")}</span>
+              <span className="agent-nav-label">{t("sidebar.ticketDetails", "Ticket Details")}</span>
             </NavLink>
 
             <NavLink
@@ -216,7 +280,7 @@ function AgentLayoutInner() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.update} />
               </span>
-              <span className="agent-nav-label">{t("sidebar.updateStatus")}</span>
+              <span className="agent-nav-label">{t("sidebar.updateStatus", "Update Status")}</span>
             </NavLink>
 
             <NavLink
@@ -228,12 +292,12 @@ function AgentLayoutInner() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.resolve} />
               </span>
-              <span className="agent-nav-label">{t("sidebar.resolveTicket")}</span>
+              <span className="agent-nav-label">{t("sidebar.resolveTicket", "Resolve Ticket")}</span>
             </NavLink>
           </div>
 
           <div className="agent-sidebar__nav-group">
-            <div className="agent-sidebar__nav-label">{t("sidebar.activity")}</div>
+            <div className="agent-sidebar__nav-label">{t("sidebar.activity", "Activity")}</div>
 
             <NavLink
               to="/agent/comments"
@@ -244,7 +308,7 @@ function AgentLayoutInner() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.comments} />
               </span>
-              <span className="agent-nav-label">{t("sidebar.comments")}</span>
+              <span className="agent-nav-label">{t("sidebar.comments", "Comments")}</span>
             </NavLink>
 
             <NavLink
@@ -256,12 +320,12 @@ function AgentLayoutInner() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.history} />
               </span>
-              <span className="agent-nav-label">{t("sidebar.history")}</span>
+              <span className="agent-nav-label">{t("sidebar.history", "History")}</span>
             </NavLink>
           </div>
 
           <div className="agent-sidebar__nav-group">
-            <div className="agent-sidebar__nav-label">{t("sidebar.account")}</div>
+            <div className="agent-sidebar__nav-label">{t("sidebar.account", "Account")}</div>
             <NavLink
               to="/agent/profile"
               className={({ isActive }) =>
@@ -271,7 +335,7 @@ function AgentLayoutInner() {
               <span className="agent-nav-icon">
                 <Icon d={Icons.profile} />
               </span>
-              <span className="agent-nav-label">{t("sidebar.profile")}</span>
+              <span className="agent-nav-label">{t("sidebar.profile", "Profile")}</span>
             </NavLink>
           </div>
         </nav>
@@ -281,7 +345,7 @@ function AgentLayoutInner() {
             <span className="agent-nav-icon">
               <Icon d={Icons.logout} />
             </span>
-            <span className="agent-nav-label">{t("sidebar.logout")}</span>
+            <span className="agent-nav-label">{t("sidebar.logout", "Logout")}</span>
           </button>
         </div>
       </aside>
@@ -297,7 +361,7 @@ function AgentLayoutInner() {
 
       <header className="agent-topbar">
         <div className="agent-topbar__breadcrumb">
-          <span>{t("topbar.breadcrumbRoot")}</span>
+          <span>{t("topbar.breadcrumbRoot", "Agent")}</span>
           <span className="agent-topbar__breadcrumb-sep">›</span>
           <span className="agent-topbar__breadcrumb-current">{crumb}</span>
         </div>
@@ -314,13 +378,13 @@ function AgentLayoutInner() {
           >
             <path d={Icons.search} />
           </svg>
-          <input type="text" placeholder={t("common.searchTickets")} />
+          <input type="text" placeholder={t("common.searchTickets", "Search tickets...")} />
         </div>
 
         <div className="agent-topbar__actions">
           <NotificationPanel />
 
-          <LanguageToggle />
+          <LanguageDropdown />
           <ThemeToggle />
 
           <div className="agent-topbar__user">

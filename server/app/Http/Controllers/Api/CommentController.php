@@ -108,16 +108,11 @@ class CommentController extends Controller
         $user   = $request->user();
         $ticket = Ticket::with('user')->findOrFail($ticketId);
 
-        // Determine receiver based on comment visibility + ticket assignment.
-        // - receiver_id null => everyone (external)
-        // - internal comments always have receiver_id null
         $visibility = $request->input('visibility');
 
         $isInternal = $request->boolean('internal', false) || $visibility === 'internal';
         $mode = $visibility ?: 'all';
 
-        // Store visibility explicitly so index() can filter correctly.
-        // For internal notes, we still set visibility='internal'.
         $storedVisibility = $isInternal ? 'internal' : $mode;
 
         $receiverId = null;
@@ -142,10 +137,81 @@ class CommentController extends Controller
         ]);
 
 
+        $role = strtolower(optional($user->role)->name);
+        $isStaffReply = in_array($role, ['agent', 'manager', 'admin'], true);
 
+        if ($isStaffReply && !$comment->internal) {
+            $ticketForSla = Ticket::query()
+                ->where('id', $ticketId)
+                ->first();
 
+            if ($ticketForSla) {
+                $now = now();
+                $updates = [];
 
+                $shouldNotifyBreach = false;
+                $breachedValue = null;
+
+                if (empty($ticketForSla->first_response_at)) {
+                    $updates['first_response_at'] = $now;
+                }
+
+                if (!empty($ticketForSla->response_due_at)) {
+                    $responseDueAt = $ticketForSla->response_due_at instanceof \Carbon\Carbon
+                        ? $ticketForSla->response_due_at
+                        : \Carbon\Carbon::parse($ticketForSla->response_due_at);
+
+                    $candidateResponseAt = $updates['first_response_at'] ?? $ticketForSla->first_response_at;
+                    if (!empty($candidateResponseAt)) {
+                        $candidate = $candidateResponseAt instanceof \Carbon\Carbon
+                            ? $candidateResponseAt
+                            : \Carbon\Carbon::parse($candidateResponseAt);
+
+                        $breachedValue = $candidate->greaterThan($responseDueAt);
+                        $updates['response_breached'] = $breachedValue;
+                        $shouldNotifyBreach = true;
+                    }
+                }
+
+                if (!empty($updates)) {
+                    $ticketForSla->update($updates);
+                }
+
+                // Notify managers/admins if SLA breached
+                if ($shouldNotifyBreach && $breachedValue === true) {
+                    $managerRoleId = \App\Models\Role::where('name', 'manager')->value('id');
+                    $adminRoleId   = \App\Models\Role::where('name', 'admin')->value('id');
+
+                    $recipientIds = collect();
+                    if (!empty($managerRoleId)) {
+                        $recipientIds = $recipientIds->merge(\App\Models\User::where('role_id', $managerRoleId)->pluck('id'));
+                    }
+                    if (!empty($adminRoleId)) {
+                        $recipientIds = $recipientIds->merge(\App\Models\User::where('role_id', $adminRoleId)->pluck('id'));
+                    }
+
+                    $recipientIds = $recipientIds
+                        ->filter(fn($uid) => !empty($uid) && (int)$uid !== (int)$user->id)
+                        ->unique()
+                        ->values();
+
+                    foreach ($recipientIds as $rid) {
+                        NotificationController::notify(
+                            user_id: (int) $rid,
+                            ticket_id: (int) $ticketForSla->id,
+                            triggered_by: (int) $user->id,
+                            type: 'sla_breached',
+                            title: 'SLA Breached',
+                            message: "Ticket {$ticketForSla->ticket_number} is overdue for first response (SLA breached)."
+                        );
+                    }
+                }
+            }
+        }
+
+        // ── Notifications ───────────────────────────────────────────────────
         // Notify the ticket owner (employee), unless they are the commenter
+
         if (!$comment->internal && $ticket->user_id !== $user->id) {
             NotificationController::notify(
                 user_id:      $ticket->user_id,

@@ -18,6 +18,7 @@ class Ticket extends Model
         'title',
         'description',
         'user_id',
+        'asset_id',
         'assigned_to',
         'category_id',
         'priority_id',
@@ -56,6 +57,11 @@ class Ticket extends Model
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function asset()
+    {
+        return $this->belongsTo(Asset::class);
     }
 
     public function comments()
