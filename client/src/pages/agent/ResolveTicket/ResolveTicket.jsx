@@ -457,21 +457,7 @@ export default function ResolveTicket() {
                   </div>
                 </div>
 
-                <div className="rt-field">
-                  <label className="rt-label">
-                    {t("agent.resolveTicket.internalNotes", "Internal Notes")}{" "}
-                    <span className="rt-label-optional">
-                      {t("agent.resolveTicket.optionalInline", "(optional)")}
-                    </span>
-                  </label>
-                  <textarea
-                    className="rt-textarea"
-                    placeholder={t("agent.resolveTicket.internalNotesPh", "Any internal notes for your team (not visible to the user)…")}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
-                  />
-                </div>
+                
 
                 <div className="rt-field">
                   <label className="rt-label">

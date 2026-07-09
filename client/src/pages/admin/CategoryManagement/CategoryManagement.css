@@ -649,7 +649,151 @@
 .button-danger:hover {
     opacity: 0.88;
 }
+/* ═══════════════════════════════════════════════════════════
+   Enhanced Icon / Color picker labels & empty states
+═══════════════════════════════════════════════════════════ */
 
+/* Row-level label so we can add a hint chip on the right */
+.form-field .form-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* "Suggested icons / palette" chip next to the label */
+.form-label-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #03363d;
+    background: linear-gradient(135deg, #d4f265 0%, #b8d94e 100%);
+    padding: 3px 9px 3px 7px;
+    border-radius: 100px;
+    box-shadow: 0 1px 3px rgba(3, 54, 61, 0.12);
+    animation: hintPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.form-label-hint i {
+    font-size: 11px;
+}
+
+@keyframes hintPop {
+    from { opacity: 0; transform: translateY(-4px) scale(0.9); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Give the icon grid a soft container so the suggested defaults feel
+   like a curated palette rather than raw buttons on the modal bg */
+.icon-grid {
+    padding: 10px;
+    background: linear-gradient(180deg, #fafbf7 0%, #f3f4f0 100%);
+    border: 1px dashed rgba(3, 54, 61, 0.12);
+    border-radius: 10px;
+}
+
+.icon-button {
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(3, 54, 61, 0.04);
+    transition: transform 0.15s, background 0.15s, color 0.15s,
+                border-color 0.15s, box-shadow 0.15s;
+}
+
+.icon-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(3, 54, 61, 0.10);
+    color: #03363d;
+    border-color: rgba(3, 54, 61, 0.18);
+}
+
+.icon-button-active {
+    box-shadow: 0 3px 10px rgba(3, 54, 61, 0.15);
+    transform: translateY(-1px);
+}
+
+/* Same soft container treatment for the color palette */
+.color-grid {
+    padding: 12px;
+    background: linear-gradient(180deg, #fafbf7 0%, #f3f4f0 100%);
+    border: 1px dashed rgba(3, 54, 61, 0.12);
+    border-radius: 10px;
+}
+
+/* ── Beautiful empty state (still ships as a fallback in case the
+   defaults list is ever cleared out) ─────────────────────────────── */
+
+.empty-icon-options,
+.empty-color-options {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 28px 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #fafbf7 0%, #f3f4f0 100%);
+    border: 1px dashed rgba(3, 54, 61, 0.15);
+    border-radius: 12px;
+    color: #6b7280;
+    font-size: 12.5px;
+    line-height: 1.55;
+    position: relative;
+    overflow: hidden;
+}
+
+.empty-icon-options::before,
+.empty-color-options::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(212, 242, 101, 0.18) 0%, transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(3, 54, 61, 0.06) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+.empty-icon-options::after {
+    content: '\eb8d'; /* Tabler ti-sparkles */
+    font-family: 'tabler-icons';
+    font-size: 34px;
+    color: #03363d;
+    background: linear-gradient(135deg, #d4f265 0%, #b8d94e 100%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(212, 242, 101, 0.45);
+    margin-bottom: 4px;
+    position: relative;
+    z-index: 1;
+    order: -1;
+}
+
+.empty-color-options::after {
+    content: '\eb01'; /* Tabler ti-palette */
+    font-family: 'tabler-icons';
+    font-size: 30px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+    margin-bottom: 4px;
+    position: relative;
+    z-index: 1;
+    order: -1;
+}
 @media (max-width: 900px) {
     .stats-grid {
     grid-template-columns: repeat(2, 1fr);

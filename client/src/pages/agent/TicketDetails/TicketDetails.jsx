@@ -111,11 +111,7 @@ export default function TicketDetails() {
   // Agents should not send or view internal notes on this screen.
   const canSeeInternal = false;
 
-
-
-
   const user = (() => {
-
     try { return JSON.parse(localStorage.getItem("user") || "{}"); }
     catch { return {}; }
   })();
@@ -139,9 +135,6 @@ export default function TicketDetails() {
 
   const [commentType, setCommentType] = useState("public");
 
-
-
-
   const [commentText,  setCommentText]  = useState("");
 
   const [submitting,   setSubmitting]   = useState(false);
@@ -163,6 +156,20 @@ export default function TicketDetails() {
   const [deletingAttachmentId, setDeletingAttachmentId] = useState(null);
   const [deleteAttachmentError, setDeleteAttachmentError] = useState(null);
   const [deletingAttachmentBusy, setDeletingAttachmentBusy] = useState(false);
+
+  /**
+   * FIX: `ticketId` from `location.state` can be either the DB primary key
+   * (numeric, e.g. 42) or the human-readable ticket_number (e.g. "TKT-0008").
+   * The GET /agent/tickets/:id endpoint accepts both, but the sub-routes
+   * (comments, attachments, preview, download, delete) all use route-model
+   * binding that ONLY resolves numeric IDs — so passing "TKT-0008" there
+   * gives you 404 "No query results for model [Ticket] TKT-0008".
+   *
+   * Once the ticket has loaded we always prefer `ticket.id` (the real
+   * numeric DB id). Before it loads we fall back to whatever was passed
+   * in so the initial GET can still resolve by ticket_number.
+   */
+  const apiTicketId = ticket?.id ?? ticketId;
 
   useEffect(() => {
     let cancelled = false;
@@ -221,17 +228,8 @@ export default function TicketDetails() {
   const desc           = ticket?.description  ?? t("agent.ticketDetails.noDescription", "No description available.");
   const requesterName  = ticket?.user?.full_name  ?? ticket?.user?.username ?? t("common.unknown", "Unknown");
   const requesterDept  = ticket?.user?.department ?? t("common.notSpecified", "No department");
-  // Ticket requester card must show the employee account details (ticket.user).
   const requesterEmail = ticket?.user?.email ?? "—";
-
-  // Ticket Info should show the client email provided at creation (tickets.client_email).
   const clientEmail = ticket?.client_email ?? "—";
-
-
-
-
-
-
 
   const requesterJoined = ticket?.user?.created_at
     ? new Date(ticket.user.created_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })
@@ -259,12 +257,19 @@ export default function TicketDetails() {
 
 
   const handleSendComment = async () => {
-
     if (!commentText.trim()) return;
+
+    // Guard: don't try to post before the ticket has loaded (we need
+    // the numeric ticket.id — see apiTicketId comment above).
+    if (!ticket?.id) {
+      setCommentError(t("agent.ticketDetails.stillLoading", "Ticket is still loading, please try again in a moment."));
+      return;
+    }
+
     setSubmitting(true);
     setCommentError(null);
     try {
-      const res = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/comments`, {
+      const res = await fetch(`${BASE_URL}/agent/tickets/${apiTicketId}/comments`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ content: commentText.trim(), internal: commentType === "internal" }),
@@ -283,8 +288,12 @@ export default function TicketDetails() {
 
   const handleDeleteComment = async (commentId) => {
     setDeleteError(null);
+    if (!ticket?.id) {
+      setDeleteError(t("agent.ticketDetails.stillLoading", "Ticket is still loading, please try again in a moment."));
+      return;
+    }
     try {
-      const res = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/comments/${commentId}`, {
+      const res = await fetch(`${BASE_URL}/agent/tickets/${apiTicketId}/comments/${commentId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
@@ -322,6 +331,11 @@ export default function TicketDetails() {
     const file = pendingAttachmentFile;
     if (!file) return;
 
+    if (!ticket?.id) {
+      setUploadError(t("agent.ticketDetails.stillLoading", "Ticket is still loading, please try again in a moment."));
+      return;
+    }
+
     setUploadError(null);
     setPendingAttachmentError(null);
     setUploadedName(null);
@@ -330,7 +344,7 @@ export default function TicketDetails() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${BASE_URL}/agent/tickets/${ticketId}/attachments`, {
+      const res = await fetch(`${BASE_URL}/agent/tickets/${apiTicketId}/attachments`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         body: formData,
@@ -395,7 +409,7 @@ export default function TicketDetails() {
   const handlePreview = async (attachmentId) => {
     setUploadError(null);
 
-    if (!ticketId) {
+    if (!ticket?.id) {
       setUploadError(t("agent.ticketDetails.missingTicketId", "Missing ticketId. Please go back and open the ticket again."));
       return;
     }
@@ -407,7 +421,7 @@ export default function TicketDetails() {
     setBusyAttachmentId(attachmentId);
     try {
       const res = await fetch(
-        `${BASE_URL}/agent/tickets/${ticketId}/attachments/${attachmentId}/preview`,
+        `${BASE_URL}/agent/tickets/${apiTicketId}/attachments/${attachmentId}/preview`,
         { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
       );
       if (!res.ok) {
@@ -428,7 +442,7 @@ export default function TicketDetails() {
   const handleDownload = async (attachmentId, fileName) => {
     setUploadError(null);
 
-    if (!ticketId) {
+    if (!ticket?.id) {
       setUploadError(t("agent.ticketDetails.missingTicketId", "Missing ticketId. Please go back and open the ticket again."));
       return;
     }
@@ -440,7 +454,7 @@ export default function TicketDetails() {
     setBusyAttachmentId(attachmentId);
     try {
       const res = await fetch(
-        `${BASE_URL}/agent/tickets/${ticketId}/attachments/${attachmentId}`,
+        `${BASE_URL}/agent/tickets/${apiTicketId}/attachments/${attachmentId}`,
         { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
       );
       if (!res.ok) {
@@ -465,10 +479,14 @@ export default function TicketDetails() {
 
   const handleDeleteAttachment = async (attachmentId) => {
     setDeleteAttachmentError(null);
+    if (!ticket?.id) {
+      setDeleteAttachmentError(t("agent.ticketDetails.stillLoading", "Ticket is still loading, please try again in a moment."));
+      return;
+    }
     setDeletingAttachmentBusy(true);
     try {
       const res = await fetch(
-        `${BASE_URL}/agent/tickets/${ticketId}/attachments/${attachmentId}`,
+        `${BASE_URL}/agent/tickets/${apiTicketId}/attachments/${attachmentId}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
