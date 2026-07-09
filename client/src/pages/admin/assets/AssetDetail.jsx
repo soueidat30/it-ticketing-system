@@ -206,7 +206,7 @@ export default function AssetDetail() {
       department:     asset.department     ?? "",
       assigned_to:    String(asset.assigned_to ?? ""),
       purchase_date:  asset.purchase_date  ? asset.purchase_date.slice(0,10) : "",
-      purchase_price: asset.purchase_price ?? "",
+
       warranty_expiry:asset.warranty_expiry? asset.warranty_expiry.slice(0,10) : "",
       notes:          asset.notes          ?? "",
     });
@@ -582,13 +582,7 @@ export default function AssetDetail() {
               <div className="asd-info-value">{formatDate(asset.warranty_expiry)}</div>
             </div>
           </div>
-          <div className="asd-info-card">
-            <div className="asd-info-icon asd-info-icon--purple"><Icon d={IC.dollar} size={18} /></div>
-            <div className="asd-info-content">
-              <div className="asd-info-label">Purchase Price</div>
-              <div className="asd-info-value">{formatCurrency(asset.purchase_price)}</div>
-            </div>
-          </div>
+
         </div>
       </div>
 
@@ -807,20 +801,17 @@ export default function AssetDetail() {
               </div>
 
               <div className="asd-form-section-label">Financial & Warranty</div>
-              <div className="asd-form-grid asd-form-grid--3">
+              <div className="asd-form-grid asd-form-grid--2">
                 <div className="asd-field">
                   <label className="asd-label">Purchase Date</label>
                   <input className="asd-input" type="date" value={form.purchase_date} onChange={e => setForm(f => ({ ...f, purchase_date: e.target.value }))} />
-                </div>
-                <div className="asd-field">
-                  <label className="asd-label">Purchase Price ($)</label>
-                  <input className="asd-input" type="number" min="0" step="0.01" value={form.purchase_price} onChange={e => setForm(f => ({ ...f, purchase_price: e.target.value }))} />
                 </div>
                 <div className="asd-field">
                   <label className="asd-label">Warranty Expires</label>
                   <input className="asd-input" type="date" value={form.warranty_expiry} onChange={e => setForm(f => ({ ...f, warranty_expiry: e.target.value }))} />
                 </div>
               </div>
+
             </div>
             <div className="asd-modal-footer">
               <button className="adm-btn adm-btn--ghost" onClick={() => setEditing(false)}>Cancel</button>

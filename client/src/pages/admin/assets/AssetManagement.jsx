@@ -98,7 +98,8 @@ const EMPTY_FORM = {
   name: "", asset_tag: "", type: "laptop", brand: "", model: "",
   serial_number: "", status: "unassigned", condition: "Good",
   location: "", department: "", assigned_to: "",
-  purchase_date: "", purchase_price: "", warranty_expiry: "", notes: "",
+      purchase_price: "", warranty_expiry: "", notes: "",
+
   qr_code_value: "",
   created_by:    "",
   assigned_at:   "",
@@ -706,12 +707,7 @@ export default function AssetManagement() {
                     value={form.purchase_date}
                     onChange={e => setForm(f => ({ ...f, purchase_date: e.target.value }))} />
                 </div>
-                <div className="ast-field">
-                  <label className="ast-label">Purchase Price ($)</label>
-                  <input className="ast-input" type="number" min="0" step="0.01" placeholder="0.00"
-                    value={form.purchase_price}
-                    onChange={e => setForm(f => ({ ...f, purchase_price: e.target.value }))} />
-                </div>
+
                 <div className="ast-field">
                   <label className="ast-label">Warranty Expires</label>
                   <input className="ast-input" type="date"
