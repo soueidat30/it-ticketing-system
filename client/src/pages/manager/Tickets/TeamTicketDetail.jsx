@@ -142,44 +142,49 @@ export default function TeamTicketDetail() {
 
   // ── add comment ───────────────────────────────────────────────────────────
   const handleAddComment = async () => {
-    if (!text.trim()) return;
-    const isInternal = recipientType === "internal";
+  if (!text.trim()) return;
 
-    setSending(true);
+  const isInternal = recipientType === "internal";
+  const visibility = recipientType === "internal" ? "internal"
+                   : recipientType === "agent"     ? "agent"
+                   : "employee";
 
-    try {
-      const created = await addTicketComment(
-        token,
-        id,
-        text.trim(),
-        isInternal,
-        null,
-        {
-          visibility: recipientType, // employee | agent | all | internal
-        }
-      );
+  // When sending to employee, notify the ticket creator
+  const notifyUserId = recipientType === "employee" ? (ticket?.user?.id ?? null) : null;
 
-      if (created?.id != null) {
-        setComments((prev) => {
-          const arr = Array.isArray(prev) ? [...prev] : [];
-          if (!arr.some((c) => c.id === created.id)) arr.push(created);
-          return arr;
-        });
-      } else {
-        const updated = await getTicketComments(token, id);
-        setComments(Array.isArray(updated) ? updated : []);
-      }
-      setText("");
-      setRecipientType("employee");
-      setSuccessMessage("Comment sent ✓");
-      setTimeout(() => setSuccessMessage(""), 2500);
-    } catch (err) {
-      console.error("Comment failed:", err);
-    } finally {
-      setSending(false);
+  setSending(true);
+
+  try {
+    const created = await addTicketComment(
+      token,
+      id,
+      text.trim(),
+      isInternal,
+      notifyUserId,
+      { visibility }
+    );
+
+    if (created?.id != null) {
+      setComments((prev) => {
+        const arr = Array.isArray(prev) ? [...prev] : [];
+        if (!arr.some((c) => c.id === created.id)) arr.push(created);
+        return arr;
+      });
+    } else {
+      const updated = await getTicketComments(token, id);
+      setComments(Array.isArray(updated) ? updated : []);
     }
-  };
 
+    setText("");
+    setRecipientType("employee");
+    setSuccessMessage("Comment sent ✓");
+    setTimeout(() => setSuccessMessage(""), 2500);
+  } catch (err) {
+    console.error("Comment failed:", err);
+  } finally {
+    setSending(false);
+  }
+};
   // ── delete comment ────────────────────────────────────────────────────────
   const handleDeleteComment = async (commentId) => {
     if (!window.confirm("Delete this comment?")) return;

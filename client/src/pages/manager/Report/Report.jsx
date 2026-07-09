@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import "./Report.css";
 
@@ -234,14 +235,20 @@ export default function Report() {
       14, 22
     );
 
-    autoTable(doc, {
-      startY: 28,
-      head: [EXPORT_COLUMNS],
-      body: buildExportRows(filtered),
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
-      alternateRowStyles: { fillColor: [245, 245, 250] },
-    });
+   autoTable(doc, {
+  head: [["Ticket #", "Title", "Employee", "Category", "Priority", "Status", "Created"]],
+  body: filtered.map(t => [
+    t.ticket_number,
+    t.title,
+    employeeName(t),
+    categoryName(t),
+    priorityName(t),
+    statusName(t),
+    t.created_at ? new Date(t.created_at).toLocaleDateString("en-GB") : "",
+  ]),
+  styles: { fontSize: 9 },
+  headStyles: { fillColor: [3, 54, 61] },
+});
 
     doc.save(`${filenameBase}.pdf`);
   };

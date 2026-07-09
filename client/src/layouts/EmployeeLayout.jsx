@@ -1,168 +1,57 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { RoleLanguageProvider, useLanguage, SUPPORTED_LANGUAGES } from "../contexts/RoleScopedLanguageContext";
+import { useLanguage, SUPPORTED_LANGUAGES } from "../contexts/LanguageContext";
+import { RoleLanguageProvider } from "../contexts/RoleScopedLanguageContext";
 import AIChatbot from "../components/common/AIChatbot/AIChatbot";
 import "./EmployeeLayout.css";
 
-const Icon = ({ d, ...p }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...p}
-  >
-    <path d={d} />
-  </svg>
-);
-
-const Icons = {
-  alertCircle: "M12 22a10 10 0 100-20 10 10 0 000 20z M12 8v4 M12 16h.01",
-  x: "M18 6L6 18 M6 6l12 12",
-  logout: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
-};
-
-const IC_CHECK = "M20 6L9 17l-5-5";
-
-/* ── Logout confirmation modal ────────────────────────────────────── */
-function LogoutModal({ open, onConfirm, onCancel }) {
-  const { t } = useLanguage();
-  const modalRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onCancel]);
-
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.activeElement;
-    modalRef.current?.focus();
-    return () => prev?.focus?.();
-  }, [open]);
-
-  if (!open) return null;
-
-  return (
-    <div className="el-logout-overlay" onClick={onCancel} role="presentation">
-      <div
-        className="el-logout-modal"
-        ref={modalRef}
-        tabIndex={-1}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="el-logout-title"
-        aria-describedby="el-logout-desc"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          className="el-logout-modal__close"
-          onClick={onCancel}
-          aria-label={t("logout.close", "Close")}
-        >
-          <Icon d={Icons.x} />
-        </button>
-
-        <div className="el-logout-modal__icon">
-          <Icon d={Icons.alertCircle} />
-        </div>
-
-        <h3 id="el-logout-title" className="el-logout-modal__title">
-          {t("logout.title", "Are you sure you want to leave?")}
-        </h3>
-
-        <p id="el-logout-desc" className="el-logout-modal__desc">
-          {t(
-            "logout.description",
-            "You will be signed out of the Employee Portal. Any unsaved changes may be lost."
-          )}
-        </p>
-
-        <div className="el-logout-modal__actions">
-          <button
-            type="button"
-            className="el-logout-modal__btn el-logout-modal__btn--ghost"
-            onClick={onCancel}
-          >
-            {t("logout.cancel", "Stay Logged In")}
-          </button>
-          <button
-            type="button"
-            className="el-logout-modal__btn el-logout-modal__btn--danger"
-            onClick={onConfirm}
-          >
-            <Icon d={Icons.logout} />
-            {t("logout.confirm", "Yes, Log Out")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function EmployeeLayout() {
-  return (
-    <RoleLanguageProvider role="employee">
-      <EmployeeLayoutInner />
-    </RoleLanguageProvider>
-  );
-}
-
-function EmployeeLayoutInner() {
+const EmployeeLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, language: lang, setLanguage: setLang } = useLanguage();
-  const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === lang) || SUPPORTED_LANGUAGES[0];
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [notifCount]  = useState(2);
+  // ── Global language (for the layout UI itself) ────────────────────────────
+  const { t, language, setLanguage, isRTL } = useLanguage();
+  const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === language) ?? SUPPORTED_LANGUAGES[0];
+
+  const [sidebarOpen,  setSidebarOpen]  = useState(true);
+  const [notifCount]                    = useState(2);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const langMenuRef = useRef(null);
+  const [darkMode,     setDarkMode]     = useState(
+    () => localStorage.getItem("emp-dark") === "true"
+  );
 
-  /* ── Logout modal state ── */
-  const [logoutOpen, setLogoutOpen] = useState(false);
+  const langMenuRef = useRef(null);
 
   const NAV_ITEMS = [
     {
-      group: t("employee.nav.groupWorkspace", "Workspace"),
+      group: t("employee.nav.groupWorkspace"),
       items: [
-        { to: "/employee/dashboard",     icon: "ti-layout-dashboard", label: t("employee.nav.dashboard", "Dashboard")     },
-        { to: "/employee/my-tickets",    icon: "ti-ticket",           label: t("employee.nav.myTickets", "My Tickets")    },
-        { to: "/employee/create-ticket", icon: "ti-plus",             label: t("employee.nav.createTicket", "Create Ticket") },
-        { to: "/employee/my-assets",     icon: "ti-archive",          label: t("employee.nav.myAssets", "My Assets") },
+        { to: "/employee/dashboard",     icon: "ti-layout-dashboard", label: t("employee.nav.dashboard")     },
+        { to: "/employee/my-tickets",    icon: "ti-ticket",           label: t("employee.nav.myTickets")    },
+        { to: "/employee/create-ticket", icon: "ti-plus",             label: t("employee.nav.createTicket") },
       ]
     },
     {
-      group: t("employee.nav.groupResources", "Resources"),
+      group: t("employee.nav.groupResources"),
       items: [
-        { to: "/employee/knowledge-base", icon: "ti-book", label: t("employee.nav.knowledgeBase", "Knowledge Base") },
+        { to: "/employee/knowledge-base", icon: "ti-book", label: t("employee.nav.knowledgeBase") },
       ]
     },
     {
-      group: t("employee.nav.groupAccount", "Account"),
+      group: t("employee.nav.groupAccount"),
       items: [
-        { to: "/employee/profile",      icon: "ti-user", label: t("employee.nav.profile", "Profile")      },
-        { to: "/employee/notification", icon: "ti-bell", label: t("employee.nav.notification", "Notifications") },
+        { to: "/employee/profile",      icon: "ti-user", label: t("employee.nav.profile")      },
+        { to: "/employee/notification", icon: "ti-bell", label: t("employee.nav.notification") },
       ]
     }
   ];
 
   // ── Dark mode ─────────────────────────────────────────────────────────────
-  const [darkMode, setDarkMode] = useState(
-    () => localStorage.getItem("emp-dark") === "true"
-  );
-
   useEffect(() => {
     localStorage.setItem("emp-dark", darkMode);
   }, [darkMode]);
 
-  const toggleDark = () => setDarkMode(v => !v);
-
+  // ── Close language menu on outside click ──────────────────────────────────
   useEffect(() => {
     const close = (e) => {
       if (langMenuRef.current && !langMenuRef.current.contains(e.target)) {
@@ -178,28 +67,12 @@ function EmployeeLayoutInner() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("language");
-    document.documentElement.lang = "en";
-    document.documentElement.dir = "ltr";
-    navigate("/", { replace: true });
-  };
-
-  const handleLogoutRequest = () => {
-    setLogoutOpen(true);
-  };
-
-  const handleLogoutConfirm = () => {
-    setLogoutOpen(false);
-    handleLogout();
-  };
-
-  const handleLogoutCancel = () => {
-    setLogoutOpen(false);
+    navigate("/");
   };
 
   const currentItem = NAV_ITEMS.flatMap(g => g.items)
     .find(i => location.pathname.startsWith(i.to));
-  const pageTitle = currentItem?.label ?? t("employee.role", "Employee");
+  const pageTitle = currentItem?.label ?? t("employee.role");
 
   return (
     <div className={`el ${sidebarOpen ? "el--open" : "el--collapsed"} ${darkMode ? "el--dark" : ""}`}>
@@ -218,7 +91,7 @@ function EmployeeLayoutInner() {
           {sidebarOpen && (
             <div className="el__logo-text">
               <span className="el__logo-name">TICKORA</span>
-              <span className="el__logo-sub">{t("employee.portalName", "Employee Portal")}</span>
+              <span className="el__logo-sub">{t("employee.portalName")}</span>
             </div>
           )}
         </div>
@@ -250,7 +123,7 @@ function EmployeeLayoutInner() {
           ))}
         </nav>
 
-        {/* ── AI Chatbot (replaces old static help box) ── */}
+        {/* AI Chatbot */}
         {sidebarOpen && <AIChatbot />}
 
         {/* User card */}
@@ -260,12 +133,12 @@ function EmployeeLayoutInner() {
           </div>
           {sidebarOpen && (
             <div className="el__user-info">
-              <span className="el__user-name">{user.full_name ?? t("employee.role", "Employee")}</span>
-              <span className="el__user-role">{t("employee.role", "Employee")}</span>
+              <span className="el__user-name">{user.full_name ?? t("employee.role")}</span>
+              <span className="el__user-role">{t("employee.role")}</span>
             </div>
           )}
           {sidebarOpen && (
-            <button className="el__logout-btn" onClick={handleLogoutRequest} title={t("employee.logout", "Logout")}>
+            <button className="el__logout-btn" onClick={handleLogout} title={t("employee.logout")}>
               <i className="ti ti-logout" />
             </button>
           )}
@@ -289,7 +162,7 @@ function EmployeeLayoutInner() {
               />
             </button>
             <div className="el__breadcrumb">
-              <span className="el__breadcrumb-root">{t("employee.breadcrumbRoot", "Employee")}</span>
+              <span className="el__breadcrumb-root">{t("employee.breadcrumbRoot")}</span>
               <i className="ti ti-chevron-right" />
               <span className="el__breadcrumb-current">{pageTitle}</span>
             </div>
@@ -300,34 +173,34 @@ function EmployeeLayoutInner() {
               <i className="ti ti-search" />
               <input
                 type="text"
-                placeholder={t("employee.searchPlaceholder", "Search tickets...")}
+                placeholder={t("employee.searchPlaceholder")}
                 className="el__search-input"
                 aria-label="Search"
               />
             </div>
 
-            {/* ── Language switcher ── */}
+            {/* Language switcher */}
             <div className="el__lang-menu" ref={langMenuRef}>
               <button
                 className="el__lang-toggle"
                 onClick={() => setLangMenuOpen(v => !v)}
-                title={t("employee.language", "Language")}
-                aria-label={t("employee.language", "Language")}
+                title={t("employee.language")}
+                aria-label={t("employee.language")}
               >
-                <span className="el__lang-flag">{currentLang.flag}</span>
-                <span className="el__lang-code">{currentLang.name ?? currentLang.label}</span>
+                <span className="el__lang-flag">{currentLang?.flag ?? "🌐"}</span>
+                <span className="el__lang-code">{currentLang?.name ?? "EN"}</span>
               </button>
               {langMenuOpen && (
                 <div className="el__lang-dropdown">
                   {SUPPORTED_LANGUAGES.map((l) => (
                     <button
                       key={l.code}
-                      className={`el__lang-option ${l.code === lang ? "el__lang-option--active" : ""}`}
-                      onClick={() => { setLang(l.code); setLangMenuOpen(false); }}
+                      className={`el__lang-option ${l.code === language ? "el__lang-option--active" : ""}`}
+                      onClick={() => { setLanguage(l.code); setLangMenuOpen(false); }}
                     >
                       <span className="el__lang-flag">{l.flag}</span>
                       <span>{l.name}</span>
-                      {l.code === lang && <i className="ti ti-check" />}
+                      {l.code === language && <i className="ti ti-check" />}
                     </button>
                   ))}
                 </div>
@@ -337,22 +210,16 @@ function EmployeeLayoutInner() {
             {/* Dark mode toggle */}
             <button
               className="el__dark-toggle"
-              onClick={toggleDark}
-              title={darkMode ? t("employee.lightMode", "Switch to light mode") : t("employee.darkMode", "Switch to dark mode")}
+              onClick={() => setDarkMode(v => !v)}
+              title={darkMode ? t("employee.lightMode") : t("employee.darkMode")}
               aria-label="Toggle dark mode"
             >
               <i className={`ti ${darkMode ? "ti-sun" : "ti-moon"}`} />
             </button>
 
-            <NavLink
-              to="/employee/notification"
-              className="el__topbar-icon"
-              aria-label="Notifications"
-            >
+            <NavLink to="/employee/notification" className="el__topbar-icon" aria-label="Notifications">
               <i className="ti ti-bell" />
-              {notifCount > 0 && (
-                <span className="el__topbar-badge">{notifCount}</span>
-              )}
+              {notifCount > 0 && <span className="el__topbar-badge">{notifCount}</span>}
             </NavLink>
 
             <div className="el__topbar-profile">
@@ -360,25 +227,23 @@ function EmployeeLayoutInner() {
                 {(user.full_name?.[0] ?? "E").toUpperCase()}
               </div>
               <div className="el__topbar-user">
-                <span className="el__topbar-name">{user.full_name ?? t("employee.role", "Employee")}</span>
-                <span className="el__topbar-dept">{user.department ?? t("employee.staff", "Staff")}</span>
+                <span className="el__topbar-name">{user.full_name ?? t("employee.role")}</span>
+                <span className="el__topbar-dept">{user.department ?? t("employee.staff")}</span>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Page content */}
+        {/* Page content — wrapped in RoleLanguageProvider so all employee
+            pages can call useLanguage() from RoleScopedLanguageContext      */}
         <main className="el__content">
-          <Outlet />
+          <RoleLanguageProvider role="employee">
+            <Outlet />
+          </RoleLanguageProvider>
         </main>
       </div>
-
-      {/* ── Logout confirmation modal ── */}
-      <LogoutModal
-        open={logoutOpen}
-        onConfirm={handleLogoutConfirm}
-        onCancel={handleLogoutCancel}
-      />
     </div>
   );
-}
+};
+
+export default EmployeeLayout;
