@@ -19,6 +19,12 @@ class Asset extends Model
         'created_by',
         'assigned_at',
         'status',
+
+        // Admin editable fields
+        'location',
+        'department',
+        'notes',
+
         'qr_code_path',
         'qr_code_value',
     ];

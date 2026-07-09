@@ -182,10 +182,54 @@ class AssetController extends Controller
     public function update(Request $request, Asset $asset)
     {
         try {
-            $validated = $request->validate([
-                'name'             => 'sometimes|required|string|max:255',
+            // The admin UI sometimes sends human labels + empty strings.
+            // Normalize before validation so they behave like expected backend slugs.
+            $normalized = $request->all();
+
+            // empty-string -> null
+            if (array_key_exists('assigned_to', $normalized) && ($normalized['assigned_to'] === '' || $normalized['assigned_to'] === 'null')) {
+                $normalized['assigned_to'] = null;
+            }
+            if (array_key_exists('name', $normalized) && $normalized['name'] === '') $normalized['name'] = null;
+            if (array_key_exists('asset_tag', $normalized) && $normalized['asset_tag'] === '') $normalized['asset_tag'] = null;
+
+            // label -> type slug
+            // Frontend uses values like: "Laptop", "Desktop", "Network Equipment" etc.
+            if (array_key_exists('type', $normalized)) {
+                $t = strtolower(trim((string) $normalized['type']));
+
+                $typeMap = [
+                    'laptop' => 'laptop',
+                    'desktop' => 'desktop',
+                    'monitor' => 'monitor',
+                    'phone' => 'mobile_phone',
+                    'tablet' => 'tablet',
+                    'printer' => 'printer',
+                    'server' => 'server',
+                    'network equipment' => 'network_device',
+                    'network_device' => 'network_device',
+                    'scanner' => 'scanner',
+                    'other' => 'other',
+                    'mobile phone' => 'mobile_phone',
+                    'mobile_phone' => 'mobile_phone',
+                ];
+
+                $normalized['type'] = $typeMap[$t] ?? $this->normalizeAssetType($normalized['type'] ?? null);
+            }
+
+            // label -> status slug
+            // Frontend uses values like: "Unassigned", "In Repair", "Retired" etc.
+            if (array_key_exists('status', $normalized)) {
+                $normalized['status'] = $this->normalizeStatus(
+                    (string) ($normalized['status'] ?? null),
+                    array_key_exists('assigned_to', $normalized) ? ($normalized['assigned_to'] ?? null) : null
+                );
+            }
+
+            $validated = validator($normalized, [
+                'name'             => 'sometimes|nullable|string|max:255',
                 'asset_tag'        => [
-                    'sometimes', 'required', 'string', 'max:255',
+                    'sometimes', 'nullable', 'string', 'max:255',
                     Rule::unique('assets', 'asset_code')->ignore($asset->id),
                 ],
                 'type'             => ['sometimes', 'required', Rule::in([
@@ -206,7 +250,7 @@ class AssetController extends Controller
                 'qr_code_value'    => 'nullable|string|max:500',
                 'department'       => 'nullable|string|max:255',
                 'location'         => 'nullable|string|max:255',
-            ]);
+            ])->validate();
 
             $payload = $validated;
             $assignedTo = array_key_exists('assigned_to', $payload)
@@ -234,12 +278,20 @@ class AssetController extends Controller
                 'assigned_to'     => $assignedTo,
                 'assigned_at'     => $assignedAt,
                 'status'          => $status,
-
-                'location'         => array_key_exists('location', $payload) ? $payload['location'] : $asset->location,
-                'department'       => array_key_exists('department', $payload) ? $payload['department'] : $asset->department,
-
-                'notes'            => array_key_exists('notes', $payload) ? $payload['notes'] : $asset->notes,
             ];
+
+            // Optional columns (may not exist in all DB schemas)
+            if (Schema::hasColumn('assets', 'notes')) {
+                $update['notes'] = array_key_exists('notes', $payload) ? $payload['notes'] : $asset->notes;
+            }
+
+            if (Schema::hasColumn('assets', 'location')) {
+                $update['location'] = array_key_exists('location', $payload) ? $payload['location'] : $asset->location;
+            }
+
+            if (Schema::hasColumn('assets', 'department')) {
+                $update['department'] = array_key_exists('department', $payload) ? $payload['department'] : $asset->department;
+            }
 
             if (Schema::hasColumn('assets', 'qr_code_value')) {
                 $update['qr_code_value'] = $payload['qr_code_value'] ?? $asset->qr_code_value;
@@ -461,9 +513,10 @@ class AssetController extends Controller
             'status'    => $status,
             'condition' => 'Good',
 
-            // Location/department can be either stored on assets or derived.
-            'location'   => $asset->location ?? ($asset->employee?->location ?? ''),
-            'department' => $asset->department ?? ($asset->employee?->department ?? ''),
+            // Location/department: admin UI persists these on assets.
+            // Always prefer asset fields (they come from admin editable inputs).
+            'location'   => $asset->location ?? '',
+            'department' => $asset->department ?? '',
 
             // Assignment
             'assigned_to'   => $asset->assigned_to,
