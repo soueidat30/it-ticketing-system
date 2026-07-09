@@ -48,7 +48,7 @@ import AssetDetails from "./pages/employee/AssetDetails/AssetDetails";
 import AssetManagement from "./pages/admin/assets/AssetManagement";
 import AssetDetail from "./pages/admin/assets/AssetDetail";
 import MyAssets from "./pages/employee/MyAssets/MyAssets";
-
+import ManagerAssets from "./pages/manager/Assets/ManagerAssets";
 
 
 function App() {
@@ -57,6 +57,8 @@ function App() {
       <UserInactiveNotice />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        
+        {/* ── Admin ── */}
         <Route
           path="/admin"
           element={
@@ -68,7 +70,6 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
-
           <Route path="departments" element={<DepartmentManagement />} />
           <Route path="categories" element={<CategoryManagement />} />
           <Route path="priorities" element={<PriorityManagement />} />
@@ -79,30 +80,35 @@ function App() {
           <Route path="tickets" element={<Tickets />} />
           <Route path="assets" element={<AssetManagement />} />
           <Route path="assets/:id" element={<AssetDetail />} />
-
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
+
+        {/* ── Manager ── */}
         <Route
-  path="/manager"
-  element={
-    <ProtectedRoute allowedRoles={["manager"]}>
-      <ManagerLayout />
-    </ProtectedRoute>
-  }
->
-  <Route index element={<Navigate to="/manager/dashboard" replace />} />
+          path="/manager"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/manager/dashboard" replace />} />
+          <Route path="dashboard" element={<ManagerDashboard />} />
+          <Route path="team-tickets" element={<TeamTicket />} />
+          <Route path="team-tickets/:id" element={<TeamTicketDetail />} />
+          <Route path="report" element={<Report />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="notifications" element={<Notification />} />
+          <Route path="profile" element={<ManagerProfile />} />
+          
+          {/* Moved inside the layout so it gets the RoleLanguageProvider */}
+          <Route path="assets" element={<ManagerAssets />} />
+          
+          <Route path="settings" element={<div>Settings Page</div>} />
+          <Route path="*" element={<Navigate to="/manager/dashboard" replace />} />
+        </Route>
 
-  <Route path="dashboard" element={<ManagerDashboard />} />
-  <Route path="team-tickets" element={<TeamTicket />} />
-  <Route path="team-tickets/:id" element={<TeamTicketDetail />} />
-  <Route path="report" element={<Report />} />
-  <Route path="analytics" element={<Analytics />} />
-  <Route path="notifications" element={<Notification />} />
-  <Route path="/manager/profile" element={<ManagerProfile />} />
-  <Route path="settings" element={<div>Settings Page</div>} />
-
-  <Route path="*" element={<Navigate to="/manager/dashboard" replace />} />
-</Route>
+        {/* ── Agent ── */}
         <Route
           path="/agent"
           element={
@@ -121,8 +127,9 @@ function App() {
           <Route path="comments" element={<Comments />} />
           <Route path="history" element={<History />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
-
         </Route>
+
+        {/* ── Employee ── */}
         <Route
           path="/employee"
           element={
@@ -135,7 +142,7 @@ function App() {
           <Route path="dashboard" element={<EmployeeDashboard />} />
           <Route path="create-ticket" element={<CreateTicket />} />
           <Route path="my-tickets" element={<MyTickets />} />
-<Route path="my-assets" element={<MyAssets />} />
+          <Route path="my-assets" element={<MyAssets />} />
           <Route path="my-assets/:id" element={<AssetDetails />} />
           <Route path="notification" element={<Notification />} />
           <Route path="knowledge-base" element={<KnowledgeBase />} />
@@ -143,8 +150,6 @@ function App() {
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
-        
-
       </Routes>
     </BrowserRouter>
   );

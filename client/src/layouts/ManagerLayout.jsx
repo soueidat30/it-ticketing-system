@@ -109,6 +109,12 @@ const NAV_ITEMS = [
     ]
   },
   {
+    group: "Assets", // New Assets section
+    items: [
+      { to: "/manager/assets", icon: "ti-package", label: "Asset Issues" },
+    ]
+  },
+  {
     group: "Communication",
     items: [
       { to: "/manager/notifications", icon: "ti-bell",         label: "Notifications" },
