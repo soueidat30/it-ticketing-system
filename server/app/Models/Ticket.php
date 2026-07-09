@@ -25,6 +25,10 @@ class Ticket extends Model
         'status_id',
         'resolved_at',
 
+        // Email notification fields
+        'client_email',
+        'client_closed_email_sent_at',
+
         // SLA timer fields
         'response_due_at',
         'resolution_due_at',

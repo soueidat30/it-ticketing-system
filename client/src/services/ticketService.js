@@ -32,6 +32,7 @@ export const createTicket = (token, body) =>
     if (!r.ok) throw { response: { data: d } };
     return d;
   });
+
  
 export const getMyTickets = (token) =>
   fetch(`${BASE}/my-tickets`, { headers: headers(token) }).then((r) => r.json());

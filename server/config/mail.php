@@ -16,6 +16,9 @@ return [
 
     'default' => env('MAIL_MAILER', 'log'),
 
+    // Optional: you can set MAIL_LOG_CHANNEL=stack to enable mail debugging.
+
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations

@@ -271,7 +271,10 @@ export default function TeamTicketDetail() {
   const pName = ticket.priority?.priority_name || "Unknown";
   const cName = ticket.category?.category_name || "—";
 
+  const requesterEmail = ticket?.user?.email ?? "—";
+
   return (
+
     <div className="ttd-page">
 
       {/* ── HEADER ── */}
@@ -596,7 +599,9 @@ export default function TeamTicketDetail() {
             <dl className="ttd-info-list">
               <div className="ttd-info-row"><dt>Employee</dt><dd>{ticket.user?.full_name || "—"}</dd></div>
               <div className="ttd-info-row"><dt>Department</dt><dd>{ticket.user?.department || "—"}</dd></div>
+              <div className="ttd-info-row"><dt>Email</dt><dd>{requesterEmail}</dd></div>
               <div className="ttd-info-row"><dt>Category</dt><dd>{cName}</dd></div>
+
               <div className="ttd-info-row">
                 <dt>Priority</dt>
                 <dd><Badge text={pName} colorKey={priorityColor(pName)} /></dd>

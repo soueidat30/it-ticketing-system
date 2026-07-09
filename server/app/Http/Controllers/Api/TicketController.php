@@ -618,7 +618,7 @@ class TicketController extends Controller
             ]);
 
             foreach ($recipientIds as $notifyUserId) {
-      
+
                 Notification::notify(
                     user_id:      (int) $notifyUserId,
                     ticket_id:    $ticket->id,
@@ -895,8 +895,53 @@ class TicketController extends Controller
         $ticket->update(['resolved_at' => now()]);
     }
 
+    // ── Send email to client when status becomes "Closed" ────────────────
+    $newStatusName = strtolower((string) ($ticket->status?->status_name ?? ''));
+
+    if ($newStatusName === 'closed' && empty($ticket->client_closed_email_sent_at)) {
+        // prefer user.email; fallback to tickets.client_email if present
+        $clientEmail = $ticket->user?->email ?? $ticket->client_email ?? null;
+
+        if (!empty($clientEmail)) {
+            // fetch latest resolution/solution if it exists
+            $latestResolution = \DB::table('ticket_resolutions')
+                ->where('ticket_id', $ticket->id)
+                ->orderByDesc('created_at')
+                ->first();
+
+            $solution = $latestResolution?->solution;
+
+            try {
+                // Send synchronously so we can detect errors immediately.
+                \Mail::to($clientEmail)->send(new \App\Mail\TicketClosedMail($ticket, $solution));
+
+                // Ensure DB field is updated so we don't resend.
+                \DB::table('tickets')
+                    ->where('id', $ticket->id)
+                    ->update(['client_closed_email_sent_at' => now()]);
+            } catch (\Throwable $e) {
+                \Log::error('TicketClosedMail send failed', [
+                    'ticket_id' => $ticket->id,
+                    'ticket' => $ticket->ticket_number,
+                    'client_email' => $clientEmail,
+                    'error' => $e->getMessage(),
+                    'exception' => get_class($e),
+                ]);
+            }
+
+        } else {
+
+            \Log::warning('TicketClosedMail skipped: missing client email', [
+                'ticket_id' => $ticket->id,
+                'ticket' => $ticket->ticket_number,
+                'user_id' => $ticket->user_id,
+            ]);
+        }
+    }
+
     return response()->json($ticket->load(['status', 'priority', 'category', 'user', 'assignee']));
 }
+
 
     public function resolveTicket(Request $request, $id)
     {
@@ -921,22 +966,60 @@ class TicketController extends Controller
             $ticketNumber = (string) $id;
             $ticket = Ticket::with(['user', 'status'])->where('ticket_number', $ticketNumber)->firstOrFail();
         }
-        \DB::table('ticket_resolutions')->insert([
-            'ticket_id'       => $ticket->id,
-            'resolved_by'     => $user->id,
-            'resolution_type' => $request->resolution_type,
-            'solution'        => $request->solution,
-            'root_cause'      => $request->root_cause,
-            'time_spent'      => $request->time_spent,
-            'time_unit'       => $request->time_unit,
-            'internal_notes'  => $request->internal_notes,
-            'rating'          => $request->rating,
-            'created_at'      => now(),
-            'updated_at'      => now(),
-        ]);
+        // Create resolution record (wrap so we can return a meaningful error)
+        try {
+            \DB::table('ticket_resolutions')->insert([
+                'ticket_id'       => $ticket->id,
+                'resolved_by'     => $user->id,
+                'resolution_type' => $request->resolution_type,
+                'solution'        => $request->solution,
+                'root_cause'      => $request->root_cause,
+                'time_spent'      => $request->time_spent,
+                'time_unit'       => $request->time_unit,
+                'internal_notes'  => $request->internal_notes,
+                'rating'          => $request->rating,
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('resolveTicket failed to insert ticket_resolutions', [
+                'ticket_param' => $id,
+                'ticket_id'    => $ticket?->id,
+                'error'        => $e->getMessage(),
+                'exception'    => get_class($e),
+            ]);
 
-        $resolvedStatus = \DB::table('statuses')->where('status_name', 'Resolved')->first();
-        $resolvedStatusId = $resolvedStatus ? $resolvedStatus->id : $ticket->status_id;
+            return response()->json([
+                'message' => 'Failed to save resolution. Please verify the database/migration for ticket_resolutions.',
+                'debug'   => $e->getMessage(),
+            ], 500);
+        }
+
+        // Resolve to a known resolved/closed status_id (case-insensitive).
+        // The frontend History/filters rely on status.status_name values like "resolved"/"closed".
+        $resolvedStatus = \DB::table('statuses')
+            ->whereRaw('LOWER(status_name) = ?', ['resolved'])
+            ->first();
+
+        $closedStatus = \DB::table('statuses')
+            ->whereRaw('LOWER(status_name) = ?', ['closed'])
+            ->first();
+
+        $resolvedStatusId = null;
+        if ($resolvedStatus) {
+            $resolvedStatusId = (int) $resolvedStatus->id;
+        } elseif ($closedStatus) {
+            $resolvedStatusId = (int) $closedStatus->id;
+        }
+
+        if (!$resolvedStatusId) {
+            return response()->json([
+                'message' => 'Cannot resolve ticket because `statuses` table is missing a resolved/closed row (expected status_name: resolved or closed).',
+                'debug'   => [
+                    'status_name_expected' => ['resolved', 'closed'],
+                ],
+            ], 500);
+        }
 
         // SLA breach on resolution
         $resolutionBreached = false;

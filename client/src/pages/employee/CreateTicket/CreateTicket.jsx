@@ -15,7 +15,7 @@ export default function CreateTicket() {
   const { t } = useLanguage();
   const token = localStorage.getItem("token");
 
-  const [form, setForm] = useState({ title: "", category_id: "", priority_id: "", description: "" });
+  const [form, setForm] = useState({ title: "", category_id: "", priority_id: "", description: "", client_email: "" });
   const [errors, setErrors]         = useState({});
   const [submitted, setSubmitted]   = useState(false);
   const [loading, setLoading]       = useState(false);
@@ -52,7 +52,15 @@ export default function CreateTicket() {
 
   const validate = () => {
     const e = {};
-    if (!form.title.trim())                    e.title       = t("createTicket.errTitleRequired",     "Title is required");
+    const clientEmail = form.client_email?.trim() ?? "";
+
+    if (!clientEmail) {
+      e.client_email = t("createTicket.errClientEmailRequired", "Client email is required");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+      e.client_email = t("createTicket.errClientEmailInvalid", "Client email is invalid");
+    }
+
+    if (!form.title.trim()) e.title = t("createTicket.errTitleRequired", "Title is required");
     if (!form.category_id)                     e.category_id = t("createTicket.errCategoryRequired", "Please select a category");
     if (!form.priority_id)                     e.priority_id = t("createTicket.errPriorityRequired", "Please select a priority");
     if (!form.description.trim())              e.description = t("createTicket.errDescriptionRequired","Description is required");
@@ -121,6 +129,7 @@ export default function CreateTicket() {
         description: form.description,
         category_id: form.category_id,
         priority_id: form.priority_id,
+        client_email: form.client_email,
       });
 
       const createdTicketId = data?.ticket?.id ?? data?.id;
@@ -163,7 +172,7 @@ export default function CreateTicket() {
   };
 
   const handleReset = () => {
-    setForm({ title: "", category_id: "", priority_id: "", description: "" });
+    setForm({ title: "", category_id: "", priority_id: "", description: "", client_email: "" });
     setErrors({}); setSubmitted(false); setApiError(""); setAttachments([]); setFileError("");
     setAiSuggestion(null); setAiError(""); setAiApplied(false);
   };
@@ -272,7 +281,24 @@ export default function CreateTicket() {
           <div className="ct-card__header">
             <h2 className="ct-card__title">{t("createTicket.sectionTitle", "Ticket Information")}</h2>
           </div>
-          <div className="ct-card__body">
+      <div className="ct-card__body">
+
+            {/* Client Email */}
+            <div className={`ct-field ${errors.client_email ? "ct-field--error" : ""}`}>
+              <label className="ct-label">
+                Client Email <span className="ct-required">*</span>
+              </label>
+              <input
+                type="email"
+                className="ct-input"
+                placeholder="client@example.com"
+                value={form.client_email}
+                onChange={update("client_email")}
+              />
+              {errors.client_email && (
+                <span className="ct-error-msg"><i className="ti ti-alert-circle" />{errors.client_email}</span>
+              )}
+            </div>
 
             {/* Title */}
             <div className={`ct-field ${errors.title ? "ct-field--error" : ""}`}>

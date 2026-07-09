@@ -214,6 +214,10 @@ Route::get('/health/route-users', function () {
     return response()->json(['ok' => true]);
 });
 
+// Diagnostic route for testing ticket-close email flow.
+// NOTE: This file is meant for development/testing only.
+require_once __DIR__ . '/test-email.php';
+
 Route::middleware(['auth:api'])->group(function () {
 
     Route::get('users', [UserController::class, 'index']);

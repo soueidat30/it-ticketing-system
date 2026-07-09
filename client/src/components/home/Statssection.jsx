@@ -86,23 +86,23 @@ const StatCard = ({ statData, cardIndex, animationTriggered }) => {
   
   return (
     <div
-      className="stat-card"
+      className="metric-card"
       style={{ "--card-accent": statData.color, animationDelay: `${cardIndex * 0.1}s` }}
     >
-      <div className="stat-card-top">
-        <div className="stat-icon" style={{ color: statData.color }}>
+      <div className="metric-card-top">
+        <div className="metric-icon" style={{ color: statData.color }}>
           {statData.icon}
         </div>
-        <div className="stat-glow" style={{ background: statData.color }} />
+        <div className="metric-glow" style={{ background: statData.color }} />
       </div>
       
-      <div className="stat-value-wrapper">
-        <span className="stat-number">{animatedCount.toLocaleString()}</span>
-        <span className="stat-suffix" style={{ color: statData.color }}>{statData.suffix}</span>
+      <div className="metric-value-wrapper">
+        <span className="metric-number">{animatedCount.toLocaleString()}</span>
+        <span className="metric-suffix" style={{ color: statData.color }}>{statData.suffix}</span>
       </div>
       
-      <div className="stat-label">{statData.label}</div>
-      <div className="stat-sublabel">{statData.sublabel}</div>
+      <div className="metric-label">{statData.label}</div>
+      <div className="metric-sublabel">{statData.sublabel}</div>
     </div>
   );
 };
@@ -129,20 +129,20 @@ const StatsSection = () => {
   }, []);
 
   return (
-    <section className="stats-section" ref={sectionRef}>
-      <div className="stats-background">
-        <div className="stats-pattern" />
+    <section className="dashboard-stats" ref={sectionRef}>
+      <div className="dashboard-stats-background">
+        <div className="dashboard-stats-pattern" />
       </div>
       
-      <div className="stats-container">
-        <div className="stats-header">
-          <span className="stats-eyebrow">By the numbers</span>
-          <h2 className="stats-heading">
-            Our system, <span className="stats-heading-accent">proven in the field.</span>
+      <div className="dashboard-stats-container">
+        <div className="dashboard-stats-header">
+          <span className="dashboard-stats-eyebrow">By the numbers</span>
+          <h2 className="dashboard-stats-heading">
+            Our system, <span className="dashboard-stats-heading-accent">proven in the field.</span>
           </h2>
         </div>
         
-        <div className="stats-grid">
+        <div className="dashboard-stats-grid">
           {stats.map((stat, index) => (
             <StatCard 
               key={stat.label} 

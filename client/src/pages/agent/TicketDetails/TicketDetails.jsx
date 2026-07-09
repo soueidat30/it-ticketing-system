@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./TicketDetails.css";
 
+
 const Icon = ({ d, size = 16 }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
@@ -107,7 +108,14 @@ export default function TicketDetails() {
   const ticketId = location.state?.ticketId;
   const { t } = useLanguage();
 
+  // Agents should not send or view internal notes on this screen.
+  const canSeeInternal = false;
+
+
+
+
   const user = (() => {
+
     try { return JSON.parse(localStorage.getItem("user") || "{}"); }
     catch { return {}; }
   })();
@@ -126,10 +134,16 @@ export default function TicketDetails() {
   const [error,         setError]         = useState(null);
 
   const [activeTab,     setActiveTab]     = useState("details");
+
   const [activeSection, setActiveSection] = useState("public");
 
+  const [commentType, setCommentType] = useState("public");
+
+
+
+
   const [commentText,  setCommentText]  = useState("");
-  const [commentType,  setCommentType]  = useState("public");
+
   const [submitting,   setSubmitting]   = useState(false);
   const [commentError, setCommentError] = useState(null);
 
@@ -207,7 +221,17 @@ export default function TicketDetails() {
   const desc           = ticket?.description  ?? t("agent.ticketDetails.noDescription", "No description available.");
   const requesterName  = ticket?.user?.full_name  ?? ticket?.user?.username ?? t("common.unknown", "Unknown");
   const requesterDept  = ticket?.user?.department ?? t("common.notSpecified", "No department");
+  // Ticket requester card must show the employee account details (ticket.user).
   const requesterEmail = ticket?.user?.email ?? "—";
+
+  // Ticket Info should show the client email provided at creation (tickets.client_email).
+  const clientEmail = ticket?.client_email ?? "—";
+
+
+
+
+
+
 
   const requesterJoined = ticket?.user?.created_at
     ? new Date(ticket.user.created_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })
@@ -226,16 +250,16 @@ export default function TicketDetails() {
 
   const timeOpen = ticket?.time_open ?? "—";
 
-  const canSeeInternal = currentUserRole === "agent" || currentUserRole === "admin";
-
   const tabs = [
     { key: "details",     label: t("agent.ticketDetails.tabDetails",     "Details"),     icon: IC.info    },
-    { key: "comments",    label: t("agent.ticketDetails.tabComments",    "Comments"),    icon: IC.comment, count: comments.filter(c => !c.internal || canSeeInternal).length },
+    { key: "comments",    label: t("agent.ticketDetails.tabComments",    "Comments"),    icon: IC.comment, count: comments.filter(c => !c.internal).length },
     { key: "attachments", label: t("agent.ticketDetails.tabAttachments", "Attachments"), icon: IC.attach,  count: attachments.length },
     { key: "history",     label: t("agent.ticketDetails.tabHistory",     "History"),     icon: IC.history, count: ticketHistory.length },
   ];
 
+
   const handleSendComment = async () => {
+
     if (!commentText.trim()) return;
     setSubmitting(true);
     setCommentError(null);
@@ -592,6 +616,8 @@ export default function TicketDetails() {
                       { key: t("agent.ticketDetails.colCategory",    "Category"),    val: category },
                       { key: t("agent.ticketDetails.colPriority",    "Priority"),    val: <PriorityBadge p={priority} t={t} /> },
                       { key: t("agent.ticketDetails.colStatus",      "Status"),      val: <StatusBadge s={status} t={t} /> },
+                      { key: t("agent.ticketDetails.colClientEmail", "Client Email"), val: clientEmail },
+
                       { key: t("agent.ticketDetails.colCreated",     "Created"),     val: createdLabel },
                       { key: t("agent.ticketDetails.colLastUpdate", "Last Update"), val: updatedLabel },
                     ].map(row => (
@@ -765,14 +791,7 @@ export default function TicketDetails() {
                     <Icon d={IC.comment} size={14} /> {t("agent.ticketDetails.publicReply", "Public Reply")}
                   </button>
 
-                  {canSeeInternal && (
-                    <button
-                      className={`td-comment-type-btn${commentType === "internal" ? " active" : ""}`}
-                      onClick={() => setCommentType("internal")}
-                    >
-                      <Icon d={IC.lock} size={14} /> {t("agent.ticketDetails.internalNoteBtn", "Internal Note")}
-                    </button>
-                  )}
+
                 </div>
 
                 <textarea

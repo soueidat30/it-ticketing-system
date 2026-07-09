@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../../contexts/RoleScopedLanguageContext";
 import "./Dashboard.css";
@@ -22,16 +22,6 @@ const BASE_URL = "http://127.0.0.1:8000/api";
 
 const normalizeStatus   = s => s?.toLowerCase().replace(/\s+/g, "-") ?? "open";
 const normalizePriority = p => p?.toLowerCase() ?? "low";
-
-// ── Localized time-ago ──
-const buildTimeAgo = (t) => (dateStr) => {
-  if (!dateStr) return "—";
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60)   return t("agent.dashboard.timeAgo.seconds", "{{n}}s ago", { n: diff });
-  if (diff < 3600) return t("agent.dashboard.timeAgo.minutes", "{{n}}m ago", { n: Math.floor(diff / 60) });
-  if (diff < 86400)return t("agent.dashboard.timeAgo.hours",   "{{n}}h ago", { n: Math.floor(diff / 3600) });
-  return t("agent.dashboard.timeAgo.days", "{{n}}d ago", { n: Math.floor(diff / 86400) });
-};
 
 // ── Status chart config (translated) ──
 const buildStatusConfig = (t) => ({
@@ -120,16 +110,23 @@ export default function AgentDashboard() {
   const user  = JSON.parse(localStorage.getItem("user") || "{}");
   const name  = user.full_name?.split(" ")[0] || t("common.unknown", "Agent");
 
-  // Localized helpers
-  const timeAgo = buildTimeAgo(t);
   const STATUS_CFG = useMemo(() => buildStatusConfig(t), [t]);
+
+  // Stable callback for time formatting (won't trigger re-renders/fetches)
+  const timeAgo = useCallback((dateStr) => {
+    if (!dateStr) return "—";
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60)   return t("agent.dashboard.timeAgo.seconds", "{{n}}s ago", { n: diff });
+    if (diff < 3600) return t("agent.dashboard.timeAgo.minutes", "{{n}}m ago", { n: Math.floor(diff / 60) });
+    if (diff < 86400) return t("agent.dashboard.timeAgo.hours",   "{{n}}h ago", { n: Math.floor(diff / 3600) });
+    return t("agent.dashboard.timeAgo.days", "{{n}}d ago", { n: Math.floor(diff / 86400) });
+  }, [t]);
 
   const [dashboard, setDashboard] = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
   const [counts,    setCounts]    = useState([0, 0, 0, 0]);
 
-  // ── KPI cards (label + stat key) — fully translated ──
   const STAT_CONFIG = useMemo(() => [
     { label: t("agent.dashboard.stats.assigned",      "Assigned to Me"), iconKey: "ticket",  iconClass: "blue",   statKey: "assigned"       },
     { label: t("agent.dashboard.stats.inProgress",    "In Progress"),    iconKey: "clock",   iconClass: "purple", statKey: "in_progress"    },
@@ -137,6 +134,7 @@ export default function AgentDashboard() {
     { label: t("agent.dashboard.stats.overdue",       "Overdue"),        iconKey: "warning", iconClass: "orange", statKey: "pending_review" },
   ], [t]);
 
+  // Fetch Stats (only runs once on mount, or if token/navigate/t changes)
   useEffect(() => {
     const load = async () => {
       try {
@@ -179,10 +177,10 @@ export default function AgentDashboard() {
 
     const tick = () => {
       let done = true;
-      const next = targets.map((t, i) => {
-        if (current[i] >= t) return t;
+      const next = targets.map((target, i) => {
+        if (current[i] >= target) return target;
         done = false;
-        current[i] = Math.min(current[i] + Math.max(1, Math.ceil(t / 20)), t);
+        current[i] = Math.min(current[i] + Math.max(1, Math.ceil(target / 20)), target);
         return current[i];
       });
       setCounts([...next]);
@@ -192,12 +190,12 @@ export default function AgentDashboard() {
     return () => cancelAnimationFrame(frame);
   }, [dashboard, STAT_CONFIG]);
 
-  const [recentTickets, setRecentTickets] = useState([]);
-  const [allTickets,    setAllTickets]    = useState([]);
+  const [allTickets, setAllTickets] = useState([]);
 
+  // Fetch All Tickets for Charts. Only depends on `token` so it doesn't infinitely loop!
   useEffect(() => {
     let cancelled = false;
-    const loadRecent = async () => {
+    const loadAll = async () => {
       try {
         if (!token) return;
         const res = await fetch(`${BASE_URL}/agent/tickets`, {
@@ -206,30 +204,31 @@ export default function AgentDashboard() {
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
-
-        const ticketsList = Array.isArray(data) ? data : [];
-        setAllTickets(ticketsList);
-
-        const sorted = [...ticketsList].sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-
-        const shaped = sorted.slice(0, 5).map(t => ({
-          dbId: t.id,
-          number: t.ticket_number ?? t.id,
-          title: t.title,
-          requester: t.user?.full_name ?? t.user?.username ?? t("common.unknown", "Unknown"),
-          priority: t.priority?.priority_name ?? t("agent.priority.low", "Low"),
-          status: t.status?.status_name ?? t("agent.status.open", "Open"),
-          age: timeAgo(t.created_at),
-        }));
-
-        setRecentTickets(shaped);
-      } catch {}
+        setAllTickets(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+      }
     };
-    loadRecent();
+    loadAll();
     return () => { cancelled = true; };
-  }, [token, t, timeAgo]);
+  }, [token]);
+
+  // Derive Recent Tickets locally using useMemo instead of triggering API calls
+  const recentTickets = useMemo(() => {
+    const sorted = [...allTickets].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    return sorted.slice(0, 5).map(tk => ({
+      dbId: tk.id,
+      number: tk.ticket_number ?? tk.id,
+      title: tk.title,
+      requester: tk.user?.full_name ?? tk.user?.username ?? t("common.unknown", "Unknown"),
+      priority: tk.priority?.priority_name ?? t("agent.priority.low", "Low"),
+      status: tk.status?.status_name ?? t("agent.status.open", "Open"),
+      age: timeAgo(tk.created_at),
+    }));
+  }, [allTickets, t, timeAgo]);
 
   const breakdown = dashboard?.priority_breakdown ?? {};
   const maxBreakdown = Math.max(...Object.values(breakdown).map(Number), 1);

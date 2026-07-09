@@ -115,7 +115,7 @@ export default function History() {
   };
 
   return (
-    <div className="agent-history">
+    <div className="hist-page">
       <div className="agent-page-header">
         <div>
           <h1 className="agent-page-title">
@@ -128,21 +128,21 @@ export default function History() {
       </div>
 
       {/* Search bar */}
-      <div className="agent-card ah-search-card">
-        <div className="ah-search-wrap">
-          <span className="ah-search-icon">
+      <div className="hist-search-card">
+        <div className="hist-search-wrap">
+          <span className="hist-search-icon">
             <Icon d={IC.search} size={15} />
           </span>
           <input
             type="text"
-            className="ah-search-input"
+            className="hist-search-input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("agent.history.searchPlaceholder", "Search by ticket # or title…")}
           />
           {search && (
             <button
-              className="ah-search-clear"
+              className="hist-search-clear"
               onClick={() => setSearch("")}
               title={t("common.cancel", "Clear")}
               type="button"
@@ -154,37 +154,37 @@ export default function History() {
       </div>
 
       {/* Results card */}
-      <div className="agent-card ah-results-card">
+      <div className="hist-table-card">
         {loading ? (
-          <div className="ah-state">
-            <div className="ah-spinner" />
+          <div className="hist-state">
+            <div className="hist-spinner" />
             <p>{t("agent.history.loading", "Loading history…")}</p>
           </div>
         ) : error ? (
-          <div className="ah-state ah-state--error">
+          <div className="hist-state hist-state--error">
             <Icon d={IC.warning} size={20} />
             <p>{error}</p>
           </div>
         ) : resolved.length === 0 ? (
-          <div className="ah-empty">
-            <div className="ah-empty-icon">
+          <div className="hist-empty">
+            <div className="hist-empty-icon">
               <Icon d={IC.history} size={32} />
             </div>
-            <h3 className="ah-empty-title">
+            <h3 className="hist-empty-title">
               {t("agent.history.emptyTitle", "No resolved tickets yet")}
             </h3>
-            <p className="ah-empty-desc">
+            <p className="hist-empty-desc">
               {t("agent.history.emptyDesc", "Tickets you resolve or close will show up here.")}
             </p>
           </div>
         ) : (
-          <div className="ah-table-wrap">
-            <table className="ah-table">
+          <div className="hist-table-wrap">
+            <table className="hist-table">
               <thead>
                 <tr>
-                  <th>{t("agent.history.colTicket",     "Ticket #")}</th>
-                  <th>{t("agent.history.colTitle",      "Title")}</th>
-                  <th>{t("agent.history.colPriority",   "Priority")}</th>
+                  <th>{t("agent.history.colTicket", "Ticket #")}</th>
+                  <th>{t("agent.history.colTitle", "Title")}</th>
+                  <th>{t("agent.history.colPriority", "Priority")}</th>
                   <th>{t("agent.history.colResolvedOn", "Resolved On")}</th>
                   <th></th>
                 </tr>
@@ -192,13 +192,15 @@ export default function History() {
               <tbody>
                 {resolved.map((tk) => (
                   <tr key={tk.id}>
-                    <td className="ah-ticket-id">#{tk.ticket_number ?? tk.id}</td>
-                    <td className="ah-ticket-title">{tk.title}</td>
-                    <td><PriorityBadge p={tk.priority?.priority_name ?? "low"} /></td>
-                    <td className="ah-ticket-date">
+                    <td className="hist-cell-id">#{tk.ticket_number ?? tk.id}</td>
+                    <td className="hist-cell-title">{tk.title}</td>
+                    <td>
+                      <PriorityBadge p={tk.priority?.priority_name ?? "low"} />
+                    </td>
+                    <td className="hist-cell-date">
                       {formatDate(tk.resolved_at ?? tk.updated_at)}
                     </td>
-                    <td className="ah-ticket-action">
+                    <td className="hist-cell-action">
                       <button
                         className="agent-btn agent-btn--ghost agent-btn--sm"
                         onClick={() =>
